@@ -1,4 +1,5 @@
 import React from 'react'
+// @ts-ignore: Could not find a declaration file for module 'react-dom/client'.
 import ReactDOM from 'react-dom/client'
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react'
 import App from './App'

@@ -1,4 +1,6 @@
 import * as tts from "@mintplex-labs/piper-tts-web";
+
+
 export type TtsStatusCallback = (status: string) => void;
 
 export type TtsBackend = "cpu";
@@ -111,23 +113,17 @@ async function ensureOrtReady(
   state.ortPromise = (async () => {
     onStatusUpdate?.(`Loading ONNX runtime (${backendLabel})...`);
 
-    // @ts-ignore - WASM module without type declarations
-    const ortModule: any = await import(/* webpackIgnore: true */ "../../ort/ort.wasm.min.js");
-    const ortNS: any = ortModule?.default ?? ortModule;
-    if (!ortNS) {
-      throw new Error("Failed to load ONNX runtime module");
-    }
+    // Import onnxruntime-web from npm package
+    const ort = await import("onnxruntime-web");
 
-    (globalThis as any).ort = ortNS;
+    // Configure WASM paths to use local files from public/ort
+    ort.env.wasm.wasmPaths = "/ort/";
+    // Force single-threaded execution to avoid SharedArrayBuffer/COOP/COEP issues
+    ort.env.wasm.numThreads = 1;
+    ort.env.wasm.proxy = false;
 
-    try {
-      if (ortNS?.env?.wasm) {
-        // ortNS.env.wasm.numThreads = 1;
-        ortNS.env.wasm.wasmPaths = "/ort/";
-      }
-    } catch (error) {
-      console.log("Failed to configure ONNX runtime", error);
-    }
+    // Set the ort globally for piper-tts-web to use
+    (globalThis as any).ort = ort;
 
     state.ortReady = true;
     onStatusUpdate?.(`ONNX runtime ready (${backendLabel})`);
