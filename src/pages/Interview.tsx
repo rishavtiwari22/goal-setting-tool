@@ -61,8 +61,18 @@ export default function Interview() {
   }, [navigate]);
 
   const handleComplete = (session: InterviewSession) => {
-    sessionStorage.setItem('interviewSession', JSON.stringify(session));
-    navigate('/results');
+    try {
+      sessionStorage.setItem('interviewSession', JSON.stringify(session));
+      navigate('/results');
+    } catch (error) {
+      console.error('Failed to save session:', error);
+      toaster.create({
+        title: 'Error',
+        description: 'Failed to save interview results',
+        type: 'error',
+        duration: 5000,
+      });
+    }
   };
 
   const {
@@ -74,6 +84,23 @@ export default function Interview() {
   } = useInterview({
     config,
     onComplete: handleComplete,
+    onStreamChunk: (chunk) => {
+      if (isSpeechOutputEnabled) {
+        addTtsChunk(chunk);
+      }
+    },
+    onStreamComplete: () => {
+      if (isSpeechOutputEnabled) {
+        finishTtsStreaming();
+      }
+    },
+    onFeedback: (feedback) => {
+      // ✅ Speak feedback messages (non-streaming)
+      if (isSpeechOutputEnabled) {
+        addTtsChunk(feedback);
+        finishTtsStreaming();
+      }
+    },
   });
 
   const {
@@ -111,22 +138,6 @@ export default function Interview() {
     scrollToBottom();
   }, [messages]);
 
-  const lastAssistantMessageRef = useRef<string>('');
-
-  useEffect(() => {
-    const lastMessage = messages[messages.length - 1];
-    if (
-      lastMessage &&
-      lastMessage.role === 'assistant' &&
-      isSpeechOutputEnabled &&
-      lastMessage.content !== lastAssistantMessageRef.current
-    ) {
-      lastAssistantMessageRef.current = lastMessage.content;
-      addTtsChunk(lastMessage.content);
-      finishTtsStreaming();
-    }
-  }, [messages, isSpeechOutputEnabled, addTtsChunk, finishTtsStreaming]);
-
   useEffect(() => {
     return () => {
       stopTts();
@@ -147,10 +158,11 @@ export default function Interview() {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (isSpeechOutputEnabled) {
-        startListening();
-      } else {
+      // If there's text, send it; otherwise start listening if TTS is enabled
+      if (input.trim()) {
         handleSendMessage();
+      } else if (isSpeechOutputEnabled) {
+        startListening();
       }
     }
   };
@@ -219,7 +231,12 @@ export default function Interview() {
               <>
                 <IconButton
                   aria-label="Toggle Speech Output"
-                  onClick={() => setIsSpeechOutputEnabled((v) => !v)}
+                  onClick={() => {
+                    setIsSpeechOutputEnabled((v) => {
+                      if (v) stopTts(); // Stop TTS if turning off
+                      return !v;
+                    });
+                  }}
                   bg={isSpeechOutputEnabled ? 'green.400' : 'red.400'}
                   color="white"
                   size="lg"
