@@ -15,9 +15,19 @@ interface UseInterviewProps {
   config: InterviewConfig | null;
   sessionId?: string;
   onComplete: (session: InterviewSession) => void;
+  onStreamChunk?: (chunk: string) => void;
+  onStreamComplete?: () => void;
+  onFeedback?: (feedback: string) => void;
 }
 
-export function useInterview({ config, sessionId, onComplete }: UseInterviewProps) {
+export function useInterview({
+  config,
+  sessionId,
+  onComplete,
+  onStreamChunk,
+  onStreamComplete,
+  onFeedback
+}: UseInterviewProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState('');
@@ -144,10 +154,20 @@ export function useInterview({ config, sessionId, onComplete }: UseInterviewProp
               },
             ];
           });
+
+          // Send chunk to TTS
+          if (onStreamChunk) {
+            onStreamChunk(chunk);
+          }
         },
       });
 
       setCurrentQuestion(result.question);
+
+      // Signal streaming complete
+      if (onStreamComplete) {
+        onStreamComplete();
+      }
 
       if (result.question.includes('【Interview ended')) {
         await handleTimeUp();
@@ -157,7 +177,7 @@ export function useInterview({ config, sessionId, onComplete }: UseInterviewProp
     } finally {
       setIsLoading(false);
     }
-  }, [handleTimeUp]);
+  }, [handleTimeUp, onStreamChunk, onStreamComplete]);
 
   const submitAnswer = useCallback(
     async (answer: string) => {
@@ -181,7 +201,7 @@ export function useInterview({ config, sessionId, onComplete }: UseInterviewProp
       try {
         const questionId = `q_${Date.now()}`;
         let accumulatedQuestion = '';
-        
+
         const result = await managerRef.current.manageInterviewState('processAnswer', {
           answer,
           question: currentQuestion,
@@ -205,8 +225,23 @@ export function useInterview({ config, sessionId, onComplete }: UseInterviewProp
                 },
               ];
             });
+
+            // Send chunk to TTS
+            if (onStreamChunk) {
+              onStreamChunk(chunk);
+            }
           },
         });
+
+        // Send feedback to TTS if present
+        if (result.decision?.feedback && result.decision.feedback.trim() && onFeedback) {
+          onFeedback(result.decision.feedback);
+        }
+
+        // Signal streaming complete
+        if (onStreamComplete) {
+          onStreamComplete();
+        }
 
         if (result.decision.decision === 'end') {
           isCompletedRef.current = true;
@@ -228,7 +263,7 @@ export function useInterview({ config, sessionId, onComplete }: UseInterviewProp
         setIsLoading(false);
       }
     },
-    [currentQuestion, isLoading, onComplete, handleTimeUp]
+    [currentQuestion, isLoading, onComplete, handleTimeUp, onStreamChunk, onStreamComplete, onFeedback]
   );
 
   return {
