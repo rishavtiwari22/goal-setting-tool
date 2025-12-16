@@ -14,9 +14,18 @@ export interface Message {
 interface UseInterviewProps {
   config: InterviewConfig | null;
   onComplete: (session: InterviewSession) => void;
+  onStreamChunk?: (chunk: string) => void;
+  onStreamComplete?: () => void;
+  onFeedback?: (feedback: string) => void;  // ✅ For non-streaming feedback
 }
 
-export function useInterview({ config, onComplete }: UseInterviewProps) {
+export function useInterview({
+  config,
+  onComplete,
+  onStreamChunk,
+  onStreamComplete,
+  onFeedback
+}: UseInterviewProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState('');
@@ -28,6 +37,7 @@ export function useInterview({ config, onComplete }: UseInterviewProps) {
   const isCompletedRef = useRef(false);
   const handleTimeUpRef = useRef<(() => Promise<void>) | null>(null);
   const startInterviewRef = useRef<(() => Promise<void>) | null>(null);
+  const hasStartedRef = useRef(false);  // ✅ Track if interview started
 
   useEffect(() => {
     isCompletedRef.current = isCompleted;
@@ -39,6 +49,11 @@ export function useInterview({ config, onComplete }: UseInterviewProps) {
       const session = engineRef.current.getSession();
       setRemainingTime(session.remainingTime);
 
+      // Clear any existing timer first to prevent memory leak
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+
       timerRef.current = setInterval(() => {
         if (engineRef.current && !isCompletedRef.current) {
           const time = engineRef.current.getRemainingTime();
@@ -49,9 +64,8 @@ export function useInterview({ config, onComplete }: UseInterviewProps) {
         }
       }, 1000);
 
-      if (startInterviewRef.current) {
-        startInterviewRef.current();
-      }
+      // ❌ REMOVED: Don't call startInterview here
+      // Will be called from separate useEffect when ref is ready
     }
 
     return () => {
@@ -66,6 +80,13 @@ export function useInterview({ config, onComplete }: UseInterviewProps) {
     if (engineRef.current && !isCompletedRef.current) {
       isCompletedRef.current = true;
       setIsCompleted(true);
+
+      // Stop the timer immediately
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+
       setIsLoading(true);
       try {
         await engineRef.current.finalizeInterview();
@@ -73,7 +94,13 @@ export function useInterview({ config, onComplete }: UseInterviewProps) {
         if (session.result) {
           saveInterviewResult(session.sessionId, session.result);
         }
-        onComplete(session);
+
+        // Wrap callback in try-catch to prevent crashes
+        try {
+          onComplete(session);
+        } catch (error) {
+          console.error('Error in onComplete callback:', error);
+        }
       } catch (error) {
         console.error('Error finalizing interview:', error);
       } finally {
@@ -117,9 +144,19 @@ export function useInterview({ config, onComplete }: UseInterviewProps) {
             },
           ];
         });
+
+        // ✅ Send chunk to TTS in real-time
+        if (onStreamChunk) {
+          onStreamChunk(chunk);
+        }
       });
 
       setCurrentQuestion(fullQuestion);
+
+      // ✅ Signal streaming complete
+      if (onStreamComplete) {
+        onStreamComplete();
+      }
 
       if (engineRef.current.isInterviewEnded(fullQuestion)) {
         if (handleTimeUpRef.current) {
@@ -131,10 +168,18 @@ export function useInterview({ config, onComplete }: UseInterviewProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [handleTimeUp]);
+  }, [handleTimeUp, onStreamChunk, onStreamComplete]);
 
   useEffect(() => {
     startInterviewRef.current = startInterview;
+  }, [startInterview]);
+
+  // ✅ Start interview once when engine is ready
+  useEffect(() => {
+    if (engineRef.current && !hasStartedRef.current && !isCompletedRef.current) {
+      hasStartedRef.current = true;
+      startInterview();
+    }
   }, [startInterview]);
 
   const submitAnswer = useCallback(
@@ -159,7 +204,8 @@ export function useInterview({ config, onComplete }: UseInterviewProps) {
       try {
         const analysis = await engineRef.current.processAnswer(answer, currentQuestion);
 
-        if (analysis.feedback) {
+        // Only show feedback if it's non-empty (analysis should return empty string now)
+        if (analysis.feedback && analysis.feedback.trim()) {
           const feedbackId = `f_${Date.now()}`;
           setMessages((prev) => [
             ...prev,
@@ -170,6 +216,11 @@ export function useInterview({ config, onComplete }: UseInterviewProps) {
               timestamp: new Date().toISOString(),
             },
           ]);
+
+          // Send feedback to TTS
+          if (onFeedback) {
+            onFeedback(analysis.feedback);
+          }
         }
 
         if (
@@ -178,13 +229,28 @@ export function useInterview({ config, onComplete }: UseInterviewProps) {
         ) {
           isCompletedRef.current = true;
           setIsCompleted(true);
+
+          // Stop the timer immediately
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
+
           await engineRef.current.finalizeInterview();
           const session = engineRef.current.getSession();
           if (session.result) {
             saveInterviewResult(session.sessionId, session.result);
           }
-          onComplete(session);
-        } else if (analysis.decision === 'MOVE_TO_NEXT') {
+
+          // Wrap callback in try-catch to prevent crashes
+          try {
+            onComplete(session);
+          } catch (error) {
+            console.error('Error in onComplete callback:', error);
+          }
+        } else if (analysis.decision === 'MOVE_TO_NEXT' || analysis.decision === 'FOLLOW_UP_NEEDED') {
+          // ✅ Generate next question for both MOVE_TO_NEXT and FOLLOW_UP_NEEDED
+          // FOLLOW_UP_NEEDED means AI wants to ask clarifying question
           if (startInterviewRef.current) {
             await startInterviewRef.current();
           }
