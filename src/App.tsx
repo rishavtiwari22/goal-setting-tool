@@ -68,7 +68,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/selfapply" replace />} />
         <Route path="/selfapply" element={<SelfApply />} />
-        <Route path="/interview" element={<Interview />} />
+        <Route path="/interview/:sessionId?" element={<Interview />} />
         <Route path="/results" element={<Results />} />
       </Routes>
       {preparing && <PiperLoader status={status} />}

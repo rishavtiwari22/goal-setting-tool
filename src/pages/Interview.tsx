@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -19,11 +19,13 @@ import { useStreamingTTS } from '../hooks/useStreamingTTS';
 import { MessageBubble } from '../components/ui/MessageBubble';
 import { Timer } from '../components/ui/Timer';
 import type { InterviewSession } from '../models/interview';
+import { loadInterviewSessionBySessionId } from '../services/storage/interviewStorage';
 
 const toaster = createToaster({ placement: 'top' });
 
 export default function Interview() {
   const navigate = useNavigate();
+  const { sessionId } = useParams<{ sessionId?: string }>();
   const [config, setConfig] = useState<InterviewConfig | null>(null);
   const [input, setInput] = useState('');
   const [isSpeechOutputEnabled, setIsSpeechOutputEnabled] = useState(true);
@@ -34,7 +36,7 @@ export default function Interview() {
 
   useEffect(() => {
     const configStr = sessionStorage.getItem('interviewConfig');
-    if (!configStr) {
+    if (!configStr && !sessionId) {
       toaster.create({
         title: 'Error',
         description: 'No interview configuration found',
@@ -46,8 +48,33 @@ export default function Interview() {
     }
 
     try {
-      const interviewConfig = JSON.parse(configStr) as InterviewConfig;
-      setConfig(interviewConfig);
+      if (configStr) {
+        const interviewConfig = JSON.parse(configStr) as InterviewConfig;
+        setConfig(interviewConfig);
+      } else if (sessionId) {
+        const session = loadInterviewSessionBySessionId(sessionId);
+        if (session) {
+          const interviewConfig: InterviewConfig = {
+            userId: session.userId,
+            jobId: session.jobId,
+            jobTitle: session.jobTitle,
+            jobDescription: session.jobDescription,
+            interviewTime: session.interviewTime,
+            language: session.language,
+            difficulty: session.difficulty,
+            examinationPoints: session.examinationPoints,
+          };
+          setConfig(interviewConfig);
+        } else {
+          toaster.create({
+            title: 'Error',
+            description: 'Session not found',
+            type: 'error',
+            duration: 3000,
+          });
+          navigate('/selfapply');
+        }
+      }
     } catch (error) {
       console.error('Error parsing interview config:', error);
       toaster.create({
@@ -58,7 +85,7 @@ export default function Interview() {
       });
       navigate('/selfapply');
     }
-  }, [navigate]);
+  }, [navigate, sessionId]);
 
   const handleComplete = (session: InterviewSession) => {
     sessionStorage.setItem('interviewSession', JSON.stringify(session));
@@ -73,6 +100,7 @@ export default function Interview() {
     submitAnswer,
   } = useInterview({
     config,
+    sessionId,
     onComplete: handleComplete,
   });
 

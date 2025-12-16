@@ -9,6 +9,8 @@ export interface QAHistoryItem {
   questionId?: string;
 }
 
+export type InterviewStatus = 'ongoing' | 'completed';
+
 export interface InterviewSession {
   sessionId: string;
   userId: string;
@@ -25,6 +27,10 @@ export interface InterviewSession {
   difficulty: string;
   examinationPoints: string[];
   result?: InterviewResult;
+  status: InterviewStatus;
+  upcomingQuestions?: string[];
+  feedbackHistory?: string[];
+  summary?: string;
 }
 
 export interface InterviewResult {
@@ -43,4 +49,20 @@ export interface AnalyzeAnswerResponse {
   score: number;
   isCorrect: boolean;
   userGivingUp: boolean;
+}
+
+export interface DecisionResponse {
+  decision: 'followup' | 'movenext' | 'end';
+  reason: string;
+}
+
+export interface QuestionResponse {
+  question: string;
+  phase: InterviewPhase;
+}
+
+export interface FeedbackResponse {
+  feedback: string;
+  summary: string;
+  nextPhase?: 'introduction' | 'project' | 'technical';
 }
