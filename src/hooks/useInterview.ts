@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { InterviewConfig } from '../services/interview/interviewEngine';
-import { InterviewEngine } from '../services/interview/interviewEngine';
+import { InterviewStateManager } from '../services/interview/interviewStateManager';
 import type { InterviewSession } from '../models/interview';
-import { saveInterviewResult } from '../services/storage/interviewStorage';
+import { saveInterviewResult, loadInterviewSessionBySessionId } from '../services/storage/interviewStorage';
 
 export interface Message {
   id: string;
@@ -13,6 +13,7 @@ export interface Message {
 
 interface UseInterviewProps {
   config: InterviewConfig | null;
+  sessionId?: string;
   onComplete: (session: InterviewSession) => void;
   onStreamChunk?: (chunk: string) => void;
   onStreamComplete?: () => void;
@@ -21,6 +22,7 @@ interface UseInterviewProps {
 
 export function useInterview({
   config,
+  sessionId,
   onComplete,
   onStreamChunk,
   onStreamComplete,
@@ -32,40 +34,61 @@ export function useInterview({
   const [isCompleted, setIsCompleted] = useState(false);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
 
-  const engineRef = useRef<InterviewEngine | null>(null);
+  const managerRef = useRef<InterviewStateManager | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isCompletedRef = useRef(false);
-  const handleTimeUpRef = useRef<(() => Promise<void>) | null>(null);
-  const startInterviewRef = useRef<(() => Promise<void>) | null>(null);
-  const hasStartedRef = useRef(false);  // ✅ Track if interview started
+  const hasStartedRef = useRef(false);
 
   useEffect(() => {
     isCompletedRef.current = isCompleted;
   }, [isCompleted]);
 
   useEffect(() => {
-    if (config && !engineRef.current) {
-      engineRef.current = new InterviewEngine(config);
-      const session = engineRef.current.getSession();
+    if (config && !managerRef.current) {
+      managerRef.current = new InterviewStateManager(config, sessionId);
+      const session = managerRef.current.getSession();
       setRemainingTime(session.remainingTime);
 
-      // Clear any existing timer first to prevent memory leak
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
+      const existingSession = sessionId ? loadInterviewSessionBySessionId(sessionId) : null;
+      if (existingSession && existingSession.status === 'ongoing') {
+        const restoredMessages: Message[] = [];
+        existingSession.qaHistory.forEach((qa, index) => {
+          restoredMessages.push({
+            id: `q_${index}`,
+            role: 'assistant' as const,
+            content: qa.question,
+            timestamp: qa.timestamp,
+          });
+          restoredMessages.push({
+            id: `a_${index}`,
+            role: 'user' as const,
+            content: qa.answer,
+            timestamp: qa.timestamp,
+          });
+        });
+        if (restoredMessages.length > 0) {
+          setMessages(restoredMessages);
+          const lastQuestion = existingSession.qaHistory[existingSession.qaHistory.length - 1]?.question;
+          if (lastQuestion) {
+            setCurrentQuestion(lastQuestion);
+          }
+        }
       }
 
       timerRef.current = setInterval(() => {
-        if (engineRef.current && !isCompletedRef.current) {
-          const time = engineRef.current.getRemainingTime();
+        if (managerRef.current && !isCompletedRef.current) {
+          const time = managerRef.current.getRemainingTime();
           setRemainingTime(time);
-          if (time <= 0 && handleTimeUpRef.current) {
-            handleTimeUpRef.current();
+          if (time <= 0) {
+            handleTimeUp();
           }
         }
       }, 1000);
 
-      // ❌ REMOVED: Don't call startInterview here
-      // Will be called from separate useEffect when ref is ready
+      if (!hasStartedRef.current && (!existingSession || existingSession.qaHistory.length === 0)) {
+        hasStartedRef.current = true;
+        startInterview();
+      }
     }
 
     return () => {
@@ -73,11 +96,14 @@ export function useInterview({
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+      if (managerRef.current) {
+        managerRef.current.cleanup();
+      }
     };
-  }, [config]);
+  }, [config, sessionId]);
 
   const handleTimeUp = useCallback(async () => {
-    if (engineRef.current && !isCompletedRef.current) {
+    if (managerRef.current && !isCompletedRef.current) {
       isCompletedRef.current = true;
       setIsCompleted(true);
 
@@ -89,8 +115,8 @@ export function useInterview({
 
       setIsLoading(true);
       try {
-        await engineRef.current.finalizeInterview();
-        const session = engineRef.current.getSession();
+        const result = await managerRef.current.manageInterviewState('end');
+        const session = managerRef.current.getSession();
         if (session.result) {
           saveInterviewResult(session.sessionId, session.result);
         }
@@ -102,19 +128,15 @@ export function useInterview({
           console.error('Error in onComplete callback:', error);
         }
       } catch (error) {
-        console.error('Error finalizing interview:', error);
+        console.error('Error ending interview:', error);
       } finally {
         setIsLoading(false);
       }
     }
   }, [onComplete]);
 
-  useEffect(() => {
-    handleTimeUpRef.current = handleTimeUp;
-  }, [handleTimeUp]);
-
   const startInterview = useCallback(async () => {
-    if (!engineRef.current || isCompletedRef.current) return;
+    if (!managerRef.current || isCompletedRef.current) return;
 
     setIsLoading(true);
     try {
@@ -123,45 +145,45 @@ export function useInterview({
 
       let fullQuestion = '';
 
-      await engineRef.current.generateNextQuestion((chunk: string) => {
-        fullQuestion += chunk;
-        setCurrentQuestion(fullQuestion);
+      const result = await managerRef.current.manageInterviewState('kickoff', {
+        onChunk: (chunk: string) => {
+          fullQuestion += chunk;
+          setCurrentQuestion(fullQuestion);
 
-        setMessages((prev) => {
-          const existing = prev.find((m) => m.id === questionId);
-          if (existing) {
-            return prev.map((m) =>
-              m.id === questionId ? { ...m, content: fullQuestion } : m
-            );
+          setMessages((prev) => {
+            const existing = prev.find((m) => m.id === questionId);
+            if (existing) {
+              return prev.map((m) =>
+                m.id === questionId ? { ...m, content: fullQuestion } : m
+              );
+            }
+            return [
+              ...prev,
+              {
+                id: questionId,
+                role: 'assistant' as const,
+                content: fullQuestion,
+                timestamp: new Date().toISOString(),
+              },
+            ];
+          });
+
+          // ✅ Send chunk to TTS in real-time
+          if (onStreamChunk) {
+            onStreamChunk(chunk);
           }
-          return [
-            ...prev,
-            {
-              id: questionId,
-              role: 'assistant' as const,
-              content: fullQuestion,
-              timestamp: new Date().toISOString(),
-            },
-          ];
-        });
-
-        // ✅ Send chunk to TTS in real-time
-        if (onStreamChunk) {
-          onStreamChunk(chunk);
-        }
+        },
       });
 
-      setCurrentQuestion(fullQuestion);
+      setCurrentQuestion(result.question);
 
       // ✅ Signal streaming complete
       if (onStreamComplete) {
         onStreamComplete();
       }
 
-      if (engineRef.current.isInterviewEnded(fullQuestion)) {
-        if (handleTimeUpRef.current) {
-          await handleTimeUpRef.current();
-        }
+      if (result.question.includes('【Interview ended')) {
+        await handleTimeUp();
       }
     } catch (error) {
       console.error('Error starting interview:', error);
@@ -170,21 +192,10 @@ export function useInterview({
     }
   }, [handleTimeUp, onStreamChunk, onStreamComplete]);
 
-  useEffect(() => {
-    startInterviewRef.current = startInterview;
-  }, [startInterview]);
-
-  // ✅ Start interview once when engine is ready
-  useEffect(() => {
-    if (engineRef.current && !hasStartedRef.current && !isCompletedRef.current) {
-      hasStartedRef.current = true;
-      startInterview();
-    }
-  }, [startInterview]);
 
   const submitAnswer = useCallback(
     async (answer: string) => {
-      if (!engineRef.current || !currentQuestion || isCompletedRef.current || isLoading) {
+      if (!managerRef.current || !currentQuestion || isCompletedRef.current || isLoading) {
         return;
       }
 
@@ -202,57 +213,51 @@ export function useInterview({
       setIsLoading(true);
 
       try {
-        const analysis = await engineRef.current.processAnswer(answer, currentQuestion);
+        const questionId = `q_${Date.now()}`;
+        let accumulatedQuestion = '';
+        
+        const result = await managerRef.current.manageInterviewState('processAnswer', {
+          answer,
+          question: currentQuestion,
+          onChunk: (chunk: string) => {
+            accumulatedQuestion += chunk;
+            setCurrentQuestion(accumulatedQuestion);
+            setMessages((prevMessages) => {
+              const existing = prevMessages.find((m) => m.id === questionId);
+              if (existing) {
+                return prevMessages.map((m) =>
+                  m.id === questionId ? { ...m, content: accumulatedQuestion } : m
+                );
+              }
+              return [
+                ...prevMessages,
+                {
+                  id: questionId,
+                  role: 'assistant' as const,
+                  content: accumulatedQuestion,
+                  timestamp: new Date().toISOString(),
+                },
+              ];
+            });
+          },
+        });
 
-        // Only show feedback if it's non-empty (analysis should return empty string now)
-        if (analysis.feedback && analysis.feedback.trim()) {
-          const feedbackId = `f_${Date.now()}`;
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: feedbackId,
-              role: 'assistant' as const,
-              content: analysis.feedback,
-              timestamp: new Date().toISOString(),
-            },
-          ]);
-
-          // Send feedback to TTS
-          if (onFeedback) {
-            onFeedback(analysis.feedback);
-          }
+        if (onStreamComplete) {
+          onStreamComplete();
         }
 
-        if (
-          analysis.decision === 'END_INTERVIEW' ||
-          engineRef.current.shouldEndInterview(analysis.decision)
-        ) {
+        if (result.decision.decision === 'end') {
           isCompletedRef.current = true;
           setIsCompleted(true);
-
-          // Stop the timer immediately
-          if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-          }
-
-          await engineRef.current.finalizeInterview();
-          const session = engineRef.current.getSession();
+          const endResult = await managerRef.current.manageInterviewState('end');
+          const session = managerRef.current.getSession();
           if (session.result) {
             saveInterviewResult(session.sessionId, session.result);
           }
-
-          // Wrap callback in try-catch to prevent crashes
-          try {
-            onComplete(session);
-          } catch (error) {
-            console.error('Error in onComplete callback:', error);
-          }
-        } else if (analysis.decision === 'MOVE_TO_NEXT' || analysis.decision === 'FOLLOW_UP_NEEDED') {
-          // ✅ Generate next question for both MOVE_TO_NEXT and FOLLOW_UP_NEEDED
-          // FOLLOW_UP_NEEDED means AI wants to ask clarifying question
-          if (startInterviewRef.current) {
-            await startInterviewRef.current();
+          onComplete(session);
+        } else if (result.nextQuestion) {
+          if (result.nextQuestion.includes('【Interview ended')) {
+            await handleTimeUp();
           }
         }
       } catch (error) {
@@ -261,7 +266,7 @@ export function useInterview({
         setIsLoading(false);
       }
     },
-    [currentQuestion, isLoading, startInterview, onComplete]
+    [currentQuestion, isLoading, onComplete, handleTimeUp, onStreamChunk, onStreamComplete]
   );
 
   return {

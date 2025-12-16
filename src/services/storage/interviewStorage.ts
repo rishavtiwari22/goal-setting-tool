@@ -1,21 +1,23 @@
 import { InterviewSession, InterviewResult } from '../../models/interview';
 
 const STORAGE_PREFIX = 'interview_';
-const SESSION_KEY = `${STORAGE_PREFIX}current_session`;
+const SESSION_KEY_PREFIX = `${STORAGE_PREFIX}session_`;
 const HISTORY_KEY = `${STORAGE_PREFIX}history`;
 
-export function saveInterviewSession(session: InterviewSession): void {
+export function saveInterviewSessionBySessionId(session: InterviewSession): void {
   try {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    console.log('Interview session saved to local storage');
+    const sessionKey = `${SESSION_KEY_PREFIX}${session.sessionId}`;
+    localStorage.setItem(sessionKey, JSON.stringify(session));
+    addToHistory(session);
   } catch (error) {
     console.error('Failed to save interview session:', error);
   }
 }
 
-export function loadInterviewSession(): InterviewSession | null {
+export function loadInterviewSessionBySessionId(sessionId: string): InterviewSession | null {
   try {
-    const data = localStorage.getItem(SESSION_KEY);
+    const sessionKey = `${SESSION_KEY_PREFIX}${sessionId}`;
+    const data = localStorage.getItem(sessionKey);
     if (!data) return null;
     return JSON.parse(data) as InterviewSession;
   } catch (error) {
@@ -24,10 +26,31 @@ export function loadInterviewSession(): InterviewSession | null {
   }
 }
 
+export function saveInterviewSession(session: InterviewSession): void {
+  saveInterviewSessionBySessionId(session);
+}
+
+export function loadInterviewSession(): InterviewSession | null {
+  try {
+    const history = getInterviewHistory();
+    const ongoingSession = history.find(s => s.status === 'ongoing');
+    if (ongoingSession) {
+      return loadInterviewSessionBySessionId(ongoingSession.sessionId);
+    }
+    return null;
+  } catch (error) {
+    console.error('Failed to load interview session:', error);
+    return null;
+  }
+}
+
 export function clearInterviewSession(): void {
   try {
-    localStorage.removeItem(SESSION_KEY);
-    console.log('Interview session cleared from local storage');
+    const history = getInterviewHistory();
+    history.forEach(session => {
+      const sessionKey = `${SESSION_KEY_PREFIX}${session.sessionId}`;
+      localStorage.removeItem(sessionKey);
+    });
   } catch (error) {
     console.error('Failed to clear interview session:', error);
   }
@@ -35,11 +58,12 @@ export function clearInterviewSession(): void {
 
 export function saveInterviewResult(sessionId: string, result: InterviewResult): void {
   try {
-    const session = loadInterviewSession();
-    if (session && session.sessionId === sessionId) {
+    const session = loadInterviewSessionBySessionId(sessionId);
+    if (session) {
       session.result = result;
       session.endTime = new Date().toISOString();
-      saveInterviewSession(session);
+      session.status = 'completed';
+      saveInterviewSessionBySessionId(session);
     }
 
     const history = getInterviewHistory();
@@ -47,9 +71,9 @@ export function saveInterviewResult(sessionId: string, result: InterviewResult):
     if (historyItem) {
       historyItem.result = result;
       historyItem.endTime = new Date().toISOString();
+      historyItem.status = 'completed';
       localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
     }
-    console.log('Interview result saved to local storage');
   } catch (error) {
     console.error('Failed to save interview result:', error);
   }
@@ -82,26 +106,18 @@ export function addToHistory(session: InterviewSession): void {
     }
 
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-    console.log('Interview added to history');
   } catch (error) {
     console.error('Failed to add interview to history:', error);
   }
 }
 
 export function getInterviewById(sessionId: string): InterviewSession | null {
-  try {
-    const history = getInterviewHistory();
-    return history.find(item => item.sessionId === sessionId) || null;
-  } catch (error) {
-    console.error('Failed to get interview by ID:', error);
-    return null;
-  }
+  return loadInterviewSessionBySessionId(sessionId);
 }
 
 export function clearInterviewHistory(): void {
   try {
     localStorage.removeItem(HISTORY_KEY);
-    console.log('Interview history cleared');
   } catch (error) {
     console.error('Failed to clear interview history:', error);
   }

@@ -1,13 +1,8 @@
-import { AnalyzeAnswerResponse } from '../../models/interview';
+import { DecisionResponse, FeedbackResponse } from '../../models/interview';
 import { ENV } from '../../utils/env';
 
 const DEEPSEEK_API_URL = ENV.DEEPSEEK_API_URL();
 const DEEPSEEK_API_KEY = ENV.DEEPSEEK_API_KEY();
-
-export interface StreamChunk {
-  content: string;
-  done: boolean;
-}
 
 async function* streamResponse(response: Response): AsyncGenerator<string> {
   const reader = response.body?.getReader();
@@ -51,9 +46,10 @@ async function* streamResponse(response: Response): AsyncGenerator<string> {
   }
 }
 
-export async function* generateQuestion(
-  prompt: string
-): AsyncGenerator<string> {
+export async function makeDecision(
+  systemMessage: string,
+  humanMessage: string
+): Promise<DecisionResponse> {
   const response = await fetch(DEEPSEEK_API_URL, {
     method: 'POST',
     headers: {
@@ -64,49 +60,16 @@ export async function* generateQuestion(
       model: 'deepseek-chat',
       messages: [
         {
-          role: 'user',
-          content: prompt,
+          role: 'system',
+          content: systemMessage,
         },
-      ],
-      stream: true,
-      temperature: 0.7,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    let errorMessage = `HTTP ${response.status}`;
-    try {
-      const error = JSON.parse(errorText);
-      errorMessage = error.error?.message || error.message || errorMessage;
-    } catch {
-      errorMessage = errorText || errorMessage;
-    }
-    throw new Error(errorMessage);
-  }
-
-  yield* streamResponse(response);
-}
-
-export async function analyzeAnswer(
-  prompt: string
-): Promise<AnalyzeAnswerResponse> {
-  const response = await fetch(DEEPSEEK_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [
         {
           role: 'user',
-          content: prompt,
+          content: humanMessage,
         },
       ],
       stream: false,
-      temperature: 0.3,
+      temperature: 0.1,
     }),
   });
 
@@ -125,11 +88,99 @@ export async function analyzeAnswer(
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content || "";
 
-  return parseAnalyzeResponse(content);
+  return parseDecisionResponse(content);
+}
+
+export async function* createQuestion(
+  systemMessage: string,
+  humanMessage: string
+): AsyncGenerator<string> {
+  const response = await fetch(DEEPSEEK_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        {
+          role: 'system',
+          content: systemMessage,
+        },
+        {
+          role: 'user',
+          content: humanMessage,
+        },
+      ],
+      stream: true,
+      temperature: 0.5,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let errorMessage = `HTTP ${response.status}`;
+    try {
+      const error = JSON.parse(errorText);
+      errorMessage = error.error?.message || error.message || errorMessage;
+    } catch {
+      errorMessage = errorText || errorMessage;
+    }
+    throw new Error(errorMessage);
+  }
+
+  yield* streamResponse(response);
+}
+
+export async function createFeedback(
+  systemMessage: string,
+  humanMessage: string
+): Promise<FeedbackResponse> {
+  const response = await fetch(DEEPSEEK_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        {
+          role: 'system',
+          content: systemMessage,
+        },
+        {
+          role: 'user',
+          content: humanMessage,
+        },
+      ],
+      stream: false,
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let errorMessage = `HTTP ${response.status}`;
+    try {
+      const error = JSON.parse(errorText);
+      errorMessage = error.error?.message || error.message || errorMessage;
+    } catch {
+      errorMessage = errorText || errorMessage;
+    }
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content || "";
+
+  return parseFeedbackResponse(content);
 }
 
 export async function summarizeInterview(
-  prompt: string
+  systemMessage: string,
+  humanMessage: string
 ): Promise<{ summary: string; score: number; conclusion: string }> {
   const response = await fetch(DEEPSEEK_API_URL, {
     method: 'POST',
@@ -141,8 +192,12 @@ export async function summarizeInterview(
       model: 'deepseek-chat',
       messages: [
         {
+          role: 'system',
+          content: systemMessage,
+        },
+        {
           role: 'user',
-          content: prompt,
+          content: humanMessage,
         },
       ],
       stream: false,
@@ -168,24 +223,35 @@ export async function summarizeInterview(
   return parseSummaryResponse(content);
 }
 
-function parseAnalyzeResponse(content: string): AnalyzeAnswerResponse {
+function parseDecisionResponse(content: string): DecisionResponse {
   const decisionMatch = content.match(/DECISION:\s*(\w+)/i);
   const reasonMatch = content.match(/REASON:\s*([^\n]+)/i);
-  const feedbackMatch = content.match(/FEEDBACK:\s*([\s\S]*?)(?=SCORE:|$)/i);
-  const scoreMatch = content.match(/SCORE:\s*(\d+)/i);
-  const isCorrectMatch = content.match(/IS_CORRECT:\s*(true|false)/i);
-  const userGivingUpMatch = content.match(/USER_GIVING_UP:\s*(true|false)/i);
 
-  const decision = (decisionMatch?.[1] || 'MOVE_TO_NEXT').toUpperCase() as 
-    'FOLLOW_UP_NEEDED' | 'MOVE_TO_NEXT' | 'END_INTERVIEW';
-  
+  const decisionStr = (decisionMatch?.[1] || 'movenext').toLowerCase();
+  const decision = (decisionStr === 'followup' || decisionStr === 'end') 
+    ? decisionStr as 'followup' | 'end'
+    : 'movenext' as 'movenext';
+
   return {
     decision,
     reason: reasonMatch?.[1]?.trim() || '',
+  };
+}
+
+function parseFeedbackResponse(content: string): FeedbackResponse {
+  const feedbackMatch = content.match(/FEEDBACK:\s*([\s\S]*?)(?=SUMMARY:|NEXT_PHASE:|$)/i);
+  const summaryMatch = content.match(/SUMMARY:\s*([\s\S]*?)(?=NEXT_PHASE:|$)/i);
+  const nextPhaseMatch = content.match(/NEXT_PHASE:\s*(\w+)/i);
+
+  const nextPhase = nextPhaseMatch?.[1]?.toLowerCase();
+  const validPhase = (nextPhase === 'introduction' || nextPhase === 'project' || nextPhase === 'technical') 
+    ? nextPhase as 'introduction' | 'project' | 'technical'
+    : undefined;
+
+  return {
     feedback: feedbackMatch?.[1]?.trim() || '',
-    score: parseInt(scoreMatch?.[1] || '0', 10),
-    isCorrect: isCorrectMatch?.[1]?.toLowerCase() === 'true',
-    userGivingUp: userGivingUpMatch?.[1]?.toLowerCase() === 'true',
+    summary: summaryMatch?.[1]?.trim() || '',
+    nextPhase: validPhase,
   };
 }
 
