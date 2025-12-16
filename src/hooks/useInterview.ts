@@ -15,19 +15,9 @@ interface UseInterviewProps {
   config: InterviewConfig | null;
   sessionId?: string;
   onComplete: (session: InterviewSession) => void;
-  onStreamChunk?: (chunk: string) => void;
-  onStreamComplete?: () => void;
-  onFeedback?: (feedback: string) => void;  // ✅ For non-streaming feedback
 }
 
-export function useInterview({
-  config,
-  sessionId,
-  onComplete,
-  onStreamChunk,
-  onStreamComplete,
-  onFeedback
-}: UseInterviewProps) {
+export function useInterview({ config, sessionId, onComplete }: UseInterviewProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState('');
@@ -106,13 +96,6 @@ export function useInterview({
     if (managerRef.current && !isCompletedRef.current) {
       isCompletedRef.current = true;
       setIsCompleted(true);
-
-      // Stop the timer immediately
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-
       setIsLoading(true);
       try {
         const result = await managerRef.current.manageInterviewState('end');
@@ -120,13 +103,7 @@ export function useInterview({
         if (session.result) {
           saveInterviewResult(session.sessionId, session.result);
         }
-
-        // Wrap callback in try-catch to prevent crashes
-        try {
-          onComplete(session);
-        } catch (error) {
-          console.error('Error in onComplete callback:', error);
-        }
+        onComplete(session);
       } catch (error) {
         console.error('Error ending interview:', error);
       } finally {
@@ -167,20 +144,10 @@ export function useInterview({
               },
             ];
           });
-
-          // ✅ Send chunk to TTS in real-time
-          if (onStreamChunk) {
-            onStreamChunk(chunk);
-          }
         },
       });
 
       setCurrentQuestion(result.question);
-
-      // ✅ Signal streaming complete
-      if (onStreamComplete) {
-        onStreamComplete();
-      }
 
       if (result.question.includes('【Interview ended')) {
         await handleTimeUp();
@@ -190,8 +157,7 @@ export function useInterview({
     } finally {
       setIsLoading(false);
     }
-  }, [handleTimeUp, onStreamChunk, onStreamComplete]);
-
+  }, [handleTimeUp]);
 
   const submitAnswer = useCallback(
     async (answer: string) => {
@@ -242,10 +208,6 @@ export function useInterview({
           },
         });
 
-        if (onStreamComplete) {
-          onStreamComplete();
-        }
-
         if (result.decision.decision === 'end') {
           isCompletedRef.current = true;
           setIsCompleted(true);
@@ -266,7 +228,7 @@ export function useInterview({
         setIsLoading(false);
       }
     },
-    [currentQuestion, isLoading, onComplete, handleTimeUp, onStreamChunk, onStreamComplete]
+    [currentQuestion, isLoading, onComplete, handleTimeUp]
   );
 
   return {
