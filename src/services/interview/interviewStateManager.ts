@@ -5,8 +5,8 @@ import { makeDecision, createQuestion as apiCreateQuestion, createFeedback as ap
 import { buildDecisionPrompt, buildCreateQuestionPrompt, buildCreateFeedbackPrompt, buildSummarizePrompt } from './promptBuilder';
 
 export class InterviewStateManager {
-  private session: InterviewSession;
-  private startTime: Date;
+  private session!: InterviewSession;
+  private startTime!: Date;
   private feedbackWorker: Worker | null = null;
 
   constructor(config: InterviewConfig, sessionId?: string) {
@@ -116,7 +116,7 @@ export class InterviewStateManager {
     this.updateRemainingTime();
 
     if (this.session.remainingTime <= 0) {
-      return { decision: 'end', reason: 'Interview time has ended' };
+      return { decision: 'end' };
     }
 
     const { systemMessage, humanMessage } = buildDecisionPrompt({ question, answer });
@@ -131,7 +131,7 @@ export class InterviewStateManager {
         return decisionResult;
       } catch (retryError) {
         console.error('Error making decision after retry:', retryError);
-        return { decision: 'movenext', reason: 'Error occurred, defaulting to move next' };
+        return { decision: 'movenext' };
       }
     }
   }
@@ -292,7 +292,7 @@ export class InterviewStateManager {
           decision.decision,
           params.question,
           params.answer,
-          params.onChunk || (() => {})
+          params.onChunk || (() => { })
         );
 
         this.createFeedback().catch(err => {

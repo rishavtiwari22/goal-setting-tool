@@ -7,7 +7,7 @@ const DEEPSEEK_API_KEY = ENV.DEEPSEEK_API_KEY();
 async function* streamResponse(response: Response): AsyncGenerator<string> {
   const reader = response.body?.getReader();
   if (!reader) throw new Error("Response body is not readable");
-  
+
   const decoder = new TextDecoder();
   let buffer = "";
 
@@ -15,7 +15,7 @@ async function* streamResponse(response: Response): AsyncGenerator<string> {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      
+
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
       buffer = lines.pop() || "";
@@ -23,7 +23,7 @@ async function* streamResponse(response: Response): AsyncGenerator<string> {
       for (const line of lines) {
         const trimmedLine = line.trim();
         if (!trimmedLine) continue;
-        
+
         if (trimmedLine.startsWith("data: ")) {
           const data = trimmedLine.slice(6).trim();
           if (data === "[DONE]") {
@@ -68,6 +68,7 @@ export async function makeDecision(
           content: humanMessage,
         },
       ],
+      response_format: { type: 'json_object' },  // ✅ Use JSON mode
       stream: false,
       temperature: 0.1,
     }),
@@ -86,9 +87,14 @@ export async function makeDecision(
   }
 
   const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || "";
+  const content = data.choices?.[0]?.message?.content || '{}';
 
-  return parseDecisionResponse(content);
+  // Direct JSON parse - no manual parsing needed
+  const result = JSON.parse(content);
+
+  return {
+    decision: result.decision || 'movenext',
+  };
 }
 
 export async function* createQuestion(
@@ -155,8 +161,9 @@ export async function createFeedback(
           content: humanMessage,
         },
       ],
+      response_format: { type: 'json_object' },  // ✅ Use JSON mode
       stream: false,
-      temperature: 0.7,
+      temperature: 0.3,
     }),
   });
 
@@ -173,9 +180,16 @@ export async function createFeedback(
   }
 
   const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || "";
+  const content = data.choices?.[0]?.message?.content || '{}';
 
-  return parseFeedbackResponse(content);
+  // Direct JSON parse
+  const result = JSON.parse(content);
+
+  return {
+    feedback: result.feedback || '',
+    summary: result.summary || '',
+    nextPhase: result.nextPhase,
+  };
 }
 
 export async function summarizeInterview(
@@ -200,6 +214,7 @@ export async function summarizeInterview(
           content: humanMessage,
         },
       ],
+      response_format: { type: 'json_object' },  // ✅ Use JSON mode
       stream: false,
       temperature: 0.5,
     }),
@@ -218,53 +233,15 @@ export async function summarizeInterview(
   }
 
   const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || "";
+  const content = data.choices?.[0]?.message?.content || '{}';
 
-  return parseSummaryResponse(content);
-}
-
-function parseDecisionResponse(content: string): DecisionResponse {
-  const decisionMatch = content.match(/DECISION:\s*(\w+)/i);
-  const reasonMatch = content.match(/REASON:\s*([^\n]+)/i);
-
-  const decisionStr = (decisionMatch?.[1] || 'movenext').toLowerCase();
-  const decision = (decisionStr === 'followup' || decisionStr === 'end') 
-    ? decisionStr as 'followup' | 'end'
-    : 'movenext' as 'movenext';
+  // Direct JSON parse
+  const result = JSON.parse(content);
 
   return {
-    decision,
-    reason: reasonMatch?.[1]?.trim() || '',
+    summary: result.summary || '',
+    score: result.score || 0,
+    conclusion: result.conclusion || '',
   };
 }
 
-function parseFeedbackResponse(content: string): FeedbackResponse {
-  const feedbackMatch = content.match(/FEEDBACK:\s*([\s\S]*?)(?=SUMMARY:|NEXT_PHASE:|$)/i);
-  const summaryMatch = content.match(/SUMMARY:\s*([\s\S]*?)(?=NEXT_PHASE:|$)/i);
-  const nextPhaseMatch = content.match(/NEXT_PHASE:\s*(\w+)/i);
-
-  const nextPhase = nextPhaseMatch?.[1]?.toLowerCase();
-  const validPhase = (nextPhase === 'introduction' || nextPhase === 'project' || nextPhase === 'technical') 
-    ? nextPhase as 'introduction' | 'project' | 'technical'
-    : undefined;
-
-  return {
-    feedback: feedbackMatch?.[1]?.trim() || '',
-    summary: summaryMatch?.[1]?.trim() || '',
-    nextPhase: validPhase,
-  };
-}
-
-function parseSummaryResponse(content: string): { summary: string; score: number; conclusion: string } {
-  const scoreMatch = content.match(/(?:score|评分)[:\s]*(\d+(?:\.\d+)?)/i);
-  const score = scoreMatch ? parseFloat(scoreMatch[1]) : 0;
-
-  const summaryMatch = content.match(/(?:summary|总结)[:\s]*([\s\S]*?)(?=(?:conclusion|结论|score|评分)|$)/i);
-  const conclusionMatch = content.match(/(?:conclusion|结论)[:\s]*([\s\S]*?)$/i);
-
-  return {
-    summary: summaryMatch?.[1]?.trim() || content,
-    score: Math.round(score * 10) / 10,
-    conclusion: conclusionMatch?.[1]?.trim() || summaryMatch?.[1]?.trim() || content,
-  };
-}
