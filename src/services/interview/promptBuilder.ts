@@ -314,7 +314,7 @@ Based on the above information, summarize the candidate's performance in 【${pa
 You must respond with ONLY valid JSON:
 {{
   "summary": "detailed summary text",
-  "score": number (0-10),
+  "score": number (0-5),
   "conclusion": "final conclusion text"
 }}`;
 
