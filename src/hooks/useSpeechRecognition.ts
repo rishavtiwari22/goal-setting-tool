@@ -10,7 +10,7 @@ export function useSpeechRecognition({ onSpeechResult, enabled = true }: UseSpee
   const [isListening, setIsListening] = useState(false);
   const [isSpeechMode, setIsSpeechMode] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
-  
+
   const sttLogicRef = useRef<ResetSTTLogic | null>(null);
   const isListeningRef = useRef(false);
   const isSpeechModeRef = useRef(true);
@@ -71,25 +71,25 @@ export function useSpeechRecognition({ onSpeechResult, enabled = true }: UseSpee
 
           console.log(`[STT] Received transcript: "${transcript.substring(0, 50)}..."`);
 
-          // VAD: 2.5 seconds silence triggers send
+          // 1.5 seconds pause timeout
           silenceTimerRef.current = setTimeout(() => {
             const logic = sttLogicRef.current;
             if (logic && isListeningRef.current) {
               const fullTranscript = logic.getFullTranscript();
               if (fullTranscript && fullTranscript.trim().length > 0) {
                 console.log(`Silence detected - sending: "${fullTranscript.substring(0, 50)}..."`);
-                
+
                 logic.stop();
                 setIsListening(false);
                 isListeningRef.current = false;
-                
+
                 resumeAfterPlaybackRef.current = true;
-                
+
                 onSpeechResultRef.current(fullTranscript);
                 logic.clearTranscript();
               }
             }
-          }, 2500);
+          }, 1500);
         },
         {
           sessionDurationMs: 60000,
@@ -115,7 +115,7 @@ export function useSpeechRecognition({ onSpeechResult, enabled = true }: UseSpee
 
   const startListening = useCallback(async () => {
     const sttLogic = sttLogicRef.current;
-    
+
     if (!sttLogic) {
       console.error("STT Logic not initialized");
       return;
@@ -131,7 +131,7 @@ export function useSpeechRecognition({ onSpeechResult, enabled = true }: UseSpee
     }
 
     console.log("Starting listening...");
-    
+
     // Update state synchronously
     setIsSpeechMode(true);
     isSpeechModeRef.current = true;
@@ -154,7 +154,7 @@ export function useSpeechRecognition({ onSpeechResult, enabled = true }: UseSpee
   const stopListening = useCallback(() => {
     console.log("Stopping listening...");
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-    
+
     sttLogicRef.current?.stop();
     setIsListening(false);
     isListeningRef.current = false;
