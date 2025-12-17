@@ -116,7 +116,7 @@ export class InterviewStateManager {
     this.updateRemainingTime();
 
     if (this.session.remainingTime <= 0) {
-      return { decision: 'end', reason: 'Interview time has ended' };
+      return { decision: 'end' };
     }
 
     const { systemMessage, humanMessage } = buildDecisionPrompt({ question, answer });
@@ -131,7 +131,7 @@ export class InterviewStateManager {
         return decisionResult;
       } catch (retryError) {
         console.error('Error making decision after retry:', retryError);
-        return { decision: 'movenext', reason: 'Error occurred, defaulting to move next' };
+        return { decision: 'movenext' };
       }
     }
   }
