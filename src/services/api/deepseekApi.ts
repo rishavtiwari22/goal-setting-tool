@@ -89,12 +89,17 @@ export async function makeDecision(
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content || '{}';
 
-  // Direct JSON parse - no manual parsing needed
-  const result = JSON.parse(content);
-
-  return {
-    decision: result.decision || 'movenext',
-  };
+  // Safe JSON parse with error handling
+  try {
+    const result = JSON.parse(content);
+    return {
+      decision: result.decision || 'movenext',
+    };
+  } catch (parseError) {
+    console.error('Failed to parse decision response:', parseError, 'Content:', content);
+    // Default to movenext on parse failure
+    return { decision: 'movenext' };
+  }
 }
 
 export async function* createQuestion(
@@ -182,14 +187,21 @@ export async function createFeedback(
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content || '{}';
 
-  // Direct JSON parse
-  const result = JSON.parse(content);
-
-  return {
-    feedback: result.feedback || '',
-    summary: result.summary || '',
-    nextPhase: result.nextPhase,
-  };
+  // Safe JSON parse with error handling
+  try {
+    const result = JSON.parse(content);
+    return {
+      feedback: result.feedback || '',
+      summary: result.summary || '',
+      nextPhase: result.nextPhase,
+      currentProjectComplete: result.currentProjectComplete,
+      projectsMentioned: result.projectsMentioned,
+    };
+  } catch (parseError) {
+    console.error('Failed to parse feedback response:', parseError, 'Content:', content);
+    // Return empty feedback on parse failure
+    return { feedback: '', summary: '' };
+  }
 }
 
 export async function summarizeInterview(
@@ -235,13 +247,22 @@ export async function summarizeInterview(
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content || '{}';
 
-  // Direct JSON parse
-  const result = JSON.parse(content);
-
-  return {
-    summary: result.summary || '',
-    score: result.score || 0,
-    conclusion: result.conclusion || '',
-  };
+  // Safe JSON parse with error handling
+  try {
+    const result = JSON.parse(content);
+    return {
+      summary: result.summary || '',
+      score: result.score || 0,
+      conclusion: result.conclusion || '',
+    };
+  } catch (parseError) {
+    console.error('Failed to parse summarize response:', parseError, 'Content:', content);
+    // Return default values on parse failure
+    return {
+      summary: 'Unable to generate summary due to an error.',
+      score: 0,
+      conclusion: 'Interview completed but summary generation failed.',
+    };
+  }
 }
 

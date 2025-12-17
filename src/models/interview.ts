@@ -11,6 +11,15 @@ export interface QAHistoryItem {
 
 export type InterviewStatus = 'ongoing' | 'completed';
 
+// Track discussed projects for dynamic phase transitions
+export interface ProjectInfo {
+  name: string;
+  role?: string;
+  technologies: string[];
+  discussedInPhases: InterviewPhase[];
+  technicalQuestionsAsked: string[];
+}
+
 export interface InterviewSession {
   sessionId: string;
   userId: string;
@@ -31,6 +40,20 @@ export interface InterviewSession {
   upcomingQuestions?: string[];
   feedbackHistory?: string[];
   summary?: string;
+
+  // Phase 2: Irrelevant answer tracking
+  consecutiveIrrelevantCount: number;       // Track consecutive irrelevant answers
+  currentTopicFollowupCount: number;        // Track follow-ups for current topic
+
+  // Phase 3: Dynamic phase transitions
+  discussedProjects: ProjectInfo[];         // Track projects discussed
+  currentProjectIndex: number;              // Which project we're currently discussing
+
+  // Phase question tracking - for minimum questions per phase
+  introductionQuestionCount: number;        // Questions asked in introduction phase
+  projectQuestionCount: number;             // Questions asked in project phase
+  technicalQuestionCount: number;           // Questions asked in technical phase
+  currentProjectQuestionCount: number;      // Technical questions on current project (reset on new project)
 }
 
 export interface InterviewResult {
@@ -53,6 +76,7 @@ export interface AnalyzeAnswerResponse {
 
 export interface DecisionResponse {
   decision: 'followup' | 'movenext' | 'end';
+  reason?: string;  // Optional reason for the decision
 }
 
 export interface QuestionResponse {
@@ -64,4 +88,6 @@ export interface FeedbackResponse {
   feedback: string;
   summary: string;
   nextPhase?: 'introduction' | 'project' | 'technical';
+  currentProjectComplete?: boolean;     // Phase 3: Is current project discussion complete
+  projectsMentioned?: string[];         // Phase 3: Projects mentioned in this Q&A
 }

@@ -1,4 +1,4 @@
-import { QAHistoryItem, InterviewPhase } from '../../models/interview';
+import { QAHistoryItem, InterviewPhase, ProjectInfo } from '../../models/interview';
 
 function formatQAHistory(qaHistory: QAHistoryItem[]): string {
   if (qaHistory.length === 0) {
@@ -32,29 +32,76 @@ function formatQASummary(qaHistory: QAHistoryItem[], useSummary: boolean, existi
     .join("\n\n");
 }
 
+// Format recent Q&A history for decision context
+function formatRecentQAForDecision(qaHistory: QAHistoryItem[], count: number = 3): string {
+  if (qaHistory.length === 0) {
+    return "No previous Q&A.";
+  }
+  const recent = qaHistory.slice(-count);
+  return recent
+    .map((qa, index) => `Q: ${qa.question}\nA: ${qa.answer}`)
+    .join("\n---\n");
+}
+
 export interface BuildDecisionPromptParams {
   question: string;
   answer: string;
+  recentQAHistory?: QAHistoryItem[];  // Phase 2: Include recent history for context
+  consecutiveIrrelevantCount?: number; // Phase 2: Current count of consecutive irrelevant answers
+  currentTopicFollowupCount?: number;  // Phase 2: Current count of follow-ups for this topic
 }
 
 export function buildDecisionPrompt(params: BuildDecisionPromptParams): { systemMessage: string; humanMessage: string } {
-  const systemMessage = `You are a technical interviewer analyzing candidate responses. Make deterministic decisions about follow-up questions.
+  const recentContext = params.recentQAHistory && params.recentQAHistory.length > 0
+    ? formatRecentQAForDecision(params.recentQAHistory, 3)
+    : '';
 
-Decision Rules:
-- If answer is gibberish, incoherent, or completely unclear → followup
-- If answer provides ANY meaningful information → movenext
-- If user wants to end interview → end
-- If answer is too brief (1-2 words with no context) → followup
-- DEFAULT: movenext
+  const consecutiveCount = params.consecutiveIrrelevantCount ?? 0;
+  const followupCount = params.currentTopicFollowupCount ?? 0;
 
-You must respond with ONLY valid JSON in this exact format:
+  const irrelevantInfo = `\nConsecutive Non-Substantive Answers: ${consecutiveCount}`;
+  const followupInfo = `\nFollow-up Questions on Current Topic: ${followupCount}`;
+
+  const systemMessage = `You are a technical interviewer analyzing candidate responses. Make deterministic decisions about the interview flow.
+
+CRITICAL: You must recognize when a candidate is UNQUALIFIED or DISENGAGED and end the interview gracefully.
+
+Decision Rules (in priority order):
+
+1. END THE INTERVIEW if:
+   - User explicitly says "stop", "end", "quit", "exit", "done", etc.
+   - Candidate has given ${consecutiveCount >= 2 ? 'MULTIPLE' : 'some'} non-substantive answers AND this answer shows:
+     * No relevant technical knowledge
+     * Refusal to engage (e.g., "I don't know", "never", "I won't")
+     * Off-topic or nonsensical responses
+   - After 3+ non-substantive answers, the candidate is clearly not a fit → END
+
+2. FOLLOW-UP if (only if there's hope of a better answer):
+   - Answer is too brief but shows SOME engagement
+   - Answer needs minor clarification
+   - This is the FIRST vague answer on this topic
+
+3. MOVE TO NEXT TOPIC if:
+   - Answer provides meaningful information
+   - Candidate demonstrates some relevant knowledge
+   - Further probing won't yield better results
+
+${irrelevantInfo}${followupInfo}
+
+IMPORTANT: Do NOT keep asking follow-ups to an unqualified or disengaged candidate. 
+${consecutiveCount >= 2 ? '⚠️ WARNING: Multiple non-substantive answers detected. Strongly consider "end" if this answer also lacks substance.' : ''}
+
+You must respond with ONLY valid JSON:
 {{
-  "decision": "followup" | "movenext" | "end"
-}}
+  "decision": "followup" | "movenext" | "end",
+  "reason": "brief explanation"
+}}`;
 
-No other text, no explanation, just the JSON object.`;
+  let humanMessage = `Question: ${params.question}\nAnswer: ${params.answer}`;
 
-  const humanMessage = `Question: ${params.question}\nAnswer: ${params.answer}`;
+  if (recentContext) {
+    humanMessage = `Recent Conversation:\n${recentContext}\n\n---\nCurrent:\nQuestion: ${params.question}\nAnswer: ${params.answer}`;
+  }
 
   return { systemMessage, humanMessage };
 }
@@ -94,15 +141,21 @@ Knowledge Areas: {knowledge_points}
 Difficulty: {difficulty}
 Language: {language}
 Remaining Time: {remaining_time} minutes
+Introduction Questions Asked So Far: {intro_question_count}
 
 Current Phase: Introduction
 
 Phase Guidelines:
-- Ask candidate to introduce themselves: name, background, years of experience
-- This should be a warm, welcoming open-ended question
-- Only ask this ONCE at the very beginning
+- Build rapport with the candidate through 2-3 introduction questions
+- Question 1: Ask candidate to introduce themselves (name, background, years of experience)
+- Question 2: Ask about what excites them about this role or their career motivation
+- Question 3 (optional): Ask about their preferred working style or team collaboration approach
+- Keep questions warm, welcoming, and conversational
+- DO NOT jump to technical questions yet - this is about building rapport
 
-Generate the next question following the interview flow. The question should be open-ended, conversational, and assess basic information. Do NOT include phase labels in the question.`;
+After 2-3 introduction questions, the feedback system will transition to project discussion.
+
+Generate the next introduction question. Be warm and conversational. Do NOT include phase labels in the question.`;
 
 const CREATE_QUESTION_MOVENEXT_PROJECT_SYSTEM = `You are a senior technical interviewer conducting an interview for {job_title}.
 
@@ -113,11 +166,14 @@ Language: {language}
 Remaining Time: {remaining_time} minutes
 
 Current Phase: Project Discussion
+{discussed_projects_context}
 
 Phase Guidelines:
-- Ask about 1-2 recent projects they've worked on
+- Ask about recent projects they've worked on
 - Focus on their role, technologies used, and challenges faced
 - These should be open-ended questions
+- DO NOT ask about projects that have already been fully discussed
+- If returning from technical phase, ask about a NEW project they haven't mentioned yet
 
 Generate the next question following the interview flow. The question should be open-ended, conversational, and assess project experience. Do NOT include phase labels in the question.`;
 
@@ -128,17 +184,24 @@ Knowledge Areas: {knowledge_points}
 Difficulty: {difficulty}
 Language: {language}
 Remaining Time: {remaining_time} minutes
+Technical Questions on Current Project: {current_project_question_count}
+{discussed_projects_context}
 
 Current Phase: Technical Discussion
 
 Phase Guidelines:
-- Ask 3-5 technical questions requiring explanations
-- Questions should be open-ended and conversational
+- Ask technical questions requiring explanations (open-ended, conversational)
 - Cover key concepts from {knowledge_points}
 - Ask about their understanding, approach, and reasoning
 - NO multiple choice - all questions should require explanations
 
-Generate the next question following the interview flow. The question should be open-ended, conversational, and assess technical competency. Do NOT include phase labels in the question.`;
+IMPORTANT - Question Limits Per Project:
+- After 2-3 technical questions about the same project, you MUST either:
+  a) Ask about a DIFFERENT aspect/technology from their experience, OR
+  b) Move to general technical concepts not tied to a specific project
+- DO NOT keep drilling the same project repeatedly beyond 3 questions
+
+Generate the next question. Vary the topics to keep the interview engaging. Do NOT include phase labels.`;
 
 export interface BuildCreateQuestionPromptParams {
   jobTitle: string;
@@ -153,12 +216,32 @@ export interface BuildCreateQuestionPromptParams {
   answer?: string;
   qaHistory: QAHistoryItem[];
   summary?: string;
+  discussedProjects?: ProjectInfo[];  // Phase 3: Projects already discussed
+  // Question count tracking
+  introductionQuestionCount?: number;
+  currentProjectQuestionCount?: number;
+}
+
+// Helper function to format discussed projects for prompts
+function formatDiscussedProjects(projects?: ProjectInfo[]): string {
+  if (!projects || projects.length === 0) {
+    return '';
+  }
+
+  const projectList = projects.map(p => {
+    const techStr = p.technologies.length > 0 ? ` (Technologies: ${p.technologies.join(', ')})` : '';
+    const phasesStr = p.discussedInPhases.length > 0 ? ` [Discussed in: ${p.discussedInPhases.join(', ')}]` : '';
+    return `- ${p.name}${techStr}${phasesStr}`;
+  }).join('\n');
+
+  return `\nProjects Already Discussed:\n${projectList}\n\nDO NOT repeat questions about these projects. Ask about NEW projects or unexplored aspects.`;
 }
 
 export function buildCreateQuestionPrompt(params: BuildCreateQuestionPromptParams): { systemMessage: string; humanMessage: string } {
   const knowledgePointsStr = params.knowledgePoints.join(", ");
   const useSummary = params.qaHistory.length > 3;
   const context = formatQASummary(params.qaHistory, useSummary, params.summary);
+  const discussedProjectsContext = formatDiscussedProjects(params.discussedProjects);
 
   let systemTemplate = '';
 
@@ -186,7 +269,10 @@ export function buildCreateQuestionPrompt(params: BuildCreateQuestionPromptParam
     .replace(/{knowledge_points}/g, knowledgePointsStr)
     .replace(/{difficulty}/g, params.difficulty)
     .replace(/{language}/g, params.language)
-    .replace(/{remaining_time}/g, params.remainingTime.toString());
+    .replace(/{remaining_time}/g, params.remainingTime.toString())
+    .replace(/{discussed_projects_context}/g, discussedProjectsContext)
+    .replace(/{intro_question_count}/g, (params.introductionQuestionCount ?? 0).toString())
+    .replace(/{current_project_question_count}/g, (params.currentProjectQuestionCount ?? 0).toString());
 
   let humanMessage = context;
 
@@ -201,13 +287,19 @@ const CREATE_FEEDBACK_INTRO_SYSTEM = `You are a technical interviewer providing 
 
 Job Title: {job_title}
 Knowledge Areas: {knowledge_points}
+Introduction Questions Asked So Far: {intro_question_count}
 
 Current Phase: Introduction
 
+Phase Transition Rules:
+- Stay in "introduction" if fewer than 2 questions have been asked
+- Move to "project" after 2-3 introduction questions when candidate has shared sufficient background
+- If candidate naturally mentions projects, still complete at least 2 intro questions first
+
 Generate:
-1. Feedback for the most recent answer (if applicable)
-2. Summary of all questions and answers so far (concise, for use in generating next questions)
-3. Next phase determination: Based on the conversation, determine if we should move to 'project' phase or stay in 'introduction'
+1. Feedback for the most recent answer (brief acknowledgment)
+2. Summary of what we've learned about the candidate so far
+3. Next phase: "introduction" (if < 2 questions) OR "project" (if >= 2 questions and rapport established)
 
 You must respond with ONLY valid JSON:
 {{
@@ -239,19 +331,27 @@ const CREATE_FEEDBACK_TECHNICAL_SYSTEM = `You are a technical interviewer provid
 
 Job Title: {job_title}
 Knowledge Areas: {knowledge_points}
+{discussed_projects_context}
 
 Current Phase: Technical Discussion
 
 Generate:
 1. Feedback for the most recent answer (if applicable)
 2. Summary of all questions and answers so far (concise, for use in generating next questions)
-3. Next phase determination: Based on the conversation, determine if we should stay in 'technical' phase
+3. Next phase determination:
+   - If technical discussion for the current project is COMPLETE and candidate mentioned other projects we haven't explored technically → return "project" to go back and discuss another project
+   - If more technical questions are needed for current project → return "technical"
+   - If all projects have been fully explored technically → return "technical" for general technical questions
+4. Whether the current project's technical discussion is complete
+5. List any project names mentioned in the conversation
 
 You must respond with ONLY valid JSON:
 {{
   "feedback": "string",
   "summary": "string",
-  "nextPhase": "technical"
+  "nextPhase": "project" | "technical",
+  "currentProjectComplete": boolean,
+  "projectsMentioned": ["array of project names mentioned"]
 }}`;
 
 export interface BuildCreateFeedbackPromptParams {
@@ -260,12 +360,17 @@ export interface BuildCreateFeedbackPromptParams {
   qaHistory: QAHistoryItem[];
   summary?: string;
   currentPhase: InterviewPhase;
+  discussedProjects?: ProjectInfo[];  // Phase 3: Projects already discussed
+  // Question count tracking
+  introductionQuestionCount?: number;
+  currentProjectQuestionCount?: number;
 }
 
 export function buildCreateFeedbackPrompt(params: BuildCreateFeedbackPromptParams): { systemMessage: string; humanMessage: string } {
   const knowledgePointsStr = params.knowledgePoints.join(", ");
   const useSummary = params.qaHistory.length > 3;
   const qaSummary = formatQASummary(params.qaHistory, useSummary, params.summary);
+  const discussedProjectsContext = formatDiscussedProjects(params.discussedProjects);
 
   let systemTemplate = '';
 
@@ -279,7 +384,10 @@ export function buildCreateFeedbackPrompt(params: BuildCreateFeedbackPromptParam
 
   const systemMessage = systemTemplate
     .replace(/{job_title}/g, params.jobTitle)
-    .replace(/{knowledge_points}/g, knowledgePointsStr);
+    .replace(/{knowledge_points}/g, knowledgePointsStr)
+    .replace(/{discussed_projects_context}/g, discussedProjectsContext)
+    .replace(/{intro_question_count}/g, (params.introductionQuestionCount ?? 0).toString())
+    .replace(/{current_project_question_count}/g, (params.currentProjectQuestionCount ?? 0).toString());
 
   const humanMessage = qaSummary;
 
