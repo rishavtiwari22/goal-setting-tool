@@ -1,13 +1,16 @@
 import { InterviewConfig } from './interviewEngine';
-import { InterviewSession, DecisionResponse, InterviewPhase } from '../../models/interview';
+import { InterviewSession, DecisionResponse, InterviewPhase, ProjectInfo } from '../../models/interview';
 import { loadInterviewSessionBySessionId, saveInterviewSessionBySessionId } from '../storage/interviewStorage';
 import { makeDecision, createQuestion as apiCreateQuestion, createFeedback as apiCreateFeedback, summarizeInterview } from '../api/deepseekApi';
 import { buildDecisionPrompt, buildCreateQuestionPrompt, buildCreateFeedbackPrompt, buildSummarizePrompt } from './promptBuilder';
 
+// Configuration constants for Phase 2: Irrelevant answer handling
+const MAX_CONSECUTIVE_IRRELEVANT = 3;  // Max consecutive irrelevant answers before phase transition
+const MAX_TOPIC_FOLLOWUPS = 3;         // Max follow-ups on a single topic before moving on
+
 export class InterviewStateManager {
   private session!: InterviewSession;
   private startTime!: Date;
-  private feedbackWorker: Worker | null = null;
 
   constructor(config: InterviewConfig, sessionId?: string) {
     if (sessionId) {
@@ -15,6 +18,8 @@ export class InterviewStateManager {
       if (existingSession && existingSession.status === 'ongoing') {
         this.session = existingSession;
         this.startTime = new Date(existingSession.startTime);
+        // Ensure new fields have default values for existing sessions
+        this.migrateSessionFields();
         this.checkAndRecoverFeedback();
       } else {
         this.initializeNewSession(config);
@@ -24,10 +29,39 @@ export class InterviewStateManager {
     }
   }
 
+  // Migrate existing sessions to have new fields
+  private migrateSessionFields(): void {
+    if (this.session.consecutiveIrrelevantCount === undefined) {
+      this.session.consecutiveIrrelevantCount = 0;
+    }
+    if (this.session.currentTopicFollowupCount === undefined) {
+      this.session.currentTopicFollowupCount = 0;
+    }
+    if (this.session.discussedProjects === undefined) {
+      this.session.discussedProjects = [];
+    }
+    if (this.session.currentProjectIndex === undefined) {
+      this.session.currentProjectIndex = 0;
+    }
+    // Phase question counts
+    if (this.session.introductionQuestionCount === undefined) {
+      this.session.introductionQuestionCount = 0;
+    }
+    if (this.session.projectQuestionCount === undefined) {
+      this.session.projectQuestionCount = 0;
+    }
+    if (this.session.technicalQuestionCount === undefined) {
+      this.session.technicalQuestionCount = 0;
+    }
+    if (this.session.currentProjectQuestionCount === undefined) {
+      this.session.currentProjectQuestionCount = 0;
+    }
+  }
+
   private initializeNewSession(config: InterviewConfig): void {
     this.startTime = new Date();
     this.session = {
-      sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      sessionId: `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
       userId: config.userId,
       jobId: config.jobId,
       jobTitle: config.jobTitle,
@@ -43,6 +77,17 @@ export class InterviewStateManager {
       examinationPoints: config.examinationPoints,
       status: 'ongoing',
       upcomingQuestions: [],
+      // Phase 2: Irrelevant answer tracking
+      consecutiveIrrelevantCount: 0,
+      currentTopicFollowupCount: 0,
+      // Phase 3: Dynamic phase transitions
+      discussedProjects: [],
+      currentProjectIndex: 0,
+      // Phase question counts
+      introductionQuestionCount: 0,
+      projectQuestionCount: 0,
+      technicalQuestionCount: 0,
+      currentProjectQuestionCount: 0,
     };
     this.saveSession();
   }
@@ -88,6 +133,9 @@ export class InterviewStateManager {
       decision: 'movenext',
       qaHistory: this.session.qaHistory,
       summary: this.session.summary,
+      discussedProjects: this.session.discussedProjects,
+      introductionQuestionCount: this.session.introductionQuestionCount,
+      currentProjectQuestionCount: this.session.currentProjectQuestionCount,
     });
 
     let fullQuestion = '';
@@ -119,21 +167,95 @@ export class InterviewStateManager {
       return { decision: 'end' };
     }
 
-    const { systemMessage, humanMessage } = buildDecisionPrompt({ question, answer });
+    // Phase 2: Include recent history and counters in decision prompt
+    const recentHistory = this.session.qaHistory.slice(-3);
+
+    const { systemMessage, humanMessage } = buildDecisionPrompt({
+      question,
+      answer,
+      recentQAHistory: recentHistory,
+      consecutiveIrrelevantCount: this.session.consecutiveIrrelevantCount,
+      currentTopicFollowupCount: this.session.currentTopicFollowupCount,
+    });
 
     try {
-      const decisionResult = await makeDecision(systemMessage, humanMessage);
+      let decisionResult = await makeDecision(systemMessage, humanMessage);
+
+      // Phase 2: Apply counter logic for irrelevant answer handling
+      decisionResult = this.applyCounterLogic(decisionResult);
+
       return decisionResult;
     } catch (error) {
       console.error('Error making decision, retrying once:', error);
       try {
-        const decisionResult = await makeDecision(systemMessage, humanMessage);
+        let decisionResult = await makeDecision(systemMessage, humanMessage);
+        decisionResult = this.applyCounterLogic(decisionResult);
         return decisionResult;
       } catch (retryError) {
         console.error('Error making decision after retry:', retryError);
         return { decision: 'movenext' };
       }
     }
+  }
+
+  // Phase 2: Apply counter logic and determine if we should force transition or end
+  private applyCounterLogic(decisionResult: DecisionResponse): DecisionResponse {
+    // If AI already decided to end (detected unqualified/disengaged candidate), respect that
+    if (decisionResult.decision === 'end') {
+      console.log('AI decided to end interview:', decisionResult.reason);
+      return decisionResult;
+    }
+
+    if (decisionResult.decision === 'followup') {
+      // Increment counters for follow-up decisions
+      this.session.consecutiveIrrelevantCount++;
+      this.session.currentTopicFollowupCount++;
+
+      console.log(`Consecutive irrelevant: ${this.session.consecutiveIrrelevantCount}, Topic follow-ups: ${this.session.currentTopicFollowupCount}`);
+
+      // Check if we've reached max consecutive irrelevant answers
+      if (this.session.consecutiveIrrelevantCount >= MAX_CONSECUTIVE_IRRELEVANT) {
+        // If already in technical phase (last phase), END the interview
+        if (this.session.currentPhase === 'technical') {
+          console.log('Max irrelevant answers in technical phase. Ending interview - candidate unqualified.');
+          return { decision: 'end', reason: 'candidate_unqualified' };
+        }
+
+        console.log(`Max consecutive irrelevant answers (${MAX_CONSECUTIVE_IRRELEVANT}) reached. Moving to next phase.`);
+        // Force phase transition
+        this.forcePhaseTransition();
+        // Reset counters and move to next topic
+        this.session.consecutiveIrrelevantCount = 0;
+        this.session.currentTopicFollowupCount = 0;
+        return { decision: 'movenext', reason: 'max_irrelevant_reached' };
+      }
+
+      // Check if we've reached max follow-ups for this topic
+      if (this.session.currentTopicFollowupCount >= MAX_TOPIC_FOLLOWUPS) {
+        console.log(`Max topic follow-ups (${MAX_TOPIC_FOLLOWUPS}) reached. Moving to next topic.`);
+        this.session.currentTopicFollowupCount = 0;
+        return { decision: 'movenext', reason: 'max_followups_reached' };
+      }
+    } else if (decisionResult.decision === 'movenext') {
+      // Reset counters on relevant answer
+      this.session.consecutiveIrrelevantCount = 0;
+      this.session.currentTopicFollowupCount = 0;
+    }
+
+    this.saveSession();
+    return decisionResult;
+  }
+
+  // Phase 2: Force transition to next phase when max irrelevant reached
+  private forcePhaseTransition(): void {
+    const phaseOrder: InterviewPhase[] = ['introduction', 'project', 'technical'];
+    const currentIndex = phaseOrder.indexOf(this.session.currentPhase);
+
+    if (currentIndex < phaseOrder.length - 1) {
+      this.session.currentPhase = phaseOrder[currentIndex + 1];
+      console.log(`Forced phase transition to: ${this.session.currentPhase}`);
+    }
+    // If already in technical phase, stay there but continue
   }
 
   async createQuestion(
@@ -162,6 +284,9 @@ export class InterviewStateManager {
       answer: currentAnswer,
       qaHistory: this.session.qaHistory,
       summary: this.session.summary,
+      discussedProjects: this.session.discussedProjects,
+      introductionQuestionCount: this.session.introductionQuestionCount,
+      currentProjectQuestionCount: this.session.currentProjectQuestionCount,
     });
 
     let fullQuestion = '';
@@ -191,6 +316,9 @@ export class InterviewStateManager {
       return;
     }
 
+    // Increment question count for current phase BEFORE generating feedback
+    this.incrementPhaseQuestionCount();
+
     try {
       const { systemMessage, humanMessage } = buildCreateFeedbackPrompt({
         jobTitle: this.session.jobTitle,
@@ -198,6 +326,9 @@ export class InterviewStateManager {
         qaHistory: this.session.qaHistory,
         summary: this.session.summary,
         currentPhase: this.session.currentPhase,
+        discussedProjects: this.session.discussedProjects,
+        introductionQuestionCount: this.session.introductionQuestionCount,
+        currentProjectQuestionCount: this.session.currentProjectQuestionCount,
       });
 
       const feedbackResult = await apiCreateFeedback(systemMessage, humanMessage);
@@ -208,10 +339,74 @@ export class InterviewStateManager {
       this.session.feedbackHistory.push(feedbackResult.feedback);
 
       this.session.summary = feedbackResult.summary;
+
+      // Track phase transition
+      const previousPhase = this.session.currentPhase;
       this.session.currentPhase = feedbackResult.nextPhase || this.session.currentPhase;
+
+      // Log phase transitions for debugging
+      if (previousPhase !== this.session.currentPhase) {
+        console.log(`Phase transition: ${previousPhase} → ${this.session.currentPhase}`);
+      }
+
+      // Phase 3: Handle project tracking from feedback
+      if (feedbackResult.currentProjectComplete) {
+        this.session.currentProjectIndex++;
+        this.session.currentProjectQuestionCount = 0; // Reset for new project
+        console.log(`Current project complete. Moving to project index: ${this.session.currentProjectIndex}`);
+      }
+
+      // Phase 3: Track mentioned projects
+      if (feedbackResult.projectsMentioned && feedbackResult.projectsMentioned.length > 0) {
+        this.updateDiscussedProjects(feedbackResult.projectsMentioned);
+      }
+
       this.saveSession();
     } catch (error) {
       console.error('Error creating feedback:', error);
+    }
+  }
+
+  // Increment question count for current phase
+  private incrementPhaseQuestionCount(): void {
+    switch (this.session.currentPhase) {
+      case 'introduction':
+        this.session.introductionQuestionCount++;
+        break;
+      case 'project':
+        this.session.projectQuestionCount++;
+        break;
+      case 'technical':
+        this.session.technicalQuestionCount++;
+        this.session.currentProjectQuestionCount++;
+        break;
+    }
+  }
+
+  // Phase 3: Update discussed projects list
+  private updateDiscussedProjects(projectNames: string[]): void {
+    for (const projectName of projectNames) {
+      const normalizedName = projectName.trim().toLowerCase();
+      const existingProject = this.session.discussedProjects.find(
+        p => p.name.toLowerCase() === normalizedName
+      );
+
+      if (existingProject) {
+        // Add current phase if not already tracked
+        if (!existingProject.discussedInPhases.includes(this.session.currentPhase)) {
+          existingProject.discussedInPhases.push(this.session.currentPhase);
+        }
+      } else {
+        // Add new project
+        const newProject: ProjectInfo = {
+          name: projectName.trim(),
+          technologies: [],
+          discussedInPhases: [this.session.currentPhase],
+          technicalQuestionsAsked: [],
+        };
+        this.session.discussedProjects.push(newProject);
+        console.log(`New project tracked: ${projectName}`);
+      }
     }
   }
 
@@ -277,7 +472,7 @@ export class InterviewStateManager {
           score: 0,
           isCorrect: false,
           timestamp: new Date().toISOString(),
-          questionId: `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          questionId: `q_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         };
         this.session.qaHistory.push(qaItem);
         this.saveSession();
@@ -288,18 +483,19 @@ export class InterviewStateManager {
           return { decision };
         }
 
-        const createQuestionPromise = this.createQuestion(
+        // Generate the next question first (streams to user immediately)
+        const questionResult = await this.createQuestion(
           decision.decision,
           params.question,
           params.answer,
           params.onChunk || (() => { })
         );
 
+        // AFTER question is fully streamed, create feedback in background
+        // This updates phase info for the NEXT question generation
         this.createFeedback().catch(err => {
           console.error('Background feedback generation failed:', err);
         });
-
-        const questionResult = await createQuestionPromise;
 
         return {
           decision,
@@ -323,9 +519,7 @@ export class InterviewStateManager {
   }
 
   cleanup(): void {
-    if (this.feedbackWorker) {
-      this.feedbackWorker.terminate();
-      this.feedbackWorker = null;
-    }
+    // Clean up any resources if needed
+    // Note: Removed unused feedbackWorker
   }
 }
