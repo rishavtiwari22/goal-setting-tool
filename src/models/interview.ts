@@ -53,7 +53,6 @@ export interface AnalyzeAnswerResponse {
 
 export interface DecisionResponse {
   decision: 'followup' | 'movenext' | 'end';
-  reason: string;
 }
 
 export interface QuestionResponse {
