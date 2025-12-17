@@ -5,8 +5,8 @@ import { makeDecision, createQuestion as apiCreateQuestion, createFeedback as ap
 import { buildDecisionPrompt, buildCreateQuestionPrompt, buildCreateFeedbackPrompt, buildSummarizePrompt } from './promptBuilder';
 
 export class InterviewStateManager {
-  private session: InterviewSession;
-  private startTime: Date;
+  private session!: InterviewSession;
+  private startTime!: Date;
   private feedbackWorker: Worker | null = null;
 
   constructor(config: InterviewConfig, sessionId?: string) {
@@ -292,7 +292,7 @@ export class InterviewStateManager {
           decision.decision,
           params.question,
           params.answer,
-          params.onChunk || (() => {})
+          params.onChunk || (() => { })
         );
 
         this.createFeedback().catch(err => {
