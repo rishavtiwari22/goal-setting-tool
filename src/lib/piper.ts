@@ -1,3 +1,5 @@
+// Must be imported before piper-tts-web to configure ONNX Runtime
+import "./ort-setup";
 import * as tts from "@mintplex-labs/piper-tts-web";
 
 
@@ -113,17 +115,11 @@ async function ensureOrtReady(
   state.ortPromise = (async () => {
     onStatusUpdate?.(`Loading ONNX runtime (${backendLabel})...`);
 
-    // Import onnxruntime-web from npm package
-    const ort = await import("onnxruntime-web");
-
-    // Configure WASM paths to use local files from public/ort
-    ort.env.wasm.wasmPaths = "/ort/";
-    // Force single-threaded execution to avoid SharedArrayBuffer/COOP/COEP issues
-    ort.env.wasm.numThreads = 1;
-    ort.env.wasm.proxy = false;
-
-    // Set the ort globally for piper-tts-web to use
-    (globalThis as any).ort = ort;
+    // Check if ONNX is configured globally (from ort-setup.ts)
+    // The import at the top of this file should have already handled this
+    if (!(globalThis as any).ort) {
+      console.error("CRITICAL: ONNX Runtime not configured properly. ort-setup.ts did not run effectively.");
+    }
 
     state.ortReady = true;
     onStatusUpdate?.(`ONNX runtime ready (${backendLabel})`);
@@ -398,11 +394,11 @@ async function playerWorker(
         const arrayBuffer = await audioBlob.arrayBuffer();
         const decodedBuffer = await audioContext!.decodeAudioData(arrayBuffer);
 
-  const source = audioContext!.createBufferSource();
+        const source = audioContext!.createBufferSource();
         source.buffer = decodedBuffer;
         source.playbackRate.value = 1.0;
         source.connect(audioContext!.destination);
-  if (currentSourceRef) currentSourceRef.source = source;
+        if (currentSourceRef) currentSourceRef.source = source;
 
         let playEnd = performance.now();
         const playPromise = new Promise<void>((resolve) => {
@@ -439,7 +435,7 @@ async function playerWorker(
               if (abortRef?.aborted) {
                 try {
                   currentSourceRef?.source?.stop();
-                } catch {}
+                } catch { }
                 resolve();
               } else {
                 setTimeout(checkAbort, 30);
@@ -569,7 +565,7 @@ export async function streamTokensToSpeech(
         // Stop current source if any
         try {
           currentSourceRef.source?.stop();
-        } catch {}
+        } catch { }
       } catch (e) {
         console.log("[TTS] Stop error", e);
       }
