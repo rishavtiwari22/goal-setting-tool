@@ -33,7 +33,7 @@ export default function Interview() {
 
   const bgColor = 'gray.50';
   const cardBgColor = 'white';
-
+  // Rozzen Bhai
   useEffect(() => {
     const configStr = sessionStorage.getItem('interviewConfig');
     if (!configStr && !sessionId) {

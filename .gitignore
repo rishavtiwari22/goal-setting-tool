@@ -24,7 +24,6 @@ dist-ssr
 *.sw?
 
 .env
-*.json
 
 pem
 *.pem
