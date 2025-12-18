@@ -202,7 +202,7 @@ export class InterviewStateManager {
   private applyCounterLogic(decisionResult: DecisionResponse): DecisionResponse {
     // If AI already decided to end (detected unqualified/disengaged candidate), respect that
     if (decisionResult.decision === 'end') {
-      console.log('AI decided to end interview:', decisionResult.reason);
+      console.log('AI decided to end interview');
       return decisionResult;
     }
 
@@ -218,7 +218,7 @@ export class InterviewStateManager {
         // If already in technical phase (last phase), END the interview
         if (this.session.currentPhase === 'technical') {
           console.log('Max irrelevant answers in technical phase. Ending interview - candidate unqualified.');
-          return { decision: 'end', reason: 'candidate_unqualified' };
+          return { decision: 'end' };
         }
 
         console.log(`Max consecutive irrelevant answers (${MAX_CONSECUTIVE_IRRELEVANT}) reached. Moving to next phase.`);
@@ -227,14 +227,14 @@ export class InterviewStateManager {
         // Reset counters and move to next topic
         this.session.consecutiveIrrelevantCount = 0;
         this.session.currentTopicFollowupCount = 0;
-        return { decision: 'movenext', reason: 'max_irrelevant_reached' };
+        return { decision: 'movenext' };
       }
 
       // Check if we've reached max follow-ups for this topic
       if (this.session.currentTopicFollowupCount >= MAX_TOPIC_FOLLOWUPS) {
         console.log(`Max topic follow-ups (${MAX_TOPIC_FOLLOWUPS}) reached. Moving to next topic.`);
         this.session.currentTopicFollowupCount = 0;
-        return { decision: 'movenext', reason: 'max_followups_reached' };
+        return { decision: 'movenext' };
       }
     } else if (decisionResult.decision === 'movenext') {
       // Reset counters on relevant answer
