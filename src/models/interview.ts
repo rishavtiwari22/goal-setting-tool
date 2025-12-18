@@ -76,7 +76,6 @@ export interface AnalyzeAnswerResponse {
 
 export interface DecisionResponse {
   decision: 'followup' | 'movenext' | 'end';
-  reason?: string;  // Optional reason for the decision
 }
 
 export interface QuestionResponse {

@@ -93,8 +93,7 @@ ${consecutiveCount >= 2 ? '⚠️ WARNING: Multiple non-substantive answers dete
 
 You must respond with ONLY valid JSON:
 {{
-  "decision": "followup" | "movenext" | "end",
-  "reason": "brief explanation"
+  "decision": "followup" | "movenext" | "end"
 }}`;
 
   let humanMessage = `Question: ${params.question}\nAnswer: ${params.answer}`;
