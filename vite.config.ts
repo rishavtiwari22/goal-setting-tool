@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import fs from "fs";
 
-// Custom plugin to serve ONNX runtime files from public/ort or node_modules
+// Custom plugin to serve ONNX runtime files from node_modules
 function serveOrtFiles() {
   return {
     name: "serve-ort-files",
@@ -11,14 +11,11 @@ function serveOrtFiles() {
       server.middlewares.use("/ort", (req: any, res: any, next: any) => {
         // Strip query parameters (e.g. ?import)
         const urlPath = req.url.split("?")[0];
-
-        // First try public/ort (preferred - same as production)
-        let filePath = path.join(__dirname, "public/ort", urlPath);
-
-        // Fall back to node_modules if not found
-        if (!fs.existsSync(filePath)) {
-          filePath = path.join(__dirname, "node_modules/onnxruntime-web/dist", urlPath);
-        }
+        const filePath = path.join(
+          __dirname,
+          "node_modules/onnxruntime-web/dist",
+          urlPath
+        );
 
         if (fs.existsSync(filePath)) {
           const ext = path.extname(filePath);
@@ -33,7 +30,6 @@ function serveOrtFiles() {
           res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
           fs.createReadStream(filePath).pipe(res);
         } else {
-          console.log(`[serveOrtFiles] File not found: ${filePath}`);
           next();
         }
       });
@@ -41,8 +37,25 @@ function serveOrtFiles() {
   };
 }
 
+// Custom plugin to patch the broken CDN URL in piper-tts-web
+function patchPiperTtsWeb() {
+  return {
+    name: "patch-piper-tts-web",
+    transform(code: string, id: string) {
+      if (id.includes("@mintplex-labs/piper-tts-web")) {
+        // Replace the broken CDN URL with our local ORT file server
+        return code.replace(
+          /https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/onnxruntime-web\/1\.18\.0\//g,
+          "/ort/"
+        );
+      }
+      return code;
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), serveOrtFiles()],
+  plugins: [react(), serveOrtFiles(), patchPiperTtsWeb()],
   optimizeDeps: {
     exclude: ["onnxruntime-web", "@mintplex-labs/piper-tts-web"],
   },
