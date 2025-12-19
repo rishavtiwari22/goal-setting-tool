@@ -65,14 +65,14 @@ export interface InterviewResult {
   elapsedTime: number;
 }
 
-export interface AnalyzeAnswerResponse {
-  decision: 'FOLLOW_UP_NEEDED' | 'MOVE_TO_NEXT' | 'END_INTERVIEW';
-  reason: string;
-  feedback: string;
-  score: number;
-  isCorrect: boolean;
-  userGivingUp: boolean;
-}
+// export interface AnalyzeAnswerResponse {
+//   decision: 'FOLLOW_UP_NEEDED' | 'MOVE_TO_NEXT' | 'END_INTERVIEW';
+//   reason: string;
+//   feedback: string;
+//   score: number;
+//   isCorrect: boolean;
+//   userGivingUp: boolean;
+// }
 
 export interface DecisionResponse {
   decision: 'followup' | 'movenext' | 'end' | 'retry';

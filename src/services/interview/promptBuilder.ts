@@ -90,10 +90,8 @@ ${irrelevantInfo}${followupInfo}
 IMPORTANT: Do NOT keep asking follow-ups to an unqualified or disengaged candidate. 
 ${consecutiveCount >= 2 ? '⚠️ WARNING: Multiple non-substantive answers detected. Strongly consider "end" if this answer also lacks substance.' : ''}
 
-You must respond with ONLY valid JSON:
-{{
-  "decision": "followup" | "movenext" | "end"
-}}`;
+Respond with ONLY ONE WORD - your decision:
+followup OR movenext OR end`;
 
   let humanMessage = `Question: ${params.question}\nAnswer: ${params.answer}`;
 
