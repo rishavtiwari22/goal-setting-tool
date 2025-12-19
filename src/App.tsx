@@ -1,15 +1,17 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Home from './pages/Home';
-import SelfApply from './pages/SelfApply';
-import Interview from './pages/Interview';
-import Results from './pages/Results';
-import { DEFAULT_PIPER_BACKEND, preparePiperVoice, type TtsBackend } from './lib/piper';
-import { PiperLoader } from './components/interview/PiperLoader';
+import { useEffect, useState, useRef, useCallback } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Home from "./pages/Home";
+import SelfApply from "./pages/SelfApply";
+import Interview from "./pages/Interview";
+import Results from "./pages/Results";
+import {
+  DEFAULT_PIPER_BACKEND,
+  preparePiperVoice,
+  type TtsBackend,
+} from "./lib/piper";
 
 function App() {
-  const [preparing, setPreparing] = useState(false);
-  const [status, setStatus] = useState<string>('idle');
+  const [status, setStatus] = useState<string>("idle");
   const preparePromiseRef = useRef<Promise<void> | null>(null);
   const voiceReadyRef = useRef(false);
 
@@ -30,20 +32,14 @@ function App() {
       }
 
       const preparation = (async () => {
-        setPreparing(true);
-        handleStatus('Ensuring Piper voice is cached and warmed...');
+        handleStatus("Ensuring Piper voice is cached and warmed...");
         try {
-          await preparePiperVoice(
-            (s) => handleStatus(s),
-            backend
-          );
+          await preparePiperVoice((s) => handleStatus(s), backend);
           voiceReadyRef.current = true;
-          handleStatus('Voice ready & warmed');
+          handleStatus("Voice ready & warmed");
         } catch (error) {
           voiceReadyRef.current = false;
           throw error;
-        } finally {
-          setPreparing(false);
         }
       })();
 
@@ -72,7 +68,6 @@ function App() {
         <Route path="/interview/:sessionId?" element={<Interview />} />
         <Route path="/results" element={<Results />} />
       </Routes>
-      {preparing && <PiperLoader status={status} />}
     </BrowserRouter>
   );
 }
