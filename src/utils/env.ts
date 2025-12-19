@@ -13,7 +13,6 @@ export function validateEnvironment(): void {
   const requiredVars = [
     'VITE_API_BASE_URL',
     'VITE_API_TOKEN',
-    'VITE_DEEPSEEK_API_KEY',
     'VITE_DEEPSEEK_API_URL',
   ];
 
@@ -39,6 +38,9 @@ export function validateEnvironment(): void {
 export const ENV = {
   API_BASE_URL: () => getEnvVar('VITE_API_BASE_URL'),
   API_TOKEN: () => getEnvVar('VITE_API_TOKEN'),
-  DEEPSEEK_API_KEY: () => getEnvVar('VITE_DEEPSEEK_API_KEY'),
+  DEEPSEEK_API_KEY: () => {
+    const key = import.meta.env['VITE_DEEPSEEK_API_KEY'];
+    return key && key.trim() !== '' ? key : '';
+  },
   DEEPSEEK_API_URL: () => getEnvVar('VITE_DEEPSEEK_API_URL'),
 };
