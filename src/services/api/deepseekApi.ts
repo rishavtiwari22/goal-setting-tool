@@ -2,7 +2,6 @@ import { DecisionResponse, FeedbackResponse } from '../../models/interview';
 import { ENV } from '../../utils/env';
 
 const DEEPSEEK_API_URL = ENV.DEEPSEEK_API_URL();
-const DEEPSEEK_API_KEY = ENV.DEEPSEEK_API_KEY();
 
 async function* streamResponse(response: Response): AsyncGenerator<string> {
   const reader = response.body?.getReader();
@@ -54,7 +53,6 @@ export async function makeDecision(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
     },
     body: JSON.stringify({
       model: 'deepseek-chat',
@@ -110,7 +108,6 @@ export async function* createQuestion(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
     },
     body: JSON.stringify({
       model: 'deepseek-chat',
@@ -152,7 +149,6 @@ export async function createFeedback(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
     },
     body: JSON.stringify({
       model: 'deepseek-chat',
@@ -212,7 +208,6 @@ export async function summarizeInterview(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
     },
     body: JSON.stringify({
       model: 'deepseek-chat',
