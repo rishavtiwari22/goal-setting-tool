@@ -200,9 +200,20 @@ export class InterviewStateManager {
 
   // Phase 2: Apply counter logic and determine if we should force transition or end
   private applyCounterLogic(decisionResult: DecisionResponse): DecisionResponse {
-    // If AI already decided to end (detected unqualified/disengaged candidate), respect that
+    // If AI decided to end, check if we can retry instead
     if (decisionResult.decision === 'end') {
-      console.log('AI decided to end interview');
+      // Allow up to 3 BAD answers (retries) before actually ending
+      // Note: User requirement "ask questions for atleast three times even with bad response"
+      this.session.consecutiveIrrelevantCount++;
+
+      console.log(`Bad answer detected. Count: ${this.session.consecutiveIrrelevantCount}/${MAX_CONSECUTIVE_IRRELEVANT}`);
+
+      if (this.session.consecutiveIrrelevantCount <= MAX_CONSECUTIVE_IRRELEVANT) {
+        console.log('Switching decision to RETRY.');
+        return { decision: 'retry' };
+      }
+
+      console.log('Max bad answers reached. Ending interview.');
       return decisionResult;
     }
 
@@ -214,20 +225,10 @@ export class InterviewStateManager {
       console.log(`Consecutive irrelevant: ${this.session.consecutiveIrrelevantCount}, Topic follow-ups: ${this.session.currentTopicFollowupCount}`);
 
       // Check if we've reached max consecutive irrelevant answers
-      if (this.session.consecutiveIrrelevantCount >= MAX_CONSECUTIVE_IRRELEVANT) {
-        // If already in technical phase (last phase), END the interview
-        if (this.session.currentPhase === 'technical') {
-          console.log('Max irrelevant answers in technical phase. Ending interview - candidate unqualified.');
-          return { decision: 'end' };
-        }
-
-        console.log(`Max consecutive irrelevant answers (${MAX_CONSECUTIVE_IRRELEVANT}) reached. Moving to next phase.`);
-        // Force phase transition
-        this.forcePhaseTransition();
-        // Reset counters and move to next topic
-        this.session.consecutiveIrrelevantCount = 0;
-        this.session.currentTopicFollowupCount = 0;
-        return { decision: 'movenext' };
+      if (this.session.consecutiveIrrelevantCount > MAX_CONSECUTIVE_IRRELEVANT) {
+        // If we exceeded max (should be caught above, but safety check)
+        console.log('Max consecutive irrelevant answers reached via followup count.');
+        return { decision: 'end' };
       }
 
       // Check if we've reached max follow-ups for this topic
@@ -240,6 +241,9 @@ export class InterviewStateManager {
       // Reset counters on relevant answer
       this.session.consecutiveIrrelevantCount = 0;
       this.session.currentTopicFollowupCount = 0;
+    } else if (decisionResult.decision === 'retry') {
+      // If the LLM itself returned 'retry' (future proofing), treat it like a bad answer
+      this.session.consecutiveIrrelevantCount++;
     }
 
     this.saveSession();
@@ -259,7 +263,7 @@ export class InterviewStateManager {
   }
 
   async createQuestion(
-    decision: 'followup' | 'movenext',
+    decision: 'followup' | 'movenext' | 'retry',
     currentQuestion: string,
     currentAnswer: string,
     onChunk: (content: string) => void

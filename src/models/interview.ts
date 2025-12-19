@@ -75,7 +75,7 @@ export interface AnalyzeAnswerResponse {
 }
 
 export interface DecisionResponse {
-  decision: 'followup' | 'movenext' | 'end';
+  decision: 'followup' | 'movenext' | 'end' | 'retry';
 }
 
 export interface QuestionResponse {

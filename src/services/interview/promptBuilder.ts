@@ -64,7 +64,6 @@ export function buildDecisionPrompt(params: BuildDecisionPromptParams): { system
 
   const systemMessage = `You are a technical interviewer analyzing candidate responses. Make deterministic decisions about the interview flow.
 
-CRITICAL: You must recognize when a candidate is UNQUALIFIED or DISENGAGED and end the interview gracefully.
 
 Decision Rules (in priority order):
 
@@ -202,6 +201,18 @@ IMPORTANT - Question Limits Per Project:
 
 Generate the next question. Vary the topics to keep the interview engaging. Do NOT include phase labels.`;
 
+const CREATE_QUESTION_RETRY_SYSTEM = `You are a technical interviewer. The candidate has given a bad or irrelevant answer.
+Job Title: {job_title}
+Knowledge Areas: {knowledge_points}
+Language: {language}
+Remaining Time: {remaining_time} minutes
+
+The candidate's previous response was incorrect, nonsense, or a refusal to answer.
+Your goal is to:
+1. Firmly but politely state that the answer is incorrect or insufficient.
+2. Ask them to try again, or ask a simplified follow-up question on the same topic to guide them.
+3. Do NOT reveal the answer yet. Give them a chance to correct themselves.`;
+
 export interface BuildCreateQuestionPromptParams {
   jobTitle: string;
   jobDescription: string;
@@ -210,7 +221,7 @@ export interface BuildCreateQuestionPromptParams {
   language: string;
   remainingTime: number;
   currentPhase: InterviewPhase;
-  decision: 'followup' | 'movenext';
+  decision: 'followup' | 'movenext' | 'retry';
   question?: string;
   answer?: string;
   qaHistory: QAHistoryItem[];
@@ -250,8 +261,9 @@ export function buildCreateQuestionPrompt(params: BuildCreateQuestionPromptParam
     } else if (params.currentPhase === 'project') {
       systemTemplate = CREATE_QUESTION_FOLLOWUP_PROJECT_SYSTEM;
     } else {
-      systemTemplate = CREATE_QUESTION_FOLLOWUP_TECHNICAL_SYSTEM;
     }
+  } else if (params.decision === 'retry') {
+    systemTemplate = CREATE_QUESTION_RETRY_SYSTEM;
   } else {
     if (params.currentPhase === 'introduction') {
       systemTemplate = CREATE_QUESTION_MOVENEXT_INTRO_SYSTEM;

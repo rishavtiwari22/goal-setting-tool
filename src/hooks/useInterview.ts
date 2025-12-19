@@ -50,7 +50,16 @@ export function useInterview({
       setRemainingTime(session.remainingTime);
 
       const existingSession = sessionId ? loadInterviewSessionBySessionId(sessionId) : null;
-      if (existingSession && existingSession.status === 'ongoing') {
+
+      // Allow loading both ongoing and completed sessions
+      if (existingSession && (existingSession.status === 'ongoing' || existingSession.status === 'completed')) {
+        // If session is already completed, update state immediately
+        if (existingSession.status === 'completed') {
+          setIsCompleted(true);
+          isCompletedRef.current = true;
+          // Optionally notify parent immediately, though UI might just use isCompleted
+        }
+
         const restoredMessages: Message[] = [];
         existingSession.qaHistory.forEach((qa, index) => {
           restoredMessages.push({
@@ -273,5 +282,6 @@ export function useInterview({
     remainingTime,
     submitAnswer,
     currentQuestion,
+    sessionId: managerRef.current?.getSession().sessionId || sessionId,
   };
 }
