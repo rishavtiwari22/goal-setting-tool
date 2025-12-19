@@ -23,8 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 
+*.env
+.env.local
 .env
 .env*.local
-
 pem
 *.pem
