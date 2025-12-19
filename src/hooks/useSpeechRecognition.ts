@@ -185,30 +185,18 @@ export function useSpeechRecognition({
       isListeningRef.current = false;
     }
 
-    resumeAfterPlaybackRef.current = true;
+    if (isSpeechModeRef.current) {
+      resumeAfterPlaybackRef.current = true;
+    }
   }, []);
 
-  const resumeListening = useCallback(async () => {
+  const resumeListening = useCallback(() => {
     console.log("Attempting to resume listening...", {
       resumeFlag: resumeAfterPlaybackRef.current,
       isSpeechMode: isSpeechModeRef.current,
     });
 
-    if (
-      sttLogicRef.current &&
-      (resumeAfterPlaybackRef.current || isSpeechModeRef.current)
-    ) {
-      // Check microphone permission before resuming
-      if (permissionGranted === null || permissionGranted === false) {
-        const hasPermission = await checkMicPermission();
-        if (!hasPermission) {
-          console.error(
-            "Cannot resume listening - microphone permission denied"
-          );
-          return;
-        }
-      }
-
+    if (sttLogicRef.current && (resumeAfterPlaybackRef.current || isSpeechModeRef.current)) {
       setTimeout(() => {
         console.log("Resuming listening now.");
         try {
@@ -222,7 +210,7 @@ export function useSpeechRecognition({
         }
       }, 100);
     }
-  }, [permissionGranted, checkMicPermission]);
+  }, []);
 
   return {
     isListening,

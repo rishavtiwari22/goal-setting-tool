@@ -169,7 +169,6 @@ export default function Interview() {
     finishStreaming: finishTtsStreaming,
     stop: stopTts,
     isSpeaking: isTtsActive,
-    currentlySpokenText,
   } = useStreamingTTS({
     enabled: isSpeechOutputEnabled,
     onStatusChange: (status) => console.log(`[TTS Status] ${status}`),

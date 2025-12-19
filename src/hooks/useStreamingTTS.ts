@@ -21,7 +21,6 @@ export function useStreamingTTS({
 }: UseStreamingTTSProps) {
   const [isReady, setIsReady] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [currentlySpokenText, setCurrentlySpokenText] = useState("");
 
   const activeHandlesRef = useRef<any[]>([]);
   const preparePromiseRef = useRef<Promise<void> | null>(null);
@@ -78,9 +77,6 @@ export function useStreamingTTS({
     try {
       await ensureReady();
       const tokens = createTokenIterable(text);
-
-      // Update caption to show ONLY current sentence for perfect synchronization
-      setCurrentlySpokenText(text);
 
       const handle = await streamTokensToSpeech(tokens, {
         backend: DEFAULT_PIPER_BACKEND,
@@ -174,11 +170,6 @@ export function useStreamingTTS({
         onStopSpeaking?.();
         onStatusChange?.("Streaming complete");
         pollTimeoutRef.current = null;
-
-        // Clear spoken text after a brief delay to allow final caption to be visible
-        setTimeout(() => {
-          setCurrentlySpokenText("");
-        }, 500);
       } else {
         pollTimeoutRef.current = setTimeout(
           checkCompletion,
@@ -211,7 +202,6 @@ export function useStreamingTTS({
     stateRef.current.isProcessing = false;
     stateRef.current.isActive = false;
     setIsSpeaking(false);
-    setCurrentlySpokenText("");
   }, []);
 
   // Cleanup on unmount
@@ -227,7 +217,6 @@ export function useStreamingTTS({
   return {
     isReady,
     isSpeaking,
-    currentlySpokenText,
     ensureReady,
     addChunk,
     finishStreaming,
