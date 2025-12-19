@@ -4,13 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import {
-  FiSend,
-  FiMic,
-  FiMicOff,
-  FiVolume2,
-  FiVolumeX,
-} from "react-icons/fi";
+import { FiSend, FiMic, FiMicOff, FiVolume2, FiVolumeX } from "react-icons/fi";
 import { Captions, CaptionsOff, MicOff, PhoneMissed } from "lucide-react";
 import { useInterview, type Message } from "../hooks/useInterview";
 import type { InterviewConfig } from "../services/interview/interviewEngine";
@@ -29,10 +23,12 @@ export default function Interview() {
   const [isSpeechOutputEnabled, setIsSpeechOutputEnabled] = useState(true);
   const [isEndCallClicked, setIsEndCallClicked] = useState(false);
   const forceEndRef = useRef(false);
-  const [currentVideoState, setCurrentVideoState] = useState<string>("juggling");
+  const [currentVideoState, setCurrentVideoState] =
+    useState<string>("juggling");
   const [showChatMessage, setShowChatMessage] = useState(true);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [activeThinkingVideo, setActiveThinkingVideo] = useState<string>("thinking");
+  const [activeThinkingVideo, setActiveThinkingVideo] =
+    useState<string>("thinking");
   const [isVideoSwitching, setIsVideoSwitching] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -164,6 +160,7 @@ export default function Interview() {
     finishStreaming: finishTtsStreaming,
     stop: stopTts,
     isSpeaking: isTtsActive,
+    currentlySpokenText,
   } = useStreamingTTS({
     enabled: isSpeechOutputEnabled,
     onStatusChange: (status) => console.log(`[TTS Status] ${status}`),
@@ -242,8 +239,7 @@ export default function Interview() {
         return "listening";
       }
 
-      const isInThinkingState =
-        isLoading || (!isListening && !isTtsActive);
+      const isInThinkingState = isLoading || (!isListening && !isTtsActive);
 
       if (isInThinkingState) {
         if (!thinkingTimerRef.current && !hasSelectedAlternativeRef.current) {
@@ -311,8 +307,7 @@ export default function Interview() {
     videoEl.src = initialSrc;
 
     const handleInitialCanPlay = () => {
-      videoEl.play().catch(() => {
-      });
+      videoEl.play().catch(() => {});
     };
 
     videoEl.addEventListener("canplay", handleInitialCanPlay, { once: true });
@@ -341,8 +336,7 @@ export default function Interview() {
       setIsVideoSwitching(false);
 
       requestAnimationFrame(() => {
-        videoEl.play().catch(() => {
-        });
+        videoEl.play().catch(() => {});
       });
     };
 
@@ -509,16 +503,15 @@ export default function Interview() {
           <div
             className="caption-container transition-opacity duration-300"
             style={{
-              opacity: showChatMessage && isTtsActive && messages.length > 0 ? 1 : 0,
+              opacity:
+                showChatMessage && isTtsActive && currentlySpokenText ? 1 : 0,
               minHeight: "80px",
               maxHeight: "80px",
               height: "80px",
             }}
           >
-            {isTtsActive && messages.length > 0 && (
-              <p className="caption-text">
-                {messages.filter(m => m.role === "assistant").slice(-1)[0]?.content || ""}
-              </p>
+            {isTtsActive && currentlySpokenText && (
+              <p className="caption-text">{currentlySpokenText}</p>
             )}
           </div>
 
@@ -526,8 +519,7 @@ export default function Interview() {
             className="flex gap-6 justify-center items-center mt-20"
             style={{
               minHeight: "64px",
-              visibility:
-                config && !isCompleted ? "visible" : "hidden",
+              visibility: config && !isCompleted ? "visible" : "hidden",
             }}
           >
             <div className="relative flex items-center justify-center">

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   DEFAULT_PIPER_BACKEND,
   preparePiperVoice,
@@ -17,10 +17,11 @@ export function useStreamingTTS({
   enabled,
   onStatusChange,
   onStartSpeaking,
-  onStopSpeaking
+  onStopSpeaking,
 }: UseStreamingTTSProps) {
   const [isReady, setIsReady] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [currentlySpokenText, setCurrentlySpokenText] = useState("");
 
   const activeHandlesRef = useRef<any[]>([]);
   const preparePromiseRef = useRef<Promise<void> | null>(null);
@@ -29,7 +30,7 @@ export function useStreamingTTS({
 
   // Internal state for buffering and queueing
   const stateRef = useRef({
-    textBuffer: '',
+    textBuffer: "",
     isActive: false,
     ttsQueue: [] as string[],
     isProcessing: false,
@@ -41,27 +42,30 @@ export function useStreamingTTS({
     return trimmed.split(/(\s+)/).filter((segment) => segment.length > 0);
   };
 
-  const ensureReady = useCallback(async (backend: TtsBackend = DEFAULT_PIPER_BACKEND) => {
-    if (voiceReadyRef.current) return;
-    if (preparePromiseRef.current) return preparePromiseRef.current;
+  const ensureReady = useCallback(
+    async (backend: TtsBackend = DEFAULT_PIPER_BACKEND) => {
+      if (voiceReadyRef.current) return;
+      if (preparePromiseRef.current) return preparePromiseRef.current;
 
-    const preparation = (async () => {
-      onStatusChange?.('Ensuring Piper voice is cached...');
-      try {
-        await preparePiperVoice((s: string) => onStatusChange?.(s), backend);
-        setIsReady(true);
-        voiceReadyRef.current = true;
-        onStatusChange?.('Voice ready');
-      } catch (error) {
-        console.error("TTS Prepare failed", error);
-        throw error;
-      }
-    })();
+      const preparation = (async () => {
+        onStatusChange?.("Ensuring Piper voice is cached...");
+        try {
+          await preparePiperVoice((s: string) => onStatusChange?.(s), backend);
+          setIsReady(true);
+          voiceReadyRef.current = true;
+          onStatusChange?.("Voice ready");
+        } catch (error) {
+          console.error("TTS Prepare failed", error);
+          throw error;
+        }
+      })();
 
-    preparePromiseRef.current = preparation;
-    await preparation;
-    preparePromiseRef.current = null;
-  }, [onStatusChange]);
+      preparePromiseRef.current = preparation;
+      await preparation;
+      preparePromiseRef.current = null;
+    },
+    [onStatusChange]
+  );
 
   const synthAndPlayChunk = async (text: string) => {
     // Trigger start callback only on the first active chunk
@@ -75,13 +79,18 @@ export function useStreamingTTS({
       await ensureReady();
       const tokens = createTokenIterable(text);
 
+      // Update caption to show ONLY current sentence for perfect synchronization
+      setCurrentlySpokenText(text);
+
       const handle = await streamTokensToSpeech(tokens, {
         backend: DEFAULT_PIPER_BACKEND,
         autoPrepare: false,
         onStatus: (s: string) => onStatusChange?.(s),
-        onSentence: () => { },
-        onSynthesisTime: () => { },
-        onPlayFinished: () => { },
+        onSentence: () => {},
+        onSynthesisTime: () => {},
+        onPlayFinished: () => {
+          // Audio chunk finished playing
+        },
       });
 
       // Track all active handles
@@ -89,7 +98,9 @@ export function useStreamingTTS({
       await handle.finished;
 
       // Remove from active handles when done
-      activeHandlesRef.current = activeHandlesRef.current.filter(h => h !== handle);
+      activeHandlesRef.current = activeHandlesRef.current.filter(
+        (h) => h !== handle
+      );
     } catch (err) {
       console.error(`TTS chunk error: ${String(err)}`);
     }
@@ -111,36 +122,39 @@ export function useStreamingTTS({
     }
   };
 
-  const addChunk = useCallback((chunk: string) => {
-    if (!enabled) return;
+  const addChunk = useCallback(
+    (chunk: string) => {
+      if (!enabled) return;
 
-    const state = stateRef.current;
-    state.textBuffer += chunk;
+      const state = stateRef.current;
+      state.textBuffer += chunk;
 
-    // Process sentences with safety limit for long text
-    while (state.textBuffer.length > 0) {
-      const match = state.textBuffer.match(/^([\s\S]*?[.!?])(\s|$)/);
+      // Process sentences with safety limit for long text
+      while (state.textBuffer.length > 0) {
+        const match = state.textBuffer.match(/^([\s\S]*?[.!?])(\s|$)/);
 
-      if (match) {
-        // Normal sentence extraction
-        const sentence = match[1].trim();
-        state.textBuffer = state.textBuffer.slice(match[0].length);
-        if (sentence) {
-          state.ttsQueue.push(sentence);
+        if (match) {
+          // Normal sentence extraction
+          const sentence = match[1].trim();
+          state.textBuffer = state.textBuffer.slice(match[0].length);
+          if (sentence) {
+            state.ttsQueue.push(sentence);
+          }
+        } else if (state.textBuffer.length > 500) {
+          // Force break after 500 chars to prevent backtracking
+          const chunk = state.textBuffer.slice(0, 500);
+          state.textBuffer = state.textBuffer.slice(500);
+          state.ttsQueue.push(chunk);
+        } else {
+          // Wait for more text
+          break;
         }
-      } else if (state.textBuffer.length > 500) {
-        // Force break after 500 chars to prevent backtracking
-        const chunk = state.textBuffer.slice(0, 500);
-        state.textBuffer = state.textBuffer.slice(500);
-        state.ttsQueue.push(chunk);
-      } else {
-        // Wait for more text
-        break;
       }
-    }
 
-    processQueue();
-  }, [enabled]);
+      processQueue();
+    },
+    [enabled]
+  );
 
   const finishStreaming = useCallback(() => {
     const state = stateRef.current;
@@ -148,7 +162,7 @@ export function useStreamingTTS({
     // Flush remaining buffer
     if (state.textBuffer.trim()) {
       state.ttsQueue.push(state.textBuffer.trim());
-      state.textBuffer = '';
+      state.textBuffer = "";
       processQueue();
     }
 
@@ -158,10 +172,18 @@ export function useStreamingTTS({
         state.isActive = false;
         setIsSpeaking(false);
         onStopSpeaking?.();
-        onStatusChange?.('Streaming complete');
+        onStatusChange?.("Streaming complete");
         pollTimeoutRef.current = null;
+
+        // Clear spoken text after a brief delay to allow final caption to be visible
+        setTimeout(() => {
+          setCurrentlySpokenText("");
+        }, 500);
       } else {
-        pollTimeoutRef.current = setTimeout(checkCompletion, 100) as unknown as number;
+        pollTimeoutRef.current = setTimeout(
+          checkCompletion,
+          100
+        ) as unknown as number;
       }
     };
     checkCompletion();
@@ -175,20 +197,21 @@ export function useStreamingTTS({
     }
 
     // Stop all active handles
-    activeHandlesRef.current.forEach(handle => {
+    activeHandlesRef.current.forEach((handle) => {
       try {
         handle?.stop();
       } catch (err) {
-        console.error('Error stopping TTS handle:', err);
+        console.error("Error stopping TTS handle:", err);
       }
     });
     activeHandlesRef.current = [];
 
     stateRef.current.ttsQueue = [];
-    stateRef.current.textBuffer = '';
+    stateRef.current.textBuffer = "";
     stateRef.current.isProcessing = false;
     stateRef.current.isActive = false;
     setIsSpeaking(false);
+    setCurrentlySpokenText("");
   }, []);
 
   // Cleanup on unmount
@@ -204,9 +227,10 @@ export function useStreamingTTS({
   return {
     isReady,
     isSpeaking,
+    currentlySpokenText,
     ensureReady,
     addChunk,
     finishStreaming,
-    stop
+    stop,
   };
 }
