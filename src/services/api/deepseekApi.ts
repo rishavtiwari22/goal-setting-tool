@@ -66,9 +66,10 @@ export async function makeDecision(
           content: humanMessage,
         },
       ],
-      response_format: { type: 'json_object' },  // ✅ Use JSON mode
+      // No JSON mode - just get plain text response for faster processing
       stream: false,
       temperature: 0.1,
+      max_tokens: 10,  // Decision is just one word, limit tokens for speed
     }),
   });
 
@@ -85,19 +86,13 @@ export async function makeDecision(
   }
 
   const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || '{}';
+  const content = (data.choices?.[0]?.message?.content || '').trim().toLowerCase();
 
-  // Safe JSON parse with error handling
-  try {
-    const result = JSON.parse(content);
-    return {
-      decision: result.decision || 'movenext',
-    };
-  } catch (parseError) {
-    console.error('Failed to parse decision response:', parseError, 'Content:', content);
-    // Default to movenext on parse failure
-    return { decision: 'movenext' };
-  }
+  // Parse plain text decision - just extract the decision word
+  const validDecisions = ['followup', 'movenext', 'end'];
+  const decision = validDecisions.find(d => content.includes(d)) || 'movenext';
+
+  return { decision: decision as 'followup' | 'movenext' | 'end' };
 }
 
 export async function* createQuestion(
