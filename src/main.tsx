@@ -1,11 +1,10 @@
 import React from 'react'
-// @ts-ignore: Could not find a declaration file for module 'react-dom/client'.
 import ReactDOM from 'react-dom/client'
-import { ChakraProvider, defaultSystem } from '@chakra-ui/react'
 import App from './App'
 import './index.css'
 import './styles/codeHighlight.css'
 import { validateEnvironment } from './utils/env'
+import { Toaster } from '@/components/ui/sonner'
 
 try {
   validateEnvironment();
@@ -38,8 +37,7 @@ try {
 
 ReactDOM.createRoot(document.getElementById('app')!).render(
   <React.StrictMode>
-    <ChakraProvider value={defaultSystem}>
-      <App />
-    </ChakraProvider>
+    <App />
+    <Toaster />
   </React.StrictMode>,
 )

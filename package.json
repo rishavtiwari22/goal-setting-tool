@@ -9,9 +9,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@chakra-ui/react": "^3.30.0",
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
     "@mintplex-labs/piper-tts-web": "^1.0.4",
     "@ricky0123/vad-web": "^0.0.30",
     "@vitejs/plugin-react": "^4.7.0",
@@ -27,7 +24,20 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
+    "@radix-ui/react-accordion": "^1.2.12",
+    "@radix-ui/react-avatar": "^1.1.11",
+    "@radix-ui/react-separator": "^1.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@tailwindcss/postcss": "^4.1.18",
     "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.23",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.562.0",
+    "postcss": "^8.5.6",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss": "^4.1.18",
     "typescript": "~5.9.3",
     "vite": "^7.2.4"
   }

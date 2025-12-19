@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Container, Box, Button, Heading, VStack, createToaster } from '@chakra-ui/react';
-import { InterviewResults } from '../components/results/InterviewResults';
+import { toast } from 'sonner';
+import { TestResults } from '../components/results/TestResults';
 import type { InterviewSession } from '../models/interview';
-
-const toaster = createToaster({ placement: 'top' });
 
 export default function Results() {
   const navigate = useNavigate();
@@ -13,12 +11,7 @@ export default function Results() {
   useEffect(() => {
     const sessionStr = sessionStorage.getItem('interviewSession');
     if (!sessionStr) {
-      toaster.create({
-        title: 'Error',
-        description: 'No interview session found',
-        type: 'error',
-        duration: 3000,
-      });
+      toast.error('No interview session found');
       navigate('/selfapply');
       return;
     }
@@ -28,45 +21,36 @@ export default function Results() {
       setSession(interviewSession);
     } catch (error) {
       console.error('Error parsing interview session:', error);
-      toaster.create({
-        title: 'Error',
-        description: 'Invalid interview session data',
-        type: 'error',
-        duration: 3000,
-      });
+      toast.error('Invalid interview session data');
       navigate('/selfapply');
     }
   }, [navigate]);
 
-  const handleStartNew = () => {
-    sessionStorage.removeItem('interviewSession');
-    sessionStorage.removeItem('interviewConfig');
-    navigate('/selfapply');
-  };
-
   if (!session) {
     return (
-      <Container maxW="container.md" py={8}>
-        <Box>Loading...</Box>
-      </Container>
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Loading...</div>
+      </div>
     );
   }
 
-  return (
-    <Container maxW="container.lg" py={8}>
-      <VStack gap={6} align="stretch">
-        <Box>
-          <Heading size="xl" mb={2}>
-            Interview Results
-          </Heading>
-        </Box>
-        <InterviewResults session={session} />
-        <Box>
-          <Button colorScheme="blue" onClick={handleStartNew} size="lg">
-            Start New Interview
-          </Button>
-        </Box>
-      </VStack>
-    </Container>
-  );
+  const testResult = {
+    id: session.sessionId,
+    test_id: session.sessionId,
+    user_id: session.userId,
+    summary: session.result?.summary || session.summary || "Interview completed successfully.",
+    score: session.result?.score || 0,
+    question_number: session.result?.totalQuestions || session.qaHistory.length,
+    correct_number: session.result?.correctAnswers || 0,
+    elapse_time: session.result?.elapsedTime || 0,
+    qa_history: session.qaHistory.map((qa) => ({
+      question: qa.question,
+      answer: qa.answer,
+      summary: "",
+    })),
+    created_at: session.startTime,
+    updated_at: session.endTime || new Date().toISOString(),
+  };
+
+  return <TestResults testResult={testResult} />;
 }

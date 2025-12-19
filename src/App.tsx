@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Home from './pages/Home';
 import SelfApply from './pages/SelfApply';
 import Interview from './pages/Interview';
 import Results from './pages/Results';
@@ -66,7 +67,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/selfapply" replace />} />
+        <Route path="/" element={<Home />} />
         <Route path="/selfapply" element={<SelfApply />} />
         <Route path="/interview/:sessionId?" element={<Interview />} />
         <Route path="/results" element={<Results />} />

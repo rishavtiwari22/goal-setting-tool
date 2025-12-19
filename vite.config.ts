@@ -56,6 +56,11 @@ function patchPiperTtsWeb() {
 
 export default defineConfig({
   plugins: [react(), serveOrtFiles(), patchPiperTtsWeb()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
   optimizeDeps: {
     exclude: ["onnxruntime-web", "@mintplex-labs/piper-tts-web"],
   },
