@@ -5,7 +5,7 @@ import { makeDecision, createQuestion as apiCreateQuestion, createFeedback as ap
 import { buildDecisionPrompt, buildCreateQuestionPrompt, buildCreateFeedbackPrompt, buildSummarizePrompt } from './promptBuilder';
 
 // Configuration constants for Phase 2: Irrelevant answer handling
-const MAX_CONSECUTIVE_IRRELEVANT = 3;  // Max consecutive irrelevant answers before phase transition
+const MAX_CONSECUTIVE_IRRELEVANT = 2;  // Max retries before ending (so 3 bad answers total = 2 retries + 1 final)
 const MAX_TOPIC_FOLLOWUPS = 3;         // Max follow-ups on a single topic before moving on
 
 export class InterviewStateManager {
@@ -212,8 +212,7 @@ export class InterviewStateManager {
   private applyCounterLogic(decisionResult: DecisionResponse): DecisionResponse {
     // If AI decided to end, check if we can retry instead
     if (decisionResult.decision === 'end') {
-      // Allow up to 3 BAD answers (retries) before actually ending
-      // Note: User requirement "ask questions for atleast three times even with bad response"
+      // Allow up to 2 retries (so 3 bad answers total) before actually ending
       this.session.consecutiveIrrelevantCount++;
 
       console.log(`Bad answer detected. Count: ${this.session.consecutiveIrrelevantCount}/${MAX_CONSECUTIVE_IRRELEVANT}`);
@@ -224,7 +223,11 @@ export class InterviewStateManager {
       }
 
       console.log('Max bad answers reached. Ending interview.');
-      return decisionResult;
+      // Provide a polite goodbye message explaining why the interview is ending
+      return {
+        decision: 'end',
+        feedback: 'I appreciate you taking the time to interview with us today. Unfortunately, based on the responses provided, I\'m not able to continue with this interview at this time. We encourage you to review the relevant topics and consider reapplying in the future. Thank you for your interest, and we wish you the best in your career journey. Goodbye!'
+      };
     }
 
     if (decisionResult.decision === 'followup') {
@@ -238,7 +241,10 @@ export class InterviewStateManager {
       if (this.session.consecutiveIrrelevantCount > MAX_CONSECUTIVE_IRRELEVANT) {
         // If we exceeded max (should be caught above, but safety check)
         console.log('Max consecutive irrelevant answers reached via followup count.');
-        return { decision: 'end' };
+        return {
+          decision: 'end',
+          feedback: 'I appreciate you taking the time to interview with us today. Unfortunately, based on the responses provided, I\'m not able to continue with this interview at this time. We encourage you to review the relevant topics and consider reapplying in the future. Thank you for your interest, and we wish you the best in your career journey. Goodbye!'
+        };
       }
 
       // Check if we've reached max follow-ups for this topic
@@ -301,6 +307,7 @@ export class InterviewStateManager {
       discussedProjects: this.session.discussedProjects,
       introductionQuestionCount: this.session.introductionQuestionCount,
       currentProjectQuestionCount: this.session.currentProjectQuestionCount,
+      consecutiveIrrelevantCount: this.session.consecutiveIrrelevantCount,
     });
 
     let fullQuestion = '';

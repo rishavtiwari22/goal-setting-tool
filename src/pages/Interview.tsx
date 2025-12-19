@@ -37,6 +37,7 @@ export default function Interview() {
   const hasSelectedAlternativeRef = useRef<boolean>(false);
   const videoTransitionDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const preloadedVideosRef = useRef<Set<string>>(new Set());
+  const pendingSessionRef = useRef<InterviewSession | null>(null); // Store session to navigate after TTS
 
   const videoStates: { [key: string]: string } = {
     speaking: "/assets/speaking-edited.mp4",
@@ -99,7 +100,14 @@ export default function Interview() {
   const handleComplete = (session: InterviewSession) => {
     try {
       sessionStorage.setItem("interviewSession", JSON.stringify(session));
-      navigate("/results");
+      // If TTS is enabled and might be speaking, store session and wait for TTS to finish
+      if (isSpeechOutputEnabled) {
+        pendingSessionRef.current = session;
+        // Navigation will happen in onStopSpeaking callback
+      } else {
+        // TTS disabled, navigate immediately
+        navigate("/results");
+      }
     } catch (error) {
       console.error("Failed to save session:", error);
       toast.error("Failed to save interview results");
@@ -168,6 +176,14 @@ export default function Interview() {
       pauseListening();
     },
     onStopSpeaking: () => {
+      // Check if there's a pending session to navigate to results
+      if (pendingSessionRef.current) {
+        // TTS finished speaking the goodbye message, now navigate to results
+        pendingSessionRef.current = null;
+        navigate("/results");
+        return;
+      }
+
       if (!isCompleted && !forceEndRef.current) {
         resumeListening();
       }
@@ -307,7 +323,7 @@ export default function Interview() {
     videoEl.src = initialSrc;
 
     const handleInitialCanPlay = () => {
-      videoEl.play().catch(() => {});
+      videoEl.play().catch(() => { });
     };
 
     videoEl.addEventListener("canplay", handleInitialCanPlay, { once: true });
@@ -336,7 +352,7 @@ export default function Interview() {
       setIsVideoSwitching(false);
 
       requestAnimationFrame(() => {
-        videoEl.play().catch(() => {});
+        videoEl.play().catch(() => { });
       });
     };
 
@@ -486,9 +502,8 @@ export default function Interview() {
               loop
               muted
               playsInline
-              className={`video-smooth-transition ${
-                isVideoSwitching ? "loading" : ""
-              }`}
+              className={`video-smooth-transition ${isVideoSwitching ? "loading" : ""
+                }`}
               style={{
                 width: "260px",
                 height: "259px",
