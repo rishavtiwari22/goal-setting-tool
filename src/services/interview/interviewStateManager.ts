@@ -167,6 +167,16 @@ export class InterviewStateManager {
       return { decision: 'end' };
     }
 
+    // Check if user explicitly wants to end the call - bypass all retry logic
+    const lowerAnswer = answer.toLowerCase().trim();
+    const endCallPhrases = ['end the call', 'end call', 'end interview', 'stop interview', 'quit interview', 'exit interview', 'i want to end', 'please end'];
+    const isExplicitEndRequest = endCallPhrases.some(phrase => lowerAnswer.includes(phrase));
+
+    if (isExplicitEndRequest) {
+      console.log('User explicitly requested to end the call. Ending interview immediately.');
+      return { decision: 'end', feedback: 'Thank you for participating in this interview! It was great speaking with you. We will now generate your interview summary.' };
+    }
+
     // Phase 2: Include recent history and counters in decision prompt
     const recentHistory = this.session.qaHistory.slice(-3);
 
