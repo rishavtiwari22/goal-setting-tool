@@ -253,6 +253,20 @@ export function useInterview({
         }
 
         if (result.decision.decision === 'end') {
+          // Add thank you/feedback message to the chat if present
+          if (result.decision?.feedback && result.decision.feedback.trim()) {
+            const feedbackMsgId = `feedback_${Date.now()}`;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: feedbackMsgId,
+                role: 'assistant' as const,
+                content: result.decision.feedback,
+                timestamp: new Date().toISOString(),
+              },
+            ]);
+          }
+
           isCompletedRef.current = true;
           setIsCompleted(true);
           const endResult = await managerRef.current.manageInterviewState('end');

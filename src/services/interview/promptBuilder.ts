@@ -67,8 +67,8 @@ export function buildDecisionPrompt(params: BuildDecisionPromptParams): { system
 
 Decision Rules (in priority order):
 
-1. END THE INTERVIEW if:
-   - User explicitly says "stop", "end", "quit", "exit", "done", etc.
+1. END THE INTERVIEW IMMEDIATELY if:
+   - User explicitly requests to end: "end the call", "end call", "stop", "end", "quit", "exit", "done", "end interview", "stop interview", etc.
    - Candidate has given ${consecutiveCount >= 2 ? 'MULTIPLE' : 'some'} non-substantive answers AND this answer shows:
      * No relevant technical knowledge
      * Refusal to engage (e.g., "I don't know", "never", "I won't")

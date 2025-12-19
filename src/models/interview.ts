@@ -76,6 +76,7 @@ export interface AnalyzeAnswerResponse {
 
 export interface DecisionResponse {
   decision: 'followup' | 'movenext' | 'end' | 'retry';
+  feedback?: string;  // Optional feedback message (e.g., thank you when user ends call)
 }
 
 export interface QuestionResponse {
