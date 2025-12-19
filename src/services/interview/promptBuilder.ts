@@ -209,13 +209,16 @@ Job Title: {job_title}
 Knowledge Areas: {knowledge_points}
 Language: {language}
 Remaining Time: {remaining_time} minutes
+Bad Answer Count: {bad_answer_count}/2
 
 The candidate's previous response was incorrect, nonsense, or a refusal to answer.
+{warning_message}
 Your goal is to:
 1. Firmly but politely state that the answer is incorrect or insufficient.
-2. Ask them to try again, or ask a simplified follow-up question on the same topic to guide them.
-3. Do NOT reveal the answer yet. Give them a chance to correct themselves.
-4. Do NOT use bold texts or any other formatting. No * or **  `;
+2. {warning_instruction}
+3. Ask them to try again, or ask a simplified follow-up question on the same topic to guide them.
+4. Do NOT reveal the answer yet. Give them a chance to correct themselves.
+5. Do NOT use bold texts or any other formatting. No * or **  `;
 export interface BuildCreateQuestionPromptParams {
   jobTitle: string;
   jobDescription: string;
@@ -233,6 +236,8 @@ export interface BuildCreateQuestionPromptParams {
   // Question count tracking
   introductionQuestionCount?: number;
   currentProjectQuestionCount?: number;
+  // Bad answer tracking for warnings
+  consecutiveIrrelevantCount?: number;
 }
 
 function formatDiscussedProjects(projects?: ProjectInfo[]): string {
@@ -265,7 +270,23 @@ export function buildCreateQuestionPrompt(params: BuildCreateQuestionPromptParam
     } else {
     }
   } else if (params.decision === 'retry') {
-    systemTemplate = CREATE_QUESTION_RETRY_SYSTEM;
+    // Determine warning message based on bad answer count
+    const badCount = params.consecutiveIrrelevantCount ?? 0;
+    let warningMessage = '';
+    let warningInstruction = '';
+
+    if (badCount >= 2) {
+      warningMessage = '⚠️ IMPORTANT: This is the candidate\'s FINAL WARNING. They have given 2 bad/irrelevant answers. You MUST clearly warn them that this is their last chance and if they give one more bad answer, the interview will be ended.';
+      warningInstruction = 'CLEARLY warn the candidate that this is their final chance. State explicitly: "This is your last opportunity. One more insufficient answer and we will need to end the interview."';
+    } else {
+      warningMessage = '';
+      warningInstruction = 'Encourage them to think more carefully about their response.';
+    }
+
+    systemTemplate = CREATE_QUESTION_RETRY_SYSTEM
+      .replace(/{warning_message}/g, warningMessage)
+      .replace(/{warning_instruction}/g, warningInstruction)
+      .replace(/{bad_answer_count}/g, badCount.toString());
   } else {
     if (params.currentPhase === 'introduction') {
       systemTemplate = CREATE_QUESTION_MOVENEXT_INTRO_SYSTEM;
