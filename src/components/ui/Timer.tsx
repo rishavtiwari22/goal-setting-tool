@@ -1,5 +1,3 @@
-import { Box, Text } from '@chakra-ui/react';
-
 interface TimerProps {
   remainingMinutes: number;
   isWarning?: boolean;
@@ -19,17 +17,13 @@ export function Timer({ remainingMinutes, isWarning }: TimerProps) {
   };
 
   return (
-    <Box textAlign="center">
-      <Text fontSize="sm" fontWeight="bold" color="gray.600">
+    <div className="text-center">
+      <p className="text-sm font-bold text-gray-600">
         Time Remaining
-      </Text>
-      <Text
-        fontSize="lg"
-        fontWeight="bold"
-        color={isWarning ? 'red.500' : 'gray.800'}
-      >
+      </p>
+      <p className={`text-lg font-bold ${isWarning ? 'text-red-500' : 'text-gray-800'}`}>
         {formatTime()}
-      </Text>
-    </Box>
+      </p>
+    </div>
   );
 }

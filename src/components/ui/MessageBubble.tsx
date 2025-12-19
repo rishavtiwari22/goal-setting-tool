@@ -1,4 +1,3 @@
-import { Box, Flex, Text } from '@chakra-ui/react';
 import { FiUser } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
@@ -15,53 +14,38 @@ export function MessageBubble({ role, content, timestamp }: MessageBubbleProps) 
   const isUser = role === 'user';
 
   return (
-    <Flex
-      alignSelf={isUser ? 'flex-end' : 'flex-start'}
-      maxW="80%"
-      direction="column"
-      mb={4}
+    <div
+      className={`flex flex-col mb-4 max-w-[80%] ${isUser ? 'self-end' : 'self-start'}`}
     >
-      <Flex align="center" mb={1}>
-        <Box
-          as="span"
-          w="24px"
-          h="24px"
-          borderRadius="full"
-          bg={isUser ? 'gray.500' : 'blue.500'}
-          display="inline-flex"
-          alignItems="center"
-          justifyContent="center"
-          mr={2}
+      <div className="flex items-center mb-1">
+        <span
+          className={`w-6 h-6 rounded-full inline-flex items-center justify-center mr-2 ${isUser ? 'bg-gray-500' : 'bg-blue-500'}`}
         >
           {isUser && <FiUser size={12} style={{ color: 'white' }} />}
-        </Box>
-        <Text fontSize="xs" color="gray.500">
+        </span>
+        <p className="text-xs text-gray-500">
           {isUser ? 'You' : 'AI Interviewer'}
           {timestamp && ` · ${new Date(timestamp).toLocaleTimeString()}`}
-        </Text>
-      </Flex>
-      <Box
-        bg={isUser ? 'blue.500' : 'gray.100'}
-        color={isUser ? 'white' : 'black'}
-        p={3}
-        borderRadius="lg"
-        boxShadow="sm"
+        </p>
+      </div>
+      <div
+        className={`p-3 rounded-lg shadow-sm ${isUser ? 'bg-blue-500 text-white' : 'bg-gray-100 text-black'}`}
       >
         {isUser ? (
-          <Text fontSize="sm" whiteSpace="pre-wrap">
+          <p className="text-sm whitespace-pre-wrap">
             {content}
-          </Text>
+          </p>
         ) : (
-          <Box fontSize="sm">
+          <div className="text-sm">
             <ReactMarkdown
               rehypePlugins={[rehypeHighlight, rehypeRaw]}
               remarkPlugins={[remarkGfm]}
             >
               {content}
             </ReactMarkdown>
-          </Box>
+          </div>
         )}
-      </Box>
-    </Flex>
+      </div>
+    </div>
   );
 }

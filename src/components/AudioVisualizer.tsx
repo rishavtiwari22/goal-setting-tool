@@ -9,105 +9,69 @@ export default function AudioVisualizer({
   isActive,
   size = 56,
 }: AudioVisualizerProps) {
-  const [volumes, setVolumes] = useState([0, 0, 0]);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const microphoneRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const [volumes, setVolumes] = useState([6, 6, 6]);
   const animationIdRef = useRef<number | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const timeRef = useRef(0);
 
   const MIN_HEIGHT = 6;
-  const MAX_HEIGHT = 40;
-  const MAX_HEIGHT_SIDE = 24;
-  const SENSITIVITY = 1;
+  const MAX_HEIGHT = 36;
+  const MAX_HEIGHT_SIDE = 20;
 
   useEffect(() => {
     if (isActive) {
-      startVisualizer();
+      console.log("AudioVisualizer: Starting animation");
+      startAnimation();
     } else {
-      stopVisualizer();
+      console.log("AudioVisualizer: Stopping animation");
+      stopAnimation();
     }
 
     return () => {
-      stopVisualizer();
+      stopAnimation();
     };
   }, [isActive]);
 
-  const startVisualizer = async () => {
-    try {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext ||
-          (window as any).webkitAudioContext)();
-      }
-
-      if (audioContextRef.current.state === "suspended") {
-        await audioContextRef.current.resume();
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 512;
-      analyserRef.current.smoothingTimeConstant = 0.5;
-
-      microphoneRef.current =
-        audioContextRef.current.createMediaStreamSource(stream);
-      microphoneRef.current.connect(analyserRef.current);
-
-      visualize();
-    } catch (err) {
-      console.error("Error accessing microphone for visualizer:", err);
-    }
+  const startAnimation = () => {
+    // Reset time when starting
+    timeRef.current = 0;
+    animate();
   };
 
-  const stopVisualizer = () => {
+  const stopAnimation = () => {
     if (animationIdRef.current) {
       cancelAnimationFrame(animationIdRef.current);
       animationIdRef.current = null;
     }
-
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-
-    if (microphoneRef.current) {
-      microphoneRef.current.disconnect();
-      microphoneRef.current = null;
-    }
-
-    setVolumes([0, 0, 0]);
+    // Reset to minimum height
+    setVolumes([MIN_HEIGHT, MIN_HEIGHT, MIN_HEIGHT]);
   };
 
-  const visualize = () => {
-    if (!analyserRef.current) return;
+  const animate = () => {
+    timeRef.current += 0.03; // Increased speed for more visible movement
+    const time = timeRef.current;
 
-    const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-    analyserRef.current.getByteFrequencyData(dataArray);
+    // Create organic, voice-like wave patterns with higher amplitude
+    // Use different frequencies and phases for each bar to create natural variation
+    const wave1 = Math.sin(time * 2.0) * 0.6 + Math.sin(time * 3.2) * 0.4;
+    const wave2 = Math.sin(time * 2.5) * 0.7 + Math.sin(time * 4.1) * 0.5;
+    const wave3 = Math.sin(time * 1.8) * 0.6 + Math.sin(time * 3.5) * 0.4;
 
-    let sum = 0;
-    const binCount = dataArray.length / 2;
+    // Add more pronounced randomness to make it more natural and visible
+    const random1 = Math.sin(time * 7.3) * 0.25;
+    const random2 = Math.sin(time * 8.1) * 0.3;
+    const random3 = Math.sin(time * 6.7) * 0.25;
 
-    for (let i = 0; i < binCount; i++) {
-      sum += dataArray[i];
-    }
-    const average = sum / binCount;
+    // Combine waves with randomness and convert to height with increased range
+    const leftHeight =
+      MIN_HEIGHT + Math.abs(wave1 + random1) * (MAX_HEIGHT_SIDE - MIN_HEIGHT);
+    const centerHeight =
+      MIN_HEIGHT + Math.abs(wave2 + random2) * (MAX_HEIGHT - MIN_HEIGHT);
+    const rightHeight =
+      MIN_HEIGHT + Math.abs(wave3 + random3) * (MAX_HEIGHT_SIDE - MIN_HEIGHT);
 
-    let volume = Math.min(100, average * SENSITIVITY);
+    setVolumes([leftHeight, centerHeight, rightHeight]);
 
-    if (volume < 5) volume = 0;
-
-    updateBars(volume);
-
-    animationIdRef.current = requestAnimationFrame(visualize);
-  };
-
-  const updateBars = (volume: number) => {
-    const centerHeight = Math.max(MIN_HEIGHT, (volume / 100) * MAX_HEIGHT);
-    const sideHeight = Math.max(MIN_HEIGHT, (volume / 100) * MAX_HEIGHT_SIDE);
-
-    setVolumes([sideHeight, centerHeight, sideHeight]);
+    animationIdRef.current = requestAnimationFrame(animate);
   };
 
   return (
@@ -115,17 +79,16 @@ export default function AudioVisualizer({
       className="bg-white flex items-center justify-center rounded-lg"
       style={{ width: size, height: size }}
     >
-      <div
-        className="relative flex items-center justify-center gap-1 z-10"
-      >
+      <div className="relative flex items-center justify-center gap-1 z-10">
         {volumes.map((height, index) => (
           <div
             key={index}
-            className="bg-amber-600 rounded-full transition-all duration-75 ease-out"
+            className="bg-amber-600 rounded-full"
             style={{
               width: "4px",
               height: `${height}px`,
               boxShadow: "0 0 8px rgba(255, 255, 255, 0.5)",
+              willChange: "height",
             }}
           />
         ))}

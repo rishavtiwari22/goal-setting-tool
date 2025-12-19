@@ -1,6 +1,7 @@
-import { Box, VStack, Text, Heading, Badge, HStack, Accordion } from '@chakra-ui/react';
 import type { InterviewSession } from '../../models/interview';
 import { MessageBubble } from '../ui/MessageBubble';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../ui/accordion';
+import { Badge } from '../ui/badge';
 
 interface InterviewResultsProps {
   session: InterviewSession;
@@ -9,9 +10,9 @@ interface InterviewResultsProps {
 export function InterviewResults({ session }: InterviewResultsProps) {
   if (!session.result) {
     return (
-      <Box p={4}>
-        <Text>No results available</Text>
-      </Box>
+      <div className="p-4">
+        <p>No results available</p>
+      </div>
     );
   }
 
@@ -19,146 +20,145 @@ export function InterviewResults({ session }: InterviewResultsProps) {
   const feedbackHistory = session.feedbackHistory || [];
 
   return (
-    <VStack gap={6} align="stretch" p={6}>
-      <Box>
-        <Heading size="lg" mb={2}>
+    <div className="flex flex-col gap-6 p-6">
+      <div>
+        <h2 className="text-2xl font-bold mb-2">
           Interview Results
-        </Heading>
-        <Text fontSize="sm" color="gray.600">
+        </h2>
+        <p className="text-sm text-gray-600">
           {session.jobTitle}
-        </Text>
-      </Box>
+        </p>
+      </div>
 
-      <Box borderTop="1px" borderColor="gray.200" pt={4} />
+      <div className="border-t border-gray-200 pt-4" />
 
       {/* Overall Score and Stats */}
-      <Box>
-        <HStack gap={4} mb={4} flexWrap="wrap">
-          <Badge colorPalette="blue" fontSize="md" p={2}>
+      <div>
+        <div className="flex gap-4 mb-4 flex-wrap">
+          <Badge className="text-base px-3 py-1">
             Score: {result.score}/5
           </Badge>
-          <Badge colorPalette="green" fontSize="md" p={2}>
+          <Badge className="text-base px-3 py-1">
             Questions: {result.totalQuestions}
           </Badge>
-          <Badge colorPalette="purple" fontSize="md" p={2}>
+          <Badge className="text-base px-3 py-1">
             Duration: {result.elapsedTime} min
           </Badge>
-        </HStack>
-      </Box>
+        </div>
+      </div>
 
       {/* Summary Section */}
-      <Box bg="blue.50" p={4} borderRadius="md">
-        <Heading size="md" mb={3} color="blue.700">
+      <div className="bg-blue-50 p-4 rounded-md">
+        <h3 className="text-xl font-semibold mb-3 text-blue-700">
           Summary
-        </Heading>
-        <Text fontSize="md" lineHeight="tall" whiteSpace="pre-wrap">
+        </h3>
+        <p className="text-base leading-relaxed whitespace-pre-wrap">
           {result.summary}
-        </Text>
-      </Box>
+        </p>
+      </div>
 
       {/* Conclusion Section */}
-      <Box bg="green.50" p={4} borderRadius="md">
-        <Heading size="md" mb={3} color="green.700">
+      <div className="bg-green-50 p-4 rounded-md">
+        <h3 className="text-xl font-semibold mb-3 text-green-700">
           Conclusion
-        </Heading>
-        <Text fontSize="md" lineHeight="tall" whiteSpace="pre-wrap">
+        </h3>
+        <p className="text-base leading-relaxed whitespace-pre-wrap">
           {result.conclusion}
-        </Text>
-      </Box>
+        </p>
+      </div>
 
-      <Box borderTop="1px" borderColor="gray.200" pt={4} />
+      <div className="border-t border-gray-200 pt-4" />
 
       {/* Q&A History with Feedback */}
-      <Box>
-        <Heading size="md" mb={4}>
+      <div>
+        <h3 className="text-xl font-semibold mb-4">
           Q&A History ({session.qaHistory.length} questions)
-        </Heading>
-        <Accordion.Root collapsible defaultValue={["0"]}>
+        </h3>
+        <Accordion type="single" collapsible defaultValue="0">
           {session.qaHistory.map((qa, index) => (
-            <Accordion.Item key={index} value={String(index)}>
-              <Accordion.ItemTrigger>
-                <Box flex="1" textAlign="left">
-                  <HStack>
-                    <Text fontWeight="semibold" color="blue.600">
+            <AccordionItem key={index} value={String(index)}>
+              <AccordionTrigger>
+                <div className="flex-1 text-left">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-blue-600">
                       Question {index + 1}
-                    </Text>
-                    <Badge colorPalette="gray" fontSize="xs">
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
                       {new Date(qa.timestamp).toLocaleTimeString()}
                     </Badge>
-                  </HStack>
-                  <Text fontSize="sm" color="gray.600" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+                  </div>
+                  <p className="text-sm text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">
                     {qa.question}
-                  </Text>
-                </Box>
-                <Accordion.ItemIndicator />
-              </Accordion.ItemTrigger>
-              <Accordion.ItemContent>
-                <Box p={4} bg="gray.50" borderRadius="md">
+                  </p>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="p-4 bg-gray-50 rounded-md">
                   {/* Question */}
-                  <Box mb={4}>
-                    <Text fontSize="xs" fontWeight="bold" color="gray.500" mb={1}>
+                  <div className="mb-4">
+                    <p className="text-xs font-bold text-gray-500 mb-1">
                       INTERVIEWER
-                    </Text>
+                    </p>
                     <MessageBubble role="assistant" content={qa.question} timestamp={qa.timestamp} />
-                  </Box>
+                  </div>
 
                   {/* Answer */}
-                  <Box mb={4}>
-                    <Text fontSize="xs" fontWeight="bold" color="gray.500" mb={1}>
+                  <div className="mb-4">
+                    <p className="text-xs font-bold text-gray-500 mb-1">
                       YOUR ANSWER
-                    </Text>
+                    </p>
                     <MessageBubble role="user" content={qa.answer} timestamp={qa.timestamp} />
-                  </Box>
+                  </div>
 
                   {/* Feedback for this question (if available) */}
                   {feedbackHistory[index] && (
-                    <Box bg="yellow.50" p={3} borderRadius="md" borderLeft="4px solid" borderColor="yellow.400">
-                      <Text fontSize="xs" fontWeight="bold" color="yellow.700" mb={1}>
+                    <div className="bg-yellow-50 p-3 rounded-md border-l-4 border-yellow-400">
+                      <p className="text-xs font-bold text-yellow-700 mb-1">
                         FEEDBACK
-                      </Text>
-                      <Text fontSize="sm" color="gray.700" whiteSpace="pre-wrap">
+                      </p>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">
                         {feedbackHistory[index]}
-                      </Text>
-                    </Box>
+                      </p>
+                    </div>
                   )}
-                </Box>
-              </Accordion.ItemContent>
-            </Accordion.Item>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
           ))}
-        </Accordion.Root>
-      </Box>
+        </Accordion>
+      </div>
 
       {/* Phase Statistics */}
-      <Box borderTop="1px" borderColor="gray.200" pt={4}>
-        <Heading size="md" mb={3}>
+      <div className="border-t border-gray-200 pt-4">
+        <h3 className="text-xl font-semibold mb-3">
           Interview Statistics
-        </Heading>
-        <HStack gap={4} flexWrap="wrap">
-          <Badge colorPalette="teal" p={2}>
+        </h3>
+        <div className="flex gap-4 flex-wrap">
+          <Badge className="px-3 py-1">
             Introduction: {session.introductionQuestionCount || 0} questions
           </Badge>
-          <Badge colorPalette="orange" p={2}>
+          <Badge className="px-3 py-1">
             Project: {session.projectQuestionCount || 0} questions
           </Badge>
-          <Badge colorPalette="purple" p={2}>
+          <Badge className="px-3 py-1">
             Technical: {session.technicalQuestionCount || 0} questions
           </Badge>
-        </HStack>
+        </div>
         {session.discussedProjects && session.discussedProjects.length > 0 && (
-          <Box mt={3}>
-            <Text fontSize="sm" fontWeight="bold" color="gray.600" mb={1}>
+          <div className="mt-3">
+            <p className="text-sm font-bold text-gray-600 mb-1">
               Projects Discussed:
-            </Text>
-            <HStack gap={2} flexWrap="wrap">
+            </p>
+            <div className="flex gap-2 flex-wrap">
               {session.discussedProjects.map((project, idx) => (
-                <Badge key={idx} colorPalette="cyan" variant="subtle">
+                <Badge key={idx} variant="secondary">
                   {project.name}
                 </Badge>
               ))}
-            </HStack>
-          </Box>
+            </div>
+          </div>
         )}
-      </Box>
-    </VStack>
+      </div>
+    </div>
   );
 }
