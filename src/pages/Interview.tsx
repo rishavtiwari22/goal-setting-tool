@@ -108,6 +108,7 @@ export default function Interview() {
     isCompleted,
     remainingTime,
     submitAnswer,
+    sessionId: currentSessionId,
   } = useInterview({
     config,
     sessionId,
@@ -130,6 +131,13 @@ export default function Interview() {
       }
     },
   });
+
+  // Sync URL with session ID to enable persistence on refresh
+  useEffect(() => {
+    if (currentSessionId && !sessionId) {
+      navigate(`/interview/${currentSessionId}`, { replace: true });
+    }
+  }, [currentSessionId, sessionId, navigate]);
 
   const {
     isListening,

@@ -64,7 +64,6 @@ export function buildDecisionPrompt(params: BuildDecisionPromptParams): { system
 
   const systemMessage = `You are a technical interviewer analyzing candidate responses. Make deterministic decisions about the interview flow.
 
-CRITICAL: You must recognize when a candidate is UNQUALIFIED or DISENGAGED and end the interview gracefully.
 
 Decision Rules (in priority order):
 
@@ -123,15 +122,15 @@ Remaining Time: {remaining_time} minutes
 
 Ask a concise follow-up question that helps clarify the candidate's project experience. Be specific and reference what they said.`;
 
-const CREATE_QUESTION_FOLLOWUP_TECHNICAL_SYSTEM = `You are a technical interviewer. The candidate's answer was unclear or insufficient. Ask a follow-up technical question.
+// const CREATE_QUESTION_FOLLOWUP_TECHNICAL_SYSTEM = `You are a technical interviewer. The candidate's answer was unclear or insufficient. Ask a follow-up technical question.
 
-Job Title: {job_title}
-Knowledge Areas: {knowledge_points}
-Difficulty: {difficulty}
-Language: {language}
-Remaining Time: {remaining_time} minutes
+// Job Title: {job_title}
+// Knowledge Areas: {knowledge_points}
+// Difficulty: {difficulty}
+// Language: {language}
+// Remaining Time: {remaining_time} minutes
 
-Ask a concise follow-up technical question that helps clarify the candidate's understanding. Be specific and reference what they said.`;
+// Ask a concise follow-up technical question that helps clarify the candidate's understanding. Be specific and reference what they said.`;
 
 const CREATE_QUESTION_MOVENEXT_INTRO_SYSTEM = `You are a senior technical interviewer conducting an interview for {job_title}.
 
@@ -151,6 +150,7 @@ Phase Guidelines:
 - Question 3 (optional): Ask about their preferred working style or team collaboration approach
 - Keep questions warm, welcoming, and conversational
 - DO NOT jump to technical questions yet - this is about building rapport
+- Do NOT use bold texts or any other formatting. No * or ** or *** or ***
 
 After 2-3 introduction questions, the feedback system will transition to project discussion.
 
@@ -172,6 +172,7 @@ Phase Guidelines:
 - Focus on their role, technologies used, and challenges faced
 - These should be open-ended questions
 - DO NOT ask about projects that have already been fully discussed
+- Do NOT use bold texts or any other formatting. No * or ** or *** or ***
 - If returning from technical phase, ask about a NEW project they haven't mentioned yet
 
 Generate the next question following the interview flow. The question should be open-ended, conversational, and assess project experience. Do NOT include phase labels in the question.`;
@@ -193,15 +194,28 @@ Phase Guidelines:
 - Cover key concepts from {knowledge_points}
 - Ask about their understanding, approach, and reasoning
 - NO multiple choice - all questions should require explanations
+- Do NOT use bold texts or any other formatting. No * or ** or *** or ***
 
 IMPORTANT - Question Limits Per Project:
 - After 2-3 technical questions about the same project, you MUST either:
   a) Ask about a DIFFERENT aspect/technology from their experience, OR
   b) Move to general technical concepts not tied to a specific project
 - DO NOT keep drilling the same project repeatedly beyond 3 questions
-
+- Do NOT use bold texts or any other formatting. No * or ** or *** or ***
 Generate the next question. Vary the topics to keep the interview engaging. Do NOT include phase labels.`;
 
+const CREATE_QUESTION_RETRY_SYSTEM = `You are a technical interviewer. The candidate has given a bad or irrelevant answer.
+Job Title: {job_title}
+Knowledge Areas: {knowledge_points}
+Language: {language}
+Remaining Time: {remaining_time} minutes
+
+The candidate's previous response was incorrect, nonsense, or a refusal to answer.
+Your goal is to:
+1. Firmly but politely state that the answer is incorrect or insufficient.
+2. Ask them to try again, or ask a simplified follow-up question on the same topic to guide them.
+3. Do NOT reveal the answer yet. Give them a chance to correct themselves.
+4. Do NOT use bold texts or any other formatting. No * or **  `;
 export interface BuildCreateQuestionPromptParams {
   jobTitle: string;
   jobDescription: string;
@@ -210,7 +224,7 @@ export interface BuildCreateQuestionPromptParams {
   language: string;
   remainingTime: number;
   currentPhase: InterviewPhase;
-  decision: 'followup' | 'movenext';
+  decision: 'followup' | 'movenext' | 'retry';
   question?: string;
   answer?: string;
   qaHistory: QAHistoryItem[];
@@ -221,7 +235,6 @@ export interface BuildCreateQuestionPromptParams {
   currentProjectQuestionCount?: number;
 }
 
-// Helper function to format discussed projects for prompts
 function formatDiscussedProjects(projects?: ProjectInfo[]): string {
   if (!projects || projects.length === 0) {
     return '';
@@ -250,8 +263,9 @@ export function buildCreateQuestionPrompt(params: BuildCreateQuestionPromptParam
     } else if (params.currentPhase === 'project') {
       systemTemplate = CREATE_QUESTION_FOLLOWUP_PROJECT_SYSTEM;
     } else {
-      systemTemplate = CREATE_QUESTION_FOLLOWUP_TECHNICAL_SYSTEM;
     }
+  } else if (params.decision === 'retry') {
+    systemTemplate = CREATE_QUESTION_RETRY_SYSTEM;
   } else {
     if (params.currentPhase === 'introduction') {
       systemTemplate = CREATE_QUESTION_MOVENEXT_INTRO_SYSTEM;
