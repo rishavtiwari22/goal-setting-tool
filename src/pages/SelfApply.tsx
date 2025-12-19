@@ -2,13 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import DeviceTester from "@/components/DeviceTester";
 import { DEFAULT_PIPER_BACKEND, preparePiperVoice } from "../lib/piper";
 import JobSelection from "@/components/JobSelection";
 import { ChevronDownIcon, ChevronLeft } from "lucide-react";
-import { getEmailFromJWT, isValidJWTFormat } from "../utils/jwt";
 import { checkUser, getJobs, getJob } from "../services/api/serverApi";
 import type { Job } from "../models/job";
 
@@ -22,18 +20,16 @@ interface FormData {
   testTime: number;
 }
 
-type Step = "email" | "job_selection" | "speakerandmiccheck";
+type Step = "job_selection" | "speakerandmiccheck";
 
 export default function SelfApply() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<string>("idle");
   const voiceReadyRef = useRef(false);
-  const [step, setStep] = useState<Step>("email");
+  const [step, setStep] = useState<Step>("job_selection");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [checkingUser, setCheckingUser] = useState(false);
-  const [emailError, setEmailError] = useState<string | null>(null);
   const [showAllJobs, setShowAllJobs] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
@@ -65,139 +61,38 @@ export default function SelfApply() {
 
   useEffect(() => {
     const checkStoredAuth = async () => {
-      const storedToken = localStorage.getItem("studentToken");
+      const storedEmail = localStorage.getItem("studentEmail");
 
-      if (storedToken) {
-        const email = getEmailFromJWT(storedToken);
-
-        if (!email) {
-          localStorage.removeItem("studentToken");
-          toast.error("Invalid authentication token. Please try again.");
-          return;
-        }
-
-        setFormData((prev) => ({ ...prev, email }));
-
-        try {
-          const response = await checkUser(email);
-          if (response.exists) {
-            if (response.user?.user_id) {
-              setUserId(response.user.user_id);
-            } else {
-              setUserId(email);
-            }
-            setStep("job_selection");
-          } else {
-            localStorage.removeItem("studentToken");
-            setFormData((prev) => ({ ...prev, email: "" }));
-            toast.error(
-              "Oh no, your data is not with us. Ask an admin to add your data."
-            );
-          }
-        } catch (error) {
-          console.error("Error checking stored token:", error);
-          localStorage.removeItem("studentToken");
-          setFormData((prev) => ({ ...prev, email: "" }));
-          toast.error(
-            "Failed to verify authentication. Please contact support."
-          );
-        }
-      } else {
-        const storedEmail = localStorage.getItem("studentEmail");
-        if (storedEmail) {
-          setFormData((prev) => ({ ...prev, email: storedEmail }));
-          try {
-            const response = await checkUser(storedEmail);
-            if (response.exists) {
-              if (response.user?.user_id) {
-                setUserId(response.user.user_id);
-              } else {
-                setUserId(storedEmail);
-              }
-              setStep("job_selection");
-            } else {
-              localStorage.removeItem("studentEmail");
-              setFormData((prev) => ({ ...prev, email: "" }));
-              toast.error(
-                "Oh no, your data is not with us. Ask an admin to add your data."
-              );
-            }
-          } catch (error) {
-            console.error("Error checking stored email:", error);
-            localStorage.removeItem("studentEmail");
-            setFormData((prev) => ({ ...prev, email: "" }));
-            toast.error("Failed to verify email. Please contact support.");
-          }
-        }
-      }
-    };
-    checkStoredAuth();
-  }, []);
-
-  const handleEmailSubmit = async () => {
-    const input = formData.email.trim();
-
-    if (!input) {
-      toast.error("Please enter a JWT token or email address");
-      return;
-    }
-
-    setCheckingUser(true);
-    setEmailError(null);
-
-    try {
-      let emailToVerify = input;
-      let jwtToken: string | null = null;
-
-      if (isValidJWTFormat(input)) {
-        const decodedEmail = getEmailFromJWT(input);
-
-        if (!decodedEmail) {
-          toast.error("Invalid JWT token: no email found in payload");
-          setCheckingUser(false);
-          return;
-        }
-
-        emailToVerify = decodedEmail;
-        jwtToken = input;
-      } else if (!input.includes("@")) {
-        toast.error("Please enter a valid JWT token or email address");
-        setCheckingUser(false);
+      if (!storedEmail) {
+        toast.error("Please provide email via URL parameter: ?email=your@email.com");
+        navigate("/");
         return;
       }
 
-      const response = await checkUser(emailToVerify);
-
-      if (response.exists) {
-        if (jwtToken) {
-          localStorage.setItem("studentToken", jwtToken);
+      try {
+        const response = await checkUser(storedEmail);
+        if (response.exists) {
+          setFormData((prev) => ({ ...prev, email: storedEmail }));
+          if (response.user?.user_id) {
+            setUserId(response.user.user_id);
+          } else {
+            setUserId(storedEmail);
+          }
+        } else {
           localStorage.removeItem("studentEmail");
-        } else {
-          localStorage.setItem("studentEmail", emailToVerify);
+          toast.error("Your data is not with us. Ask an admin to add your data.");
+          navigate("/");
         }
-
-        if (response.user?.user_id) {
-          setUserId(response.user.user_id);
-        } else {
-          setUserId(emailToVerify);
-        }
-
-        setFormData((prev) => ({ ...prev, email: emailToVerify }));
-        setStep("job_selection");
-      } else {
-        setEmailError(
-          "Oh no, your data is not with us. Ask an admin to add your data."
-        );
+      } catch (error) {
+        console.error("Error checking stored email:", error);
+        localStorage.removeItem("studentEmail");
+        toast.error("Failed to verify authentication.");
+        navigate("/");
       }
-    } catch (error) {
-      console.error("Error checking user:", error);
-      setEmailError(
-        "Oh no, your data is not with us. Ask an admin to add your data."
-      );
-    } finally {
-      setCheckingUser(false);
-    }
-  };
+    };
+
+    checkStoredAuth();
+  }, [navigate]);
 
   const handleJobSelect = (jobId: string | null) => {
     if (jobId) {
@@ -277,53 +172,6 @@ export default function SelfApply() {
 
   const renderStep = () => {
     switch (step) {
-      case "email":
-        return (
-          <div className="w-full">
-            <header className="border-b border-gray-200 bg-white">
-              <div className="relative w-full px-6 py-4 flex items-center justify-center">
-                <button
-                  onClick={() => navigate("/")}
-                  className="cursor-pointer absolute left-6 text-gray-600 hover:text-gray-900"
-                >
-                  <ChevronLeft />
-                </button>
-                <h1 className="text-base font-semibold">
-                  Zoe: Your Learning Assistant
-                </h1>
-              </div>
-            </header>
-
-            <div className="flex flex-col gap-4 items-stretch w-full p-8 max-w-2xl mx-auto mt-12">
-              <p className="text-lg text-gray-600">
-                Let's get started! Please enter your email address or JWT token.
-              </p>
-              <Input
-                placeholder="your.email@example.com or JWT token"
-                value={formData.email}
-                onChange={(e) => {
-                  setFormData({ ...formData, email: e.target.value });
-                  setEmailError(null);
-                }}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter" && !checkingUser) handleEmailSubmit();
-                }}
-              />
-              {emailError && (
-                <p className="text-red-500 text-sm">{emailError}</p>
-              )}
-              <Button
-                onClick={handleEmailSubmit}
-                size="lg"
-                disabled={checkingUser}
-                className="bg-[#2C5F2D] hover:bg-[#2C5F2D]/90 text-white"
-              >
-                {checkingUser ? <Spinner size="sm" /> : "Continue"}
-              </Button>
-            </div>
-          </div>
-        );
-
       case "job_selection":
         return (
           <div className="w-full">

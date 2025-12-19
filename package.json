@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:latency": "node test-latency.js"
   },
   "dependencies": {
     "@mintplex-labs/piper-tts-web": "^1.0.4",

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import SelectionCard from "@/components/SelectionCard";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { checkUser } from "../services/api/serverApi";
 
 export default function Home() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -43,15 +45,26 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const token = searchParams.get("token") || searchParams.get("jwt");
-    if (token) {
-      localStorage.setItem("studentToken", token);
-    }
+    const authenticateFromQuery = async () => {
+      const email = searchParams.get("email");
+      
+      if (email) {
+        try {
+          const response = await checkUser(email);
+          if (response.exists) {
+            localStorage.setItem("studentEmail", email);
+            toast.success("Authentication successful");
+          } else {
+            toast.error("Email not found. Please contact support.");
+          }
+        } catch (error) {
+          console.error("Error checking user:", error);
+          toast.error("Failed to verify email. Please contact support.");
+        }
+      }
+    };
 
-    const studentEmail = searchParams.get("studentEmail");
-    if (studentEmail) {
-      localStorage.setItem("studentEmail", studentEmail);
-    }
+    authenticateFromQuery();
   }, [searchParams]);
 
   return (
