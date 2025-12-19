@@ -121,6 +121,7 @@ export default function Interview() {
     remainingTime,
     submitAnswer,
     sessionId: currentSessionId,
+    currentQuestion,
   } = useInterview({
     config,
     sessionId,
@@ -519,14 +520,14 @@ export default function Interview() {
             className="caption-container transition-opacity duration-300"
             style={{
               opacity:
-                showChatMessage && isTtsActive && currentlySpokenText ? 1 : 0,
+                showChatMessage && currentQuestion ? 1 : 0,
               minHeight: "80px",
               maxHeight: "80px",
               height: "80px",
             }}
           >
-            {isTtsActive && currentlySpokenText && (
-              <p className="caption-text">{currentlySpokenText}</p>
+            {showChatMessage && currentQuestion && (
+              <p className="caption-text">{currentQuestion}</p>
             )}
           </div>
 
