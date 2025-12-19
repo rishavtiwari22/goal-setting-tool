@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from "react";
 import { ResetSTTLogic } from "../utils/stt/sttLogic";
 
 interface UseSpeechRecognitionProps {
@@ -6,10 +6,15 @@ interface UseSpeechRecognitionProps {
   enabled?: boolean;
 }
 
-export function useSpeechRecognition({ onSpeechResult, enabled = true }: UseSpeechRecognitionProps) {
+export function useSpeechRecognition({
+  onSpeechResult,
+  enabled = true,
+}: UseSpeechRecognitionProps) {
   const [isListening, setIsListening] = useState(false);
   const [isSpeechMode, setIsSpeechMode] = useState(false);
-  const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
+  const [permissionGranted, setPermissionGranted] = useState<boolean | null>(
+    null
+  );
 
   const sttLogicRef = useRef<ResetSTTLogic | null>(null);
   const isListeningRef = useRef(false);
@@ -32,7 +37,7 @@ export function useSpeechRecognition({ onSpeechResult, enabled = true }: UseSpee
   const checkMicPermission = useCallback(async () => {
     try {
       // Check if we're in a browser environment
-      if (typeof window === 'undefined' || !navigator.mediaDevices) {
+      if (typeof window === "undefined" || !navigator.mediaDevices) {
         console.error("MediaDevices API not available");
         setPermissionGranted(false);
         return false;
@@ -41,7 +46,7 @@ export function useSpeechRecognition({ onSpeechResult, enabled = true }: UseSpee
       // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       // Stop the stream immediately - we just needed to check permission
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach((track) => track.stop());
       setPermissionGranted(true);
       console.log("Microphone permission granted");
       return true;
@@ -69,7 +74,9 @@ export function useSpeechRecognition({ onSpeechResult, enabled = true }: UseSpee
 
           if (!transcript.trim()) return;
 
-          console.log(`[STT] Received transcript: "${transcript.substring(0, 50)}..."`);
+          console.log(
+            `[STT] Received transcript: "${transcript.substring(0, 50)}..."`
+          );
 
           // 1.5 seconds pause timeout
           silenceTimerRef.current = setTimeout(() => {
@@ -77,7 +84,12 @@ export function useSpeechRecognition({ onSpeechResult, enabled = true }: UseSpee
             if (logic && isListeningRef.current) {
               const fullTranscript = logic.getFullTranscript();
               if (fullTranscript && fullTranscript.trim().length > 0) {
-                console.log(`Silence detected - sending: "${fullTranscript.substring(0, 50)}..."`);
+                console.log(
+                  `Silence detected - sending: "${fullTranscript.substring(
+                    0,
+                    50
+                  )}..."`
+                );
 
                 logic.stop();
                 setIsListening(false);
@@ -173,18 +185,30 @@ export function useSpeechRecognition({ onSpeechResult, enabled = true }: UseSpee
       isListeningRef.current = false;
     }
 
-    if (isSpeechModeRef.current) {
-      resumeAfterPlaybackRef.current = true;
-    }
+    resumeAfterPlaybackRef.current = true;
   }, []);
 
-  const resumeListening = useCallback(() => {
+  const resumeListening = useCallback(async () => {
     console.log("Attempting to resume listening...", {
       resumeFlag: resumeAfterPlaybackRef.current,
-      isSpeechMode: isSpeechModeRef.current
+      isSpeechMode: isSpeechModeRef.current,
     });
 
-    if (sttLogicRef.current && (resumeAfterPlaybackRef.current || isSpeechModeRef.current)) {
+    if (
+      sttLogicRef.current &&
+      (resumeAfterPlaybackRef.current || isSpeechModeRef.current)
+    ) {
+      // Check microphone permission before resuming
+      if (permissionGranted === null || permissionGranted === false) {
+        const hasPermission = await checkMicPermission();
+        if (!hasPermission) {
+          console.error(
+            "Cannot resume listening - microphone permission denied"
+          );
+          return;
+        }
+      }
+
       setTimeout(() => {
         console.log("Resuming listening now.");
         try {
@@ -198,7 +222,7 @@ export function useSpeechRecognition({ onSpeechResult, enabled = true }: UseSpee
         }
       }, 100);
     }
-  }, []);
+  }, [permissionGranted, checkMicPermission]);
 
   return {
     isListening,
@@ -208,6 +232,6 @@ export function useSpeechRecognition({ onSpeechResult, enabled = true }: UseSpee
     stopListening,
     pauseListening,
     resumeListening,
-    checkMicPermission
+    checkMicPermission,
   };
 }

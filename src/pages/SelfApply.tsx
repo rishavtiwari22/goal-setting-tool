@@ -11,7 +11,6 @@ import { ChevronDownIcon, ChevronLeft } from "lucide-react";
 import { getEmailFromJWT, isValidJWTFormat } from "../utils/jwt";
 import { checkUser, getJobs, getJob } from "../services/api/serverApi";
 import type { Job } from "../models/job";
-import { PiperLoader } from "../components/interview/PiperLoader";
 
 interface FormData {
   email: string;
@@ -27,7 +26,6 @@ type Step = "email" | "job_selection" | "speakerandmiccheck";
 
 export default function SelfApply() {
   const navigate = useNavigate();
-  const [preparing, setPreparing] = useState(false);
   const [status, setStatus] = useState<string>("idle");
   const voiceReadyRef = useRef(false);
   const [step, setStep] = useState<Step>("email");
@@ -92,13 +90,17 @@ export default function SelfApply() {
           } else {
             localStorage.removeItem("studentToken");
             setFormData((prev) => ({ ...prev, email: "" }));
-            toast.error("Oh no, your data is not with us. Ask an admin to add your data.");
+            toast.error(
+              "Oh no, your data is not with us. Ask an admin to add your data."
+            );
           }
         } catch (error) {
           console.error("Error checking stored token:", error);
           localStorage.removeItem("studentToken");
           setFormData((prev) => ({ ...prev, email: "" }));
-          toast.error("Failed to verify authentication. Please contact support.");
+          toast.error(
+            "Failed to verify authentication. Please contact support."
+          );
         }
       } else {
         const storedEmail = localStorage.getItem("studentEmail");
@@ -116,7 +118,9 @@ export default function SelfApply() {
             } else {
               localStorage.removeItem("studentEmail");
               setFormData((prev) => ({ ...prev, email: "" }));
-              toast.error("Oh no, your data is not with us. Ask an admin to add your data.");
+              toast.error(
+                "Oh no, your data is not with us. Ask an admin to add your data."
+              );
             }
           } catch (error) {
             console.error("Error checking stored email:", error);
@@ -181,11 +185,15 @@ export default function SelfApply() {
         setFormData((prev) => ({ ...prev, email: emailToVerify }));
         setStep("job_selection");
       } else {
-        setEmailError("Oh no, your data is not with us. Ask an admin to add your data.");
+        setEmailError(
+          "Oh no, your data is not with us. Ask an admin to add your data."
+        );
       }
     } catch (error) {
       console.error("Error checking user:", error);
-      setEmailError("Oh no, your data is not with us. Ask an admin to add your data.");
+      setEmailError(
+        "Oh no, your data is not with us. Ask an admin to add your data."
+      );
     } finally {
       setCheckingUser(false);
     }
@@ -213,20 +221,19 @@ export default function SelfApply() {
       toast.error("User ID not found");
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     if (!voiceReadyRef.current) {
-      setPreparing(true);
       setStatus("Preparing voice system...");
       try {
         await preparePiperVoice((s) => setStatus(s), DEFAULT_PIPER_BACKEND);
         voiceReadyRef.current = true;
       } catch (error) {
         console.error("Piper preparation failed:", error);
-        toast.warning("Voice system preparation failed, continuing without voice");
-      } finally {
-        setPreparing(false);
+        toast.warning(
+          "Voice system preparation failed, continuing without voice"
+        );
       }
     }
 
@@ -255,7 +262,10 @@ export default function SelfApply() {
         examinationPoints: [],
       };
 
-      sessionStorage.setItem("interviewConfig", JSON.stringify(interviewConfig));
+      sessionStorage.setItem(
+        "interviewConfig",
+        JSON.stringify(interviewConfig)
+      );
       navigate("/interview");
     } catch (error) {
       console.error("Error starting interview:", error);
@@ -288,28 +298,28 @@ export default function SelfApply() {
               <p className="text-lg text-gray-600">
                 Let's get started! Please enter your email address or JWT token.
               </p>
-            <Input
+              <Input
                 placeholder="your.email@example.com or JWT token"
                 value={formData.email}
-              onChange={(e) => {
+                onChange={(e) => {
                   setFormData({ ...formData, email: e.target.value });
-                setEmailError(null);
-              }}
-              onKeyPress={(e) => {
+                  setEmailError(null);
+                }}
+                onKeyPress={(e) => {
                   if (e.key === "Enter" && !checkingUser) handleEmailSubmit();
-              }}
-            />
-            {emailError && (
+                }}
+              />
+              {emailError && (
                 <p className="text-red-500 text-sm">{emailError}</p>
-            )}
-            <Button
-              onClick={handleEmailSubmit}
-              size="lg"
+              )}
+              <Button
+                onClick={handleEmailSubmit}
+                size="lg"
                 disabled={checkingUser}
                 className="bg-[#2C5F2D] hover:bg-[#2C5F2D]/90 text-white"
-            >
+              >
                 {checkingUser ? <Spinner size="sm" /> : "Continue"}
-            </Button>
+              </Button>
             </div>
           </div>
         );
@@ -349,11 +359,11 @@ export default function SelfApply() {
                   Select a job role from below :
                 </p>
 
-            {loadingJobs ? (
+                {loadingJobs ? (
                   <div className="flex justify-center py-8">
-                <Spinner size="lg" />
+                    <Spinner size="lg" />
                   </div>
-            ) : (
+                ) : (
                   <>
                     <JobSelection
                       jobs={jobs}
@@ -417,10 +427,5 @@ export default function SelfApply() {
     }
   };
 
-  return (
-    <div className="flex min-h-screen bg-primary">
-            {renderStep()}
-      {preparing && <PiperLoader status={status} />}
-    </div>
-  );
+  return <div className="flex min-h-screen bg-primary">{renderStep()}</div>;
 }
