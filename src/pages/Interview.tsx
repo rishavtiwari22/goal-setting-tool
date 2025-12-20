@@ -534,7 +534,9 @@ export default function Interview() {
             }}
           >
             {showChatMessage && currentlySpokenText && (
-              <p className="caption-text">{currentlySpokenText}</p>
+              <p className="caption-text font-semibold">
+                {currentlySpokenText}
+              </p>
             )}
           </div>
 
@@ -709,8 +711,10 @@ export default function Interview() {
           overflow: hidden;
         }
         .caption-text {
+          overflow: auto;
           color: #1f2937;
-          font-size: 16px;
+          font-size: 21px;
+          font-weight: semi-bold;
           line-height: 1.5;
           text-align: left;
           margin: 0;

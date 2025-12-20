@@ -61,8 +61,10 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
   if (!summary) return result;
 
   const lines = summary.split("\n");
-  
-  const overallIndex = lines.findIndex(line => line.includes("**Overall Assessment:**"));
+
+  const overallIndex = lines.findIndex((line) =>
+    line.includes("**Overall Assessment:**")
+  );
   if (overallIndex !== -1) {
     let assessmentText = "";
     for (let i = overallIndex + 1; i < lines.length; i++) {
@@ -73,32 +75,45 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
     result.mainSummary = assessmentText.trim();
   }
 
-  const breakdownIndex = lines.findIndex(line => line.includes("**Performance Breakdown:**"));
+  const breakdownIndex = lines.findIndex((line) =>
+    line.includes("**Performance Breakdown:**")
+  );
   if (breakdownIndex !== -1) {
     for (let i = breakdownIndex + 1; i < lines.length; i++) {
       const line = lines[i].trim();
-      
-      if (line.includes("**Interview Conclusion:**") || line.includes("**Score:**") || line.includes("**Recommendation:**")) break;
-      
+
+      if (
+        line.includes("**Interview Conclusion:**") ||
+        line.includes("**Score:**") ||
+        line.includes("**Recommendation:**")
+      )
+        break;
+
       const bulletMatch = line.match(/^\*\s+\*\*(.+?):\*\*\s+(.+)/);
       if (bulletMatch) {
         const [, title, description] = bulletMatch;
         const cleanDesc = description.replace(/\*\*/g, "").trim();
-        
-        if (title.toLowerCase().includes("technical") || 
-            title.toLowerCase().includes("coding") || 
-            title.toLowerCase().includes("problem")) {
+
+        if (
+          title.toLowerCase().includes("technical") ||
+          title.toLowerCase().includes("coding") ||
+          title.toLowerCase().includes("problem")
+        ) {
           result.topStrengths.push({ title, description: cleanDesc });
-        } else if (title.toLowerCase().includes("communication") || 
-                   title.toLowerCase().includes("professionalism") || 
-                   title.toLowerCase().includes("experience")) {
+        } else if (
+          title.toLowerCase().includes("communication") ||
+          title.toLowerCase().includes("professionalism") ||
+          title.toLowerCase().includes("experience")
+        ) {
           result.improvementAreas.push({ title, description: cleanDesc });
         }
       }
     }
   }
 
-  const recommendationIndex = lines.findIndex(line => line.includes("**Recommendation:**"));
+  const recommendationIndex = lines.findIndex((line) =>
+    line.includes("**Recommendation:**")
+  );
   if (recommendationIndex !== -1) {
     let recommendationText = "";
     for (let i = recommendationIndex + 1; i < lines.length; i++) {
@@ -107,9 +122,9 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
       recommendationText += line.replace(/\*\*/g, "") + " ";
     }
     if (recommendationText.trim()) {
-      result.nextSteps.push({ 
-        title: "Recommendation", 
-        description: recommendationText.trim() 
+      result.nextSteps.push({
+        title: "Recommendation",
+        description: recommendationText.trim(),
       });
     }
   }
@@ -120,9 +135,7 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
 const ResultOverviewItem = ({ color, children }: any) => (
   <div className="flex items-center gap-2">
     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-    <p className="text-sm text-gray-600">
-      {children}
-    </p>
+    <p className="text-sm text-gray-600">{children}</p>
   </div>
 );
 
@@ -133,19 +146,52 @@ export const TestResults: React.FC<TestResultsProps> = ({
   const parsed = parseSummaryContent(testResult.summary);
 
   const displayData = {
-    mainSummary: parsed.mainSummary || testResult.summary.split("\n\n")[0] || "Interview performance summary",
-    topStrengths: parsed.topStrengths.length > 0 ? parsed.topStrengths : [
-      { title: "Technical Knowledge", description: "Demonstrated strong understanding of core concepts." },
-      { title: "Problem Solving", description: "Showed good analytical thinking and approach to challenges." }
-    ],
-    improvementAreas: parsed.improvementAreas.length > 0 ? parsed.improvementAreas : [
-      { title: "Communication", description: "Could benefit from more detailed explanations." },
-      { title: "Time Management", description: "Consider practicing under time constraints." }
-    ],
-    nextSteps: parsed.nextSteps.length > 0 ? parsed.nextSteps : [
-      { title: "Practice", description: "Continue practicing similar interview scenarios." },
-      { title: "Review", description: "Review the questions and answers from this session." }
-    ],
+    mainSummary:
+      parsed.mainSummary ||
+      testResult.summary.split("\n\n")[0] ||
+      "Interview performance summary",
+    topStrengths:
+      parsed.topStrengths.length > 0
+        ? parsed.topStrengths
+        : [
+            {
+              title: "Technical Knowledge",
+              description:
+                "Demonstrated strong understanding of core concepts.",
+            },
+            {
+              title: "Problem Solving",
+              description:
+                "Showed good analytical thinking and approach to challenges.",
+            },
+          ],
+    improvementAreas:
+      parsed.improvementAreas.length > 0
+        ? parsed.improvementAreas
+        : [
+            {
+              title: "Communication",
+              description: "Could benefit from more detailed explanations.",
+            },
+            {
+              title: "Time Management",
+              description: "Consider practicing under time constraints.",
+            },
+          ],
+    nextSteps:
+      parsed.nextSteps.length > 0
+        ? parsed.nextSteps
+        : [
+            {
+              title: "Practice",
+              description: "Continue practicing similar interview scenarios.",
+            },
+            {
+              title: "Review",
+              description:
+                "Review the questions and answers from this session.",
+            },
+          ],
   };
 
   const getFeedbackText = (summary: any): string => {
@@ -173,22 +219,26 @@ export const TestResults: React.FC<TestResultsProps> = ({
     <div className="min-h-screen w-screen p-8">
       <div className="w-full mx-auto">
         <div className="flex justify-between items-center mb-2 mx-7">
-          <div className="flex items-center gap-2"> 
-           <img src="/assets/image 1.svg" alt="Logo" />
+          <div className="flex items-center gap-2">
+            <img src="/assets/image 1.svg" alt="Logo" />
           </div>
           <div className="flex items-center gap-2">
-            <Button 
+            <Button
               className="bg-[#2C5F2D] text-white font-semibold hover:bg-[#1F4420] hover:scale-[1.01] transition-all"
-              onClick={() => window.location.href = "/"}
+              onClick={() => (window.location.href = "/")}
             >
-              <img src="/assets/Vector (Stroke).svg" alt="" className="w-4 h-4 mr-2" />
+              <img
+                src="/assets/Vector (Stroke).svg"
+                alt=""
+                className="w-4 h-4 mr-2"
+              />
               Try another interview
             </Button>
             <Button
               variant="ghost"
               size="icon"
               className="mb-4"
-              onClick={() => window.location.href = "/"}
+              onClick={() => (window.location.href = "/")}
             >
               <XCircle className="w-6 h-6" />
             </Button>
@@ -277,14 +327,21 @@ export const TestResults: React.FC<TestResultsProps> = ({
             </div>
 
             <div>
-              <div className="p-6 rounded-lg border border-green-200" style={{
-                backgroundImage: "url('/assets/Rectangle 5 (2).svg')",
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat'
-              }}>
+              <div
+                className="p-6 rounded-lg border border-green-200"
+                style={{
+                  backgroundImage: "url('/assets/Rectangle 5 (2).svg')",
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
+                }}
+              >
                 <div className="flex items-center gap-2 mb-4">
-                  <img src="/assets/zoe-talking 1 (2).svg" alt="" className="w-8 h-8" />
+                  <img
+                    src="/assets/zoe-talking 1 (2).svg"
+                    alt=""
+                    className="w-8 h-8"
+                  />
                   <h2 className="text-md font-semibold text-green-900">
                     Next Steps
                   </h2>
@@ -307,33 +364,47 @@ export const TestResults: React.FC<TestResultsProps> = ({
 
           <Separator className="my-8" />
 
-          <Accordion type="single" collapsible defaultValue="item-0" className="border-none">
+          <Accordion
+            type="single"
+            collapsible
+            defaultValue="item-0"
+            className="border-none"
+          >
             <AccordionItem value="item-0" className="border-none">
-              <AccordionTrigger className="justify-center hover:bg-gray-50 rounded-md py-3">
-                <span className="font-semibold">
-                  Session Transcript
-                </span>
-              </AccordionTrigger>
+              <div className="flex justify-center">
+                <AccordionTrigger className="cursor-pointer gap-2 w-auto hover:bg-gray-50 rounded-full px-3 py-2.5 border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all hover:no-underline">
+                  <span className="font-semibold text-sm">
+                    Session Transcript
+                  </span>
+                </AccordionTrigger>
+              </div>
               <AccordionContent className="pb-4 pt-6">
                 <div className="flex flex-col items-stretch gap-4 max-w-[900px] mx-auto">
                   {testResult.qa_history.map((qa, index) => (
-                    <div key={index} className="flex flex-col items-stretch gap-4">
+                    <div
+                      key={index}
+                      className="flex flex-col items-stretch gap-4"
+                    >
                       <div className="flex gap-3">
                         <div className="rounded-full flex items-center justify-center shrink-0">
-                          <img src="/assets/zoe-talking 1 (2).svg" alt="" className="w-[46px] h-[46px]" />
+                          <img
+                            src="/assets/zoe-talking 1 (2).svg"
+                            alt=""
+                            className="w-[46px] h-[46px]"
+                          />
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 bg-emerald-50 p-2 rounded-md">
                           <p className="font-semibold text-gray-800 mb-1 text-sm">
-                            AI Interviewer
+                            Zoe
                           </p>
-                          <p className="text-gray-700 text-sm leading-relaxed">
+                          <p className="text-gray-700 text-sm leading-relaxed ">
                             {qa.question}
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex gap-3 justify-end">
-                        <div className="px-3 rounded-lg max-w-fit">
+                      <div className="flex gap-3 justify-end ">
+                        <div className="px-3 shadow-md max-w-fit bg-white p-2 rounded-sm">
                           <p className="font-semibold text-gray-800 mb-1 text-sm">
                             You
                           </p>
@@ -348,14 +419,22 @@ export const TestResults: React.FC<TestResultsProps> = ({
 
                       {qa.summary && (
                         <div className="flex justify-center">
-                          <div className="px-4 py-3 rounded-md border border-green-200 max-w-[85%]" style={{
-                            backgroundImage: "url('/assets/Rectangle 5 (2).svg')",
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            backgroundRepeat: 'no-repeat'
-                          }}>
+                          <div
+                            className="px-4 py-3 rounded-md border border-green-200 max-w-[85%]"
+                            style={{
+                              backgroundImage:
+                                "url('/assets/Rectangle 5 (2).svg')",
+                              backgroundSize: "cover",
+                              backgroundPosition: "center",
+                              backgroundRepeat: "no-repeat",
+                            }}
+                          >
                             <div className="flex items-center gap-2 mb-6 justify-center">
-                              <img src="/assets/hand-heart (1).svg" alt="" className="w-4 h-4" />
+                              <img
+                                src="/assets/hand-heart (1).svg"
+                                alt=""
+                                className="w-4 h-4"
+                              />
                               <p className="text-sm font-semibold text-green-800">
                                 Improvement area
                               </p>

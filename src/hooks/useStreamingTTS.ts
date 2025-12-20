@@ -21,7 +21,7 @@ export function useStreamingTTS({
 }: UseStreamingTTSProps) {
   const [isReady, setIsReady] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [currentlySpokenText, setCurrentlySpokenText] = useState('');
+  const [currentlySpokenText, setCurrentlySpokenText] = useState("");
 
   const activeHandlesRef = useRef<any[]>([]);
   const preparePromiseRef = useRef<Promise<void> | null>(null);
@@ -94,7 +94,8 @@ export function useStreamingTTS({
         onSynthesisTime: () => {},
         onPlayFinished: () => {
           // Audio chunk finished playing - add to completed text
-          stateRef.current.completedText += (stateRef.current.completedText ? ' ' : '') + text.trim();
+          stateRef.current.completedText +=
+            (stateRef.current.completedText ? " " : "") + text.trim();
           stateRef.current.currentChunkText = "";
         },
       });
@@ -178,10 +179,10 @@ export function useStreamingTTS({
         state.isActive = false;
         state.isStreamComplete = true;
         setIsSpeaking(false);
-        
+
         // Show full combined text when streaming completes
         setCurrentlySpokenText(state.completedText);
-        
+
         onStopSpeaking?.();
         onStatusChange?.("Streaming complete");
         pollTimeoutRef.current = null;
