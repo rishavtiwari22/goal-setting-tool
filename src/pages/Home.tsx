@@ -166,6 +166,7 @@ export default function Home() {
               isSelected={selectedType === type.id}
               onClick={() => handleCardClick(type.id)}
               comingSoon={type.comingSoon}
+              showEstimatedTime={false}
             />
           ))}
         </div>

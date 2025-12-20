@@ -185,9 +185,9 @@ export function useSpeechRecognition({
       isListeningRef.current = false;
     }
 
-    if (isSpeechModeRef.current) {
-      resumeAfterPlaybackRef.current = true;
-    }
+    // Always set resume flag when pausing for TTS playback
+    // This ensures microphone resumes after first question too
+    resumeAfterPlaybackRef.current = true;
   }, []);
 
   const resumeListening = useCallback(() => {
@@ -196,7 +196,10 @@ export function useSpeechRecognition({
       isSpeechMode: isSpeechModeRef.current,
     });
 
-    if (sttLogicRef.current && (resumeAfterPlaybackRef.current || isSpeechModeRef.current)) {
+    if (
+      sttLogicRef.current &&
+      (resumeAfterPlaybackRef.current || isSpeechModeRef.current)
+    ) {
       setTimeout(() => {
         console.log("Resuming listening now.");
         try {

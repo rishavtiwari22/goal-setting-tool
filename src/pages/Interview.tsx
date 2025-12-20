@@ -570,8 +570,8 @@ export default function Interview() {
                   minHeight: "56px",
                 }}
               >
-                {isSpeechMode ? (
-                  <AudioVisualizer isActive={isSpeechMode} size={56} />
+                {isSpeechMode && !isTtsActive ? (
+                  <AudioVisualizer isActive={isListening} size={56} />
                 ) : (
                   <MicOff className="size-6" />
                 )}
