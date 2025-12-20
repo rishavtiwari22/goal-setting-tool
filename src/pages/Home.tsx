@@ -4,6 +4,7 @@ import SelectionCard from "@/components/SelectionCard";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { checkUser } from "../services/api/serverApi";
+import { getEmailFromJWT, isValidJWTFormat } from "../utils/jwt";
 
 export default function Home() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -46,8 +47,35 @@ export default function Home() {
 
   useEffect(() => {
     const authenticateFromQuery = async () => {
-      const email = searchParams.get("email");
+      const token = searchParams.get("token") || searchParams.get("jwt");
       
+      if (token) {
+        if (isValidJWTFormat(token)) {
+          const email = getEmailFromJWT(token);
+          if (email) {
+            try {
+              const response = await checkUser(email);
+              if (response.exists) {
+                localStorage.setItem("studentToken", token);
+                localStorage.removeItem("studentEmail");
+                toast.success("Authentication successful");
+              } else {
+                toast.error("Email not found. Please contact support.");
+              }
+            } catch (error) {
+              console.error("Error checking user:", error);
+              toast.error("Failed to verify email. Please contact support.");
+            }
+          } else {
+            toast.error("Invalid JWT token: no email found in payload");
+          }
+        } else {
+          toast.error("Invalid JWT token format");
+        }
+        return;
+      }
+      
+      const email = searchParams.get("email");
       if (email) {
         try {
           const response = await checkUser(email);

@@ -9,6 +9,7 @@ import JobSelection from "@/components/JobSelection";
 import { ChevronDownIcon, ChevronLeft } from "lucide-react";
 import { checkUser, getJobs, getJob } from "../services/api/serverApi";
 import type { Job } from "../models/job";
+import { getEmailFromJWT } from "../utils/jwt";
 
 interface FormData {
   email: string;
@@ -61,34 +62,68 @@ export default function SelfApply() {
 
   useEffect(() => {
     const checkStoredAuth = async () => {
+      const storedToken = localStorage.getItem("studentToken");
+      
+      if (storedToken) {
+        const email = getEmailFromJWT(storedToken);
+        
+        if (!email) {
+          localStorage.removeItem("studentToken");
+          toast.error("Invalid authentication token. Please try again.");
+          navigate("/");
+          return;
+        }
+        
+        try {
+          const response = await checkUser(email);
+          if (response.exists) {
+            setFormData((prev) => ({ ...prev, email }));
+            if (response.user?.user_id) {
+              setUserId(response.user.user_id);
+            } else {
+              setUserId(email);
+            }
+          } else {
+            localStorage.removeItem("studentToken");
+            toast.error("Your data is not with us. Ask an admin to add your data.");
+            navigate("/");
+          }
+        } catch (error) {
+          console.error("Error checking stored token:", error);
+          localStorage.removeItem("studentToken");
+          toast.error("Failed to verify authentication.");
+          navigate("/");
+        }
+        return;
+      }
+      
       const storedEmail = localStorage.getItem("studentEmail");
-
-      if (!storedEmail) {
-        toast.error("Please provide email via URL parameter: ?email=your@email.com");
-        navigate("/");
+      if (storedEmail) {
+        try {
+          const response = await checkUser(storedEmail);
+          if (response.exists) {
+            setFormData((prev) => ({ ...prev, email: storedEmail }));
+            if (response.user?.user_id) {
+              setUserId(response.user.user_id);
+            } else {
+              setUserId(storedEmail);
+            }
+          } else {
+            localStorage.removeItem("studentEmail");
+            toast.error("Your data is not with us. Ask an admin to add your data.");
+            navigate("/");
+          }
+        } catch (error) {
+          console.error("Error checking stored email:", error);
+          localStorage.removeItem("studentEmail");
+          toast.error("Failed to verify authentication.");
+          navigate("/");
+        }
         return;
       }
 
-      try {
-        const response = await checkUser(storedEmail);
-        if (response.exists) {
-          setFormData((prev) => ({ ...prev, email: storedEmail }));
-          if (response.user?.user_id) {
-            setUserId(response.user.user_id);
-          } else {
-            setUserId(storedEmail);
-          }
-        } else {
-          localStorage.removeItem("studentEmail");
-          toast.error("Your data is not with us. Ask an admin to add your data.");
-          navigate("/");
-        }
-      } catch (error) {
-        console.error("Error checking stored email:", error);
-        localStorage.removeItem("studentEmail");
-        toast.error("Failed to verify authentication.");
-        navigate("/");
-      }
+      toast.error("Please provide authentication via URL parameter: ?token=your_jwt_token or ?email=your@email.com");
+      navigate("/");
     };
 
     checkStoredAuth();
