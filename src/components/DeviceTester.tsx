@@ -240,16 +240,16 @@ const DeviceTester = ({
 
   return (
     <div className="p-8 rounded-lg max-w-4xl mx-auto">
-      <h3 className="text-lg font-bold text-center mb-4">
-        Before you start, test your mic and speaker
+      <h3 className="text-lg font-bold text-center mb-6">
+        Before you start, please test your mic and speaker
       </h3>
-      <p className=" flex items-center justify-center text-gray-800 font-semibold">
+      {/* <p className=" flex items-center justify-center text-gray-800 font-semibold">
         <CircleAlert className="inline-block mr-2" size={20} />
         <span>
           Pro tip: Be 5 minutes early to your interview. This helps you settle
           in and form a good first impression.
         </span>
-      </p>
+      </p> */}
 
       <div className="grid md:grid-cols-2 gap-8 mt-4">
         <div
@@ -261,7 +261,11 @@ const DeviceTester = ({
           "
         >
           <div className="flex items-center mb-4">
-            <Mic className="w-5 h-5 mr-2 text-[var(--text-primary)]" />
+            <img
+              className="w-[52px] h-[64px] mr-2"
+              src="/assets/testmic.png"
+              alt="Microphone"
+            />
             <h3 className="text-lg text-[var(--text-primary)] font-semibold">
               Test mic
             </h3>
@@ -303,11 +307,11 @@ const DeviceTester = ({
                 </select>
               </div>
               <AudioVisualizer volume={micVolume} />
-              {isTestingMic && (
+              {/* {isTestingMic && (
                 <p className="text-sm text-gray-500 mt-2">
                   Testing microphone...
                 </p>
-              )}
+              )} */}
             </>
           )}
           <div
@@ -330,7 +334,11 @@ const DeviceTester = ({
           "
         >
           <div className="flex items-center mb-4">
-            <img className="w-5 h-5 mr-2" src={"/assets/volume-2.svg"} alt="Speaker" />
+            <img
+              className="w-[52px] h-[64px] mr-2"
+              src="/assets/testspeakers.png"
+              alt="Speaker"
+            />
             <h3 className="text-lg text-[var(--text-primary)] font-semibold">
               Test speaker
             </h3>
@@ -355,11 +363,10 @@ const DeviceTester = ({
               )}
             </select>
           </div>
-          <div className="flex mt-4 h-3">
-          </div>
-          <p className="text-sm text-gray-500 mt-2">
+          <div className="flex mt-4 h-3"></div>
+          {/* <p className="text-sm text-gray-500 mt-2">
             A test sound will play when you select a speaker.
-          </p>
+          </p> */}
           <div
             className="
             absolute bottom-0 left-0 right-0 h-1.5
@@ -371,12 +378,12 @@ const DeviceTester = ({
           />
         </div>
       </div>
-
+      {/* 
       <p className="text-base font-normal text-center my-4">
         Or, you can start right away
-      </p>
+      </p> */}
 
-      <div className="text-center">
+      <div className="text-center mt-5">
         <Button
           className="mt-3 bg-[#2C5F2D] hover:bg-[#2C5F2D]/90 text-white"
           size="lg"
