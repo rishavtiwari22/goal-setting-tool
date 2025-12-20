@@ -231,21 +231,10 @@ export class InterviewStateManager {
     }
 
     if (decisionResult.decision === 'followup') {
-      // Increment counters for follow-up decisions
-      this.session.consecutiveIrrelevantCount++;
+      // Increment follow-up counter for this topic
       this.session.currentTopicFollowupCount++;
 
-      console.log(`Consecutive irrelevant: ${this.session.consecutiveIrrelevantCount}, Topic follow-ups: ${this.session.currentTopicFollowupCount}`);
-
-      // Check if we've reached max consecutive irrelevant answers
-      if (this.session.consecutiveIrrelevantCount > MAX_CONSECUTIVE_IRRELEVANT) {
-        // If we exceeded max (should be caught above, but safety check)
-        console.log('Max consecutive irrelevant answers reached via followup count.');
-        return {
-          decision: 'end',
-          feedback: 'I appreciate you taking the time to interview with us today. Unfortunately, based on the responses provided, I\'m not able to continue with this interview at this time. We encourage you to review the relevant topics and consider reapplying in the future. Thank you for your interest, and we wish you the best in your career journey. Goodbye!'
-        };
-      }
+      console.log(`Topic follow-ups: ${this.session.currentTopicFollowupCount}`);
 
       // Check if we've reached max follow-ups for this topic
       if (this.session.currentTopicFollowupCount >= MAX_TOPIC_FOLLOWUPS) {

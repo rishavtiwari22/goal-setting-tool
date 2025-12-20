@@ -67,29 +67,21 @@ export function buildDecisionPrompt(params: BuildDecisionPromptParams): { system
 
 Decision Rules (in priority order):
 
-1. END THE INTERVIEW IMMEDIATELY if:
-   - User explicitly requests to end: "end the call", "end call", "stop", "end", "quit", "exit", "done", "end interview", "stop interview", etc.
-   - Candidate has given ${consecutiveCount >= 2 ? 'MULTIPLE' : 'some'} garbage answers AND this answer shows:
-     * Refusal to engage (e.g., "I don't know", "never", "I won't")
-   - After 3+ completely garbage answers, the candidate is clearly not a fit → END
-
-   1. END THE INTERVIEW IMMEDIATELY if:
-   - User explicitly requests to end: "end the call", "end call", "stop", "end", "quit", "exit", "done", "end interview", "stop interview", etc.
-   - Candidate has given ${consecutiveCount >= 2 ? 'MULTIPLE' : 'some'} non-substantive answers AND this answer shows:
-     * No relevant technical knowledge
-     * Refusal to engage (e.g., "I don't know", "never", "I won't")
-     * Off-topic or nonsensical responses
-   - After 3+ non-substantive answers, the candidate is clearly not a fit → END
+1. MOVE TO NEXT TOPIC if:
+   - Answer provides meaningful information
+   - Candidate demonstrates some relevant knowledge
+   - Further probing won't yield better results
 
 2. FOLLOW-UP if (only if there's hope of a better answer):
    - Answer is too brief but shows SOME engagement
    - Answer needs minor clarification
    - This is the FIRST vague answer on this topic
 
-3. MOVE TO NEXT TOPIC if:
-   - Answer provides meaningful information
-   - Candidate demonstrates some relevant knowledge
-   - Further probing won't yield better results
+3. END THE INTERVIEW IMMEDIATELY if:
+   - User explicitly requests to end: "end the call", "end call", "stop", "end", "quit", "exit", "done", "end interview", "stop interview", etc.
+   - Candidate has given ${consecutiveCount >= 2 ? 'MULTIPLE' : 'some'} garbage answers AND this answer shows:
+     * Refusal to engage (e.g., "I don't know", "never", "I won't")
+   - After 3+ completely garbage answers, the candidate is clearly not a fit → END
 
 ${irrelevantInfo}${followupInfo}
 
