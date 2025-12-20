@@ -125,6 +125,8 @@ export function useInterview({
         onComplete(session);
       } catch (error) {
         console.error('Error ending interview:', error);
+        const session = managerRef.current.getSession();
+        onComplete(session);
       } finally {
         setIsLoading(false);
       }
@@ -253,28 +255,34 @@ export function useInterview({
         }
 
         if (result.decision.decision === 'end') {
-          // Add thank you/feedback message to the chat if present
-          if (result.decision?.feedback && result.decision.feedback.trim()) {
-            const feedbackMsgId = `feedback_${Date.now()}`;
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: feedbackMsgId,
-                role: 'assistant' as const,
-                content: result.decision.feedback,
-                timestamp: new Date().toISOString(),
-              },
-            ]);
-          }
+          // Add thank you/feedback message to the chat
+          const feedbackMessage = result.decision?.feedback?.trim() || 'Thank you for the interview! We are now generating your results.';
+          const feedbackMsgId = `feedback_${Date.now()}`;
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: feedbackMsgId,
+              role: 'assistant' as const,
+              content: feedbackMessage,
+              timestamp: new Date().toISOString(),
+            },
+          ]);
 
           isCompletedRef.current = true;
           setIsCompleted(true);
-          const endResult = await managerRef.current.manageInterviewState('end');
-          const session = managerRef.current.getSession();
-          if (session.result) {
-            saveInterviewResult(session.sessionId, session.result);
+
+          try {
+            const endResult = await managerRef.current.manageInterviewState('end');
+            const session = managerRef.current.getSession();
+            if (session.result) {
+              saveInterviewResult(session.sessionId, session.result);
+            }
+            onComplete(session);
+          } catch (endError) {
+            console.error('Error generating summary:', endError);
+            const session = managerRef.current.getSession();
+            onComplete(session);
           }
-          onComplete(session);
         } else if (result.nextQuestion) {
           if (result.nextQuestion.includes('【Interview ended')) {
             await handleTimeUp();

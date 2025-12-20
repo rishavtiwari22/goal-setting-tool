@@ -164,7 +164,10 @@ export class InterviewStateManager {
     this.updateRemainingTime();
 
     if (this.session.remainingTime <= 0) {
-      return { decision: 'end' };
+      return {
+        decision: 'end',
+        feedback: 'Thank you for the interview! Your time is up. We are now generating your results.'
+      };
     }
 
     // Check if user explicitly wants to end the call - bypass all retry logic
@@ -186,6 +189,7 @@ export class InterviewStateManager {
       recentQAHistory: recentHistory,
       consecutiveIrrelevantCount: this.session.consecutiveIrrelevantCount,
       currentTopicFollowupCount: this.session.currentTopicFollowupCount,
+      remainingTime: this.session.remainingTime,
     });
 
     try {

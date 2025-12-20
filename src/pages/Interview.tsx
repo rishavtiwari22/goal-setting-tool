@@ -102,10 +102,16 @@ export default function Interview() {
   const handleComplete = (session: InterviewSession) => {
     try {
       sessionStorage.setItem("interviewSession", JSON.stringify(session));
-      // If TTS is enabled and might be speaking, store session and wait for TTS to finish
+      // If TTS is enabled, store session and wait for TTS to finish (with timeout fallback)
       if (isSpeechOutputEnabled) {
         pendingSessionRef.current = session;
-        // Navigation will happen in onStopSpeaking callback
+        // Fallback: If TTS doesn't trigger navigation within 5 seconds, navigate anyway
+        setTimeout(() => {
+          if (pendingSessionRef.current) {
+            pendingSessionRef.current = null;
+            navigate("/results");
+          }
+        }, 5000);
       } else {
         // TTS disabled, navigate immediately
         navigate("/results");
@@ -329,7 +335,7 @@ export default function Interview() {
     videoEl.src = initialSrc;
 
     const handleInitialCanPlay = () => {
-      videoEl.play().catch(() => {});
+      videoEl.play().catch(() => { });
     };
 
     videoEl.addEventListener("canplay", handleInitialCanPlay, { once: true });
@@ -358,7 +364,7 @@ export default function Interview() {
       setIsVideoSwitching(false);
 
       requestAnimationFrame(() => {
-        videoEl.play().catch(() => {});
+        videoEl.play().catch(() => { });
       });
     };
 
@@ -510,9 +516,8 @@ export default function Interview() {
               loop
               muted
               playsInline
-              className={`video-smooth-transition ${
-                isVideoSwitching ? "loading" : ""
-              }`}
+              className={`video-smooth-transition ${isVideoSwitching ? "loading" : ""
+                }`}
               style={{
                 width: "260px",
                 height: "259px",
