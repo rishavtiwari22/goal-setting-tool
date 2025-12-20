@@ -13,6 +13,7 @@ interface SelectionCardProps {
   onClick?: () => void;
   estimatedTime?: string;
   comingSoon?: boolean;
+  showEstimatedTime?: boolean;
 }
 
 export default function SelectionCard({
@@ -23,6 +24,7 @@ export default function SelectionCard({
   onClick,
   estimatedTime,
   comingSoon = false,
+  showEstimatedTime = true,
 }: SelectionCardProps) {
   return (
     <Card
@@ -61,18 +63,20 @@ export default function SelectionCard({
           </p>
         </div>
       </div>
-      <div className="mt-auto">
-        <Separator className="mb-3 border-1 mt-5" />
+      {showEstimatedTime && (
+        <div className="mt-auto">
+          <Separator className="mb-3 border-1 mt-5" />
 
-        <div className="flex items-center gap-2 text-base text-gray-500 ">
-          {estimatedTime && (
-            <div className="flex items-center gap-1 font-semibold">
-              <AlarmClock />
-              <span>{estimatedTime}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-base text-gray-500 ">
+            {estimatedTime && (
+              <div className="flex items-center gap-1 font-semibold">
+                <AlarmClock />
+                <span>{estimatedTime}</span>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
       <div
         className={`
           absolute bottom-0 left-0 right-0 h-1.5

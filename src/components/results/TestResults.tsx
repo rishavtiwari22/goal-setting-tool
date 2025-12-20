@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  CheckCircle,
-  XCircle,
-  Clock,
-  MessageSquare,
-  ChevronDown,
-  X,
-} from "lucide-react";
+import { XCircle, Clock, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -17,6 +10,7 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
+import { useNavigate } from "react-router-dom";
 
 interface TestResult {
   id: string;
@@ -145,6 +139,8 @@ export const TestResults: React.FC<TestResultsProps> = ({
 }) => {
   const parsed = parseSummaryContent(testResult.summary);
 
+  const navigate = useNavigate();
+
   const displayData = {
     mainSummary:
       parsed.mainSummary ||
@@ -216,41 +212,50 @@ export const TestResults: React.FC<TestResultsProps> = ({
   };
 
   return (
-    <div className="min-h-screen w-screen p-8">
-      <div className="w-full mx-auto">
-        <div className="flex justify-between items-center mb-2 mx-7">
-          <div className="flex items-center gap-2">
-            <img src="/assets/image 1.svg" alt="Logo" />
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              className="bg-[#2C5F2D] text-white font-semibold hover:bg-[#1F4420] hover:scale-[1.01] transition-all"
-              onClick={() => (window.location.href = "/")}
-            >
-              <img
-                src="/assets/Vector (Stroke).svg"
-                alt=""
-                className="w-4 h-4 mr-2"
-              />
-              Try another interview
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="mb-4"
-              onClick={() => (window.location.href = "/")}
-            >
-              <XCircle className="w-6 h-6" />
-            </Button>
-          </div>
+    <div className="min-h-screen w-screen ">
+      <header className="mb-8">
+        <div className="relative w-full px-6 py-4 flex items-center justify-center">
+          <button
+            onClick={() => navigate("/")}
+            className="cursor-pointer absolute left-6 text-gray-600 hover:text-gray-900"
+          >
+            <X />
+          </button>
+          {/* <div className="flex gap-3 items-center"> */}
+          <h1 className="text-base font-semibold ">
+            Zoe: Your Learning Assistant
+          </h1>
+          {/* <Badge className="px-1 bg-green-400 rounded-sm font-semibold">
+                    Beta
+                  </Badge> */}
+          {/* </div> */}
+        </div>
+      </header>
+      <div className="w-full px-20">
+        <div className="flex justify-end items-center mb-5">
+          <h1>{userName ? `Great start, ${userName}!` : ""}</h1>
+          <Button
+            className="bg-[#2C5F2D] text-white font-semibold hover:bg-[#1F4420] hover:scale-[1.01] transition-all"
+            onClick={() => (window.location.href = "/")}
+          >
+            <img
+              src="/assets/Vector (Stroke).svg"
+              alt=""
+              className="w-4 h-4 mr-2"
+            />
+            Try another interview
+          </Button>
         </div>
 
-        <div className="bg-white p-20 rounded-xl shadow-lg">
+        <div className="shadow-sm rounded-md  p-6 ">
           <div className="flex justify-between items-start mb-4">
-            <h1 className="text-4xl font-bold text-gray-800">
-              {userName ? `Great start, ${userName}!` : "Interview Results"}
-            </h1>
-            <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full">
+            <div className="flex items-center gap-3">
+              <img src="/assets/summary.png" alt="" className="w-10 h-10" />
+              <h1 className="text-normal font-bold text-gray-800">
+                Interview Summary
+              </h1>
+            </div>
+            <div className="flex items-center gap-2 border px-3 py-1.5 rounded-md">
               <Clock className="w-4 h-4 text-gray-500" />
               <span className="text-sm font-medium text-gray-700">
                 {Math.round(testResult.elapse_time)} mins
@@ -261,197 +266,161 @@ export const TestResults: React.FC<TestResultsProps> = ({
           <p className="text-gray-700 mb-6 leading-relaxed">
             {displayData.mainSummary}
           </p>
+        </div>
 
-          <div className="flex items-center gap-6 mb-8 flex-wrap">
+        {/* <div className="flex items-center gap-6 mb-8 flex-wrap">
             <span className="font-semibold text-gray-800">
               Results overview
             </span>
-            <ResultOverviewItem color="green.400">
+            <ResultOverviewItem color="#22c55e">
               Technical: Exceeds Expectations
             </ResultOverviewItem>
-            <ResultOverviewItem color="green.400">
+            <ResultOverviewItem color="#22c55e">
               Problem Solving: Strong
             </ResultOverviewItem>
-            <ResultOverviewItem color="red.400">
+            <ResultOverviewItem color="#ef4444">
               Communication: Development Needed
             </ResultOverviewItem>
+          </div> */}
+
+        <Separator className="my-8" />
+
+        {/* Detailed Assessment and Interview Conclusion Side by Side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          {/* Detailed Assessment */}
+          <div className="bg-white shadow-sm p-6 rounded-lg">
+            <div className="flex items-center gap-3 mb-6">
+              <img src="/assets/assessment.png" alt="" className="w-10 h-10" />
+              <h2 className="text-normal text-gray-800 font-semibold">
+                Detailed Assessment
+              </h2>
+            </div>
+            <div className="flex flex-col items-stretch gap-6">
+              {displayData.topStrengths.map((item, i) => (
+                <div key={i}>
+                  <p className="font-semibold text-gray-800 mb-2 text-base">
+                    {item.title}
+                  </p>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <Separator className="my-8" />
-
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_1.5fr] gap-0">
-            <div>
-              <div className="flex flex-col items-stretch gap-8">
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <img src="/assets/badge-check.svg" alt="" />
-                    <h2 className="text-xl text-gray-800 font-semibold">
-                      Top Strengths
-                    </h2>
-                  </div>
-                  <div className="flex flex-col items-stretch gap-4">
-                    {displayData.topStrengths.map((item, i) => (
-                      <div key={i}>
-                        <p className="font-semibold text-gray-800 mb-1">
-                          {item.title}
-                        </p>
-                        <p className="text-sm text-gray-600 leading-relaxed">
-                          {item.description}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <img src="/assets/hand-heart.svg" alt="" />
-                    <h2 className="text-xl text-gray-800 font-semibold">
-                      Improvement areas
-                    </h2>
-                  </div>
-                  <div className="flex flex-col items-stretch gap-4">
-                    {displayData.improvementAreas.map((item, i) => (
-                      <div key={i}>
-                        <p className="font-semibold text-gray-800 mb-1">
-                          {item.title}
-                        </p>
-                        <p className="text-sm text-gray-600 leading-relaxed">
-                          {item.description}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+          {/* Interview Conclusion */}
+          <div className="bg-white shadow-sm p-6 rounded-lg">
+            <div className="flex items-center gap-3 mb-6">
+              <img src="/assets/conclusion.png" alt="" className="w-10 h-10" />
+              <h2 className="text-normal text-gray-800 font-semibold">
+                Interview Conclusion
+              </h2>
             </div>
-
-            <div>
-              <div
-                className="p-6 rounded-lg border border-green-200"
-                style={{
-                  backgroundImage: "url('/assets/Rectangle 5 (2).svg')",
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  backgroundRepeat: "no-repeat",
-                }}
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <img
-                    src="/assets/zoe-talking 1 (2).svg"
-                    alt=""
-                    className="w-8 h-8"
-                  />
-                  <h2 className="text-md font-semibold text-green-900">
-                    Next Steps
-                  </h2>
+            <div className="flex flex-col items-stretch gap-6">
+              {displayData.improvementAreas.map((item, i) => (
+                <div key={i}>
+                  <p className="font-semibold text-gray-800 mb-2 text-base">
+                    {item.title}
+                  </p>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    {item.description}
+                  </p>
                 </div>
-                <div className="flex flex-col items-stretch gap-4">
-                  {displayData.nextSteps.map((item, i) => (
-                    <div key={i}>
-                      <p className="font-semibold text-sm text-gray-800 mb-1">
-                        {item.title}
-                      </p>
-                      <p className="text-sm text-gray-700 leading-relaxed">
-                        {item.description}
-                      </p>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <Separator className="my-8" />
+
+        <Accordion
+          type="single"
+          collapsible
+          defaultValue="item-0"
+          className="border-none"
+        >
+          <AccordionItem value="item-0" className="border-none">
+            <div className="flex justify-center">
+              <AccordionTrigger className="cursor-pointer gap-2 w-auto hover:bg-gray-50 rounded-full px-3 py-2.5 border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all hover:no-underline">
+                <span className="font-semibold text-sm">
+                  Session Transcript
+                </span>
+              </AccordionTrigger>
+            </div>
+            <AccordionContent className="pb-4 pt-6">
+              <div className="flex flex-col items-stretch gap-4 max-w-[900px] mx-auto">
+                {testResult.qa_history.map((qa, index) => (
+                  <div
+                    key={index}
+                    className="flex flex-col items-stretch gap-4"
+                  >
+                    <div className="flex gap-3">
+                      <div className="rounded-full flex items-center justify-center shrink-0">
+                        <img
+                          src="/assets/zoe-talking 1 (2).svg"
+                          alt=""
+                          className="w-[46px] h-[46px]"
+                        />
+                      </div>
+                      <div className="flex-1 bg-emerald-50 p-2 rounded-md">
+                        <p className="font-semibold text-gray-800 mb-1 text-sm">
+                          Zoe
+                        </p>
+                        <p className="text-gray-700 text-sm leading-relaxed ">
+                          {qa.question}
+                        </p>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <Separator className="my-8" />
-
-          <Accordion
-            type="single"
-            collapsible
-            defaultValue="item-0"
-            className="border-none"
-          >
-            <AccordionItem value="item-0" className="border-none">
-              <div className="flex justify-center">
-                <AccordionTrigger className="cursor-pointer gap-2 w-auto hover:bg-gray-50 rounded-full px-3 py-2.5 border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all hover:no-underline">
-                  <span className="font-semibold text-sm">
-                    Session Transcript
-                  </span>
-                </AccordionTrigger>
-              </div>
-              <AccordionContent className="pb-4 pt-6">
-                <div className="flex flex-col items-stretch gap-4 max-w-[900px] mx-auto">
-                  {testResult.qa_history.map((qa, index) => (
-                    <div
-                      key={index}
-                      className="flex flex-col items-stretch gap-4"
-                    >
-                      <div className="flex gap-3">
-                        <div className="rounded-full flex items-center justify-center shrink-0">
-                          <img
-                            src="/assets/zoe-talking 1 (2).svg"
-                            alt=""
-                            className="w-[46px] h-[46px]"
-                          />
-                        </div>
-                        <div className="flex-1 bg-emerald-50 p-2 rounded-md">
-                          <p className="font-semibold text-gray-800 mb-1 text-sm">
-                            Zoe
-                          </p>
-                          <p className="text-gray-700 text-sm leading-relaxed ">
-                            {qa.question}
-                          </p>
-                        </div>
+                    <div className="flex gap-3 justify-end ">
+                      <div className="px-3 shadow-md max-w-fit bg-white p-2 rounded-sm">
+                        <p className="font-semibold text-gray-800 mb-1 text-sm">
+                          You
+                        </p>
+                        <p className="text-[#5A615F] text-sm leading-relaxed">
+                          "{qa.answer}"
+                        </p>
                       </div>
-
-                      <div className="flex gap-3 justify-end ">
-                        <div className="px-3 shadow-md max-w-fit bg-white p-2 rounded-sm">
-                          <p className="font-semibold text-gray-800 mb-1 text-sm">
-                            You
-                          </p>
-                          <p className="text-[#5A615F] text-sm leading-relaxed">
-                            "{qa.answer}"
-                          </p>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center shrink-0">
-                          <img src="/assets/Frame 56.svg" alt="" />
-                        </div>
+                      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center shrink-0">
+                        <img src="/assets/Frame 56.svg" alt="" />
                       </div>
+                    </div>
 
-                      {qa.summary && (
-                        <div className="flex justify-center">
-                          <div
-                            className="px-4 py-3 rounded-md border border-green-200 max-w-[85%]"
-                            style={{
-                              backgroundImage:
-                                "url('/assets/Rectangle 5 (2).svg')",
-                              backgroundSize: "cover",
-                              backgroundPosition: "center",
-                              backgroundRepeat: "no-repeat",
-                            }}
-                          >
-                            <div className="flex items-center gap-2 mb-6 justify-center">
-                              <img
-                                src="/assets/hand-heart (1).svg"
-                                alt=""
-                                className="w-4 h-4"
-                              />
-                              <p className="text-sm font-semibold text-green-800">
-                                Improvement area
-                              </p>
-                            </div>
-                            <p className="text-sm text-gray-700 leading-relaxed">
-                              {getFeedbackText(qa.summary)}
+                    {qa.summary && (
+                      <div className="flex justify-center">
+                        <div
+                          className="px-4 py-3 rounded-md border border-green-200 max-w-[85%]"
+                          style={{
+                            backgroundImage:
+                              "url('/assets/Rectangle 5 (2).svg')",
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                            backgroundRepeat: "no-repeat",
+                          }}
+                        >
+                          <div className="flex items-center gap-2 mb-6 justify-center">
+                            <img
+                              src="/assets/hand-heart (1).svg"
+                              alt=""
+                              className="w-4 h-4"
+                            />
+                            <p className="text-sm font-semibold text-green-800">
+                              Improvement area
                             </p>
                           </div>
+                          <p className="text-sm text-gray-700 leading-relaxed">
+                            {getFeedbackText(qa.summary)}
+                          </p>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
     </div>
   );

@@ -62,6 +62,10 @@ export default function Home() {
               if (response.exists) {
                 localStorage.setItem("studentToken", token);
                 localStorage.removeItem("studentEmail");
+                // Store user name if available
+                if (response.user?.name) {
+                  localStorage.setItem("userName", response.user.name);
+                }
                 toast.success("Authentication successful");
               } else {
                 toast.error("Email not found. Please contact support.");
@@ -85,6 +89,10 @@ export default function Home() {
           const response = await checkUser(email);
           if (response.exists) {
             localStorage.setItem("studentEmail", email);
+            // Store user name if available
+            if (response.user?.name) {
+              localStorage.setItem("userName", response.user.name);
+            }
             toast.success("Authentication successful");
           } else {
             toast.error("Email not found. Please contact support.");
@@ -123,14 +131,14 @@ export default function Home() {
               />
             </svg>
           </button>
-          <div className="flex gap-3 items-center">
-            <h1 className="text-base font-semibold ">
-              Zoe: Your Learning Assistant
-            </h1>
-            <Badge className="px-1 bg-green-400 rounded-sm font-semibold">
+          {/* <div className="flex gap-3 items-center"> */}
+          <h1 className="text-base font-semibold ">
+            Zoe: Your Learning Assistant
+          </h1>
+          {/* <Badge className="px-1 bg-green-400 rounded-sm font-semibold">
               Beta
             </Badge>
-          </div>
+          </div> */}
         </div>
       </header>
 

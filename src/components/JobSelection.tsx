@@ -73,6 +73,7 @@ export default function JobSelection({
           estimatedTime="5-10 mins"
           isSelected={selectedRole === role.job_id}
           onClick={() => handleCardClick(role.job_id)}
+          showEstimatedTime={false}
         />
       ))}
     </div>

@@ -84,6 +84,10 @@ export default function SelfApply() {
             } else {
               setUserId(email);
             }
+            // Store user name if available
+            if (response.user?.name) {
+              localStorage.setItem("userName", response.user.name);
+            }
           } else {
             localStorage.removeItem("studentToken");
             toast.error(
@@ -110,6 +114,10 @@ export default function SelfApply() {
               setUserId(response.user.user_id);
             } else {
               setUserId(storedEmail);
+            }
+            // Store user name if available
+            if (response.user?.name) {
+              localStorage.setItem("userName", response.user.name);
             }
           } else {
             localStorage.removeItem("studentEmail");
@@ -225,14 +233,14 @@ export default function SelfApply() {
                 >
                   <ChevronLeft />
                 </button>
-                <div className="flex gap-3 items-center">
-                  <h1 className="text-base font-semibold ">
-                    Zoe: Your Learning Assistant
-                  </h1>
-                  <Badge className="px-1 bg-green-400 rounded-sm font-semibold">
+                {/* <div className="flex gap-3 items-center"> */}
+                <h1 className="text-base font-semibold ">
+                  Zoe: Your Learning Assistant
+                </h1>
+                {/* <Badge className="px-1 bg-green-400 rounded-sm font-semibold">
                     Beta
-                  </Badge>
-                </div>
+                  </Badge> */}
+                {/* </div> */}
               </div>
             </header>
 
@@ -300,14 +308,14 @@ export default function SelfApply() {
                 >
                   <ChevronLeft />
                 </button>
-                <div className="flex gap-3 items-center">
-                  <h1 className="text-base font-semibold ">
-                    Zoe: Your Learning Assistant
-                  </h1>
-                  <Badge className="px-1 bg-green-400 rounded-sm font-semibold">
+                {/* <div className="flex gap-3 items-center"> */}
+                <h1 className="text-base font-semibold ">
+                  Zoe: Your Learning Assistant
+                </h1>
+                {/* <Badge className="px-1 bg-green-400 rounded-sm font-semibold">
                     Beta
-                  </Badge>
-                </div>
+                  </Badge> */}
+                {/* </div> */}
               </div>
             </header>
 

@@ -529,8 +529,8 @@ export default function Interview() {
             style={{
               opacity: showChatMessage && currentlySpokenText ? 1 : 0,
               minHeight: "80px",
-              maxHeight: "80px",
-              height: "80px",
+              maxHeight: "120px",
+              // height: "80px",
             }}
           >
             {showChatMessage && currentlySpokenText && (
