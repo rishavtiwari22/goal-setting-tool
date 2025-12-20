@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { checkUser } from "../services/api/serverApi";
 import { getEmailFromJWT, isValidJWTFormat } from "../utils/jwt";
+import { Badge } from "@/components/ui/badge";
 
 export default function Home() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -19,6 +20,7 @@ export default function Home() {
       description:
         "Test your knowledge, and practice your communication skills with an AI assistant.",
       estimatedTime: "5-10 mins",
+      comingSoon: false,
     },
     {
       id: "flowchart",
@@ -27,6 +29,7 @@ export default function Home() {
       description:
         "Design flowcharts to test your problem-solving, algorithm, and process-thinking skills",
       estimatedTime: "15-20 mins",
+      comingSoon: true,
     },
     {
       id: "competitive-coding",
@@ -35,6 +38,7 @@ export default function Home() {
       description:
         "Technical interview to solve algorithmic and data-structure problems under time pressure.",
       estimatedTime: "30-45 mins",
+      comingSoon: true,
     },
   ];
 
@@ -48,7 +52,7 @@ export default function Home() {
   useEffect(() => {
     const authenticateFromQuery = async () => {
       const token = searchParams.get("token") || searchParams.get("jwt");
-      
+
       if (token) {
         if (isValidJWTFormat(token)) {
           const email = getEmailFromJWT(token);
@@ -74,7 +78,7 @@ export default function Home() {
         }
         return;
       }
-      
+
       const email = searchParams.get("email");
       if (email) {
         try {
@@ -96,11 +100,11 @@ export default function Home() {
   }, [searchParams]);
 
   return (
-    <div className="min-h-screen bg-primary">
+    <div className="min-h-screen bg-primary flex flex-col">
       <header className="border-b border-gray-200 bg-white">
         <div className="relative w-full px-6 py-4 flex items-center justify-center">
           <button
-            onClick={() => window.location.href = "https://app.zuvy.org"}
+            onClick={() => (window.location.href = "https://app.zuvy.org")}
             className="cursor-pointer absolute left-6 text-gray-600 hover:text-gray-900"
           >
             <svg
@@ -119,13 +123,18 @@ export default function Home() {
               />
             </svg>
           </button>
-          <h1 className="text-base font-semibold">
-            Zoe: Your Learning Assistant
-          </h1>
+          <div className="flex gap-3 items-center">
+            <h1 className="text-base font-semibold ">
+              Zoe: Your Learning Assistant
+            </h1>
+            <Badge className="px-1 bg-green-400 rounded-sm font-semibold">
+              Beta
+            </Badge>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-12">
+      <main className="max-w-5xl mx-auto px-6 py-12 flex-1 flex flex-col">
         <div className="flex justify-center mb-8">
           <img
             src="/assets/zoe-talking 1.svg"
@@ -138,7 +147,7 @@ export default function Home() {
           What would you like to practice today?
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto mb-8">
           {interviewTypes.map((type) => (
             <SelectionCard
               key={type.id}
@@ -148,8 +157,15 @@ export default function Home() {
               estimatedTime={type.estimatedTime}
               isSelected={selectedType === type.id}
               onClick={() => handleCardClick(type.id)}
+              comingSoon={type.comingSoon}
             />
           ))}
+        </div>
+
+        <div className="flex justify-center mt-auto pb-4">
+          <Badge className="px-3 py-1 font-semibold text-blue-600 rounded-sm bg-blue-200">
+            Please note that Zoe works best on Google Chrome
+          </Badge>
         </div>
       </main>
     </div>

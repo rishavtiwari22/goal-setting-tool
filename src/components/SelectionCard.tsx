@@ -1,5 +1,6 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { truncateText } from "@/lib/utils";
 
 interface SelectionCardProps {
@@ -9,6 +10,7 @@ interface SelectionCardProps {
   isSelected?: boolean;
   onClick?: () => void;
   estimatedTime?: string;
+  comingSoon?: boolean;
 }
 
 export default function SelectionCard({
@@ -18,13 +20,19 @@ export default function SelectionCard({
   isSelected = false,
   onClick,
   estimatedTime,
+  comingSoon = false,
 }: SelectionCardProps) {
   return (
     <Card
-      onClick={onClick}
+      onClick={comingSoon ? undefined : onClick}
       className={`
-        group relative cursor-pointer transition-all duration-200 p-6 pb-8
-        hover:shadow-md hover:scale-[1.01] overflow-hidden
+        group relative transition-all duration-200 p-6 pb-8
+        overflow-hidden
+        ${
+          comingSoon
+            ? "cursor-not-allowed opacity-60"
+            : "cursor-pointer hover:shadow-md hover:scale-[1.01]"
+        }
         ${
           isSelected
             ? "border-2 border-[#6AEDAA] shadow-md"
@@ -32,6 +40,13 @@ export default function SelectionCard({
         }
       `}
     >
+      {comingSoon && (
+        <div className="absolute top-3 right-3">
+          <Badge className="bg-orange-500 text-white text-xs px-2 py-0.5 rounded-sm font-semibold">
+            Coming Soon
+          </Badge>
+        </div>
+      )}
       <div className="flex flex-col gap-4">
         <div className="flex items-start justify-start  gap-3">
           <h3 className="text-base font-bold text-[#2C5F2D]">{title}</h3>

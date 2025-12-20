@@ -10,6 +10,7 @@ import { ChevronDownIcon, ChevronLeft } from "lucide-react";
 import { checkUser, getJobs, getJob } from "../services/api/serverApi";
 import type { Job } from "../models/job";
 import { getEmailFromJWT } from "../utils/jwt";
+import { Badge } from "@/components/ui/badge";
 
 interface FormData {
   email: string;
@@ -63,17 +64,17 @@ export default function SelfApply() {
   useEffect(() => {
     const checkStoredAuth = async () => {
       const storedToken = localStorage.getItem("studentToken");
-      
+
       if (storedToken) {
         const email = getEmailFromJWT(storedToken);
-        
+
         if (!email) {
           localStorage.removeItem("studentToken");
           toast.error("Invalid authentication token. Please try again.");
           navigate("/");
           return;
         }
-        
+
         try {
           const response = await checkUser(email);
           if (response.exists) {
@@ -85,7 +86,9 @@ export default function SelfApply() {
             }
           } else {
             localStorage.removeItem("studentToken");
-            toast.error("Your data is not with us. Ask an admin to add your data.");
+            toast.error(
+              "Your data is not with us. Ask an admin to add your data."
+            );
             navigate("/");
           }
         } catch (error) {
@@ -96,7 +99,7 @@ export default function SelfApply() {
         }
         return;
       }
-      
+
       const storedEmail = localStorage.getItem("studentEmail");
       if (storedEmail) {
         try {
@@ -110,7 +113,9 @@ export default function SelfApply() {
             }
           } else {
             localStorage.removeItem("studentEmail");
-            toast.error("Your data is not with us. Ask an admin to add your data.");
+            toast.error(
+              "Your data is not with us. Ask an admin to add your data."
+            );
             navigate("/");
           }
         } catch (error) {
@@ -122,7 +127,9 @@ export default function SelfApply() {
         return;
       }
 
-      toast.error("Please provide authentication via URL parameter: ?token=your_jwt_token or ?email=your@email.com");
+      toast.error(
+        "Please provide authentication via URL parameter: ?token=your_jwt_token or ?email=your@email.com"
+      );
       navigate("/");
     };
 
@@ -218,9 +225,14 @@ export default function SelfApply() {
                 >
                   <ChevronLeft />
                 </button>
-                <h1 className="text-base font-semibold">
-                  Zoe: Your Learning Assistant
-                </h1>
+                <div className="flex gap-3 items-center">
+                  <h1 className="text-base font-semibold ">
+                    Zoe: Your Learning Assistant
+                  </h1>
+                  <Badge className="px-1 bg-green-400 rounded-sm font-semibold">
+                    Beta
+                  </Badge>
+                </div>
               </div>
             </header>
 
@@ -285,9 +297,14 @@ export default function SelfApply() {
                 >
                   <ChevronLeft />
                 </button>
-                <h1 className="text-base font-semibold">
-                  Zoe: Your Learning Assistant
-                </h1>
+                <div className="flex gap-3 items-center">
+                  <h1 className="text-base font-semibold ">
+                    Zoe: Your Learning Assistant
+                  </h1>
+                  <Badge className="px-1 bg-green-400 rounded-sm font-semibold">
+                    Beta
+                  </Badge>
+                </div>
               </div>
             </header>
 
