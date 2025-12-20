@@ -171,6 +171,7 @@ export default function Interview() {
     finishStreaming: finishTtsStreaming,
     stop: stopTts,
     isSpeaking: isTtsActive,
+    currentlySpokenText,
   } = useStreamingTTS({
     enabled: isSpeechOutputEnabled,
     onStatusChange: (status) => console.log(`[TTS Status] ${status}`),
@@ -521,14 +522,14 @@ export default function Interview() {
             className="caption-container transition-opacity duration-300"
             style={{
               opacity:
-                showChatMessage && currentQuestion ? 1 : 0,
+                showChatMessage && isTtsActive && currentlySpokenText ? 1 : 0,
               minHeight: "80px",
               maxHeight: "80px",
               height: "80px",
             }}
           >
-            {showChatMessage && currentQuestion && (
-              <p className="caption-text">{currentQuestion}</p>
+            {showChatMessage && isTtsActive && currentlySpokenText && (
+              <p className="caption-text">{currentlySpokenText}</p>
             )}
           </div>
 
