@@ -244,10 +244,12 @@ export class InterviewStateManager {
       }
     } else if (decisionResult.decision === 'movenext') {
       // Reset counters on relevant answer
+      console.log("took decision to move to next topic")
       this.session.consecutiveIrrelevantCount = 0;
       this.session.currentTopicFollowupCount = 0;
     } else if (decisionResult.decision === 'retry') {
       // If the LLM itself returned 'retry' (future proofing), treat it like a bad answer
+      console.log("took decision to retry")
       this.session.consecutiveIrrelevantCount++;
     }
 

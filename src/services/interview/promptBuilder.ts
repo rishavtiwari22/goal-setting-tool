@@ -86,7 +86,7 @@ Decision Rules (in priority order):
 ${irrelevantInfo}${followupInfo}
 
 IMPORTANT: Do NOT keep asking follow-ups to an unqualified or disengaged candidate. 
-${consecutiveCount >= 2 ? '⚠️ WARNING: Multiple non-substantive answers detected. Strongly consider "end" if this answer also lacks substance.' : ''}
+${consecutiveCount >= 2 ? ' WARNING: Multiple non-substantive answers detected. Strongly consider "end" if this answer also lacks substance.' : ''}
 
 Respond with ONLY ONE WORD - your decision:
 followup OR movenext OR end`;
@@ -118,15 +118,15 @@ Remaining Time: {remaining_time} minutes
 
 Ask a concise follow-up question that helps clarify the candidate's project experience. Be specific and reference what they said.`;
 
-// const CREATE_QUESTION_FOLLOWUP_TECHNICAL_SYSTEM = `You are a technical interviewer. The candidate's answer was unclear or insufficient. Ask a follow-up technical question.
+const CREATE_QUESTION_FOLLOWUP_TECHNICAL_SYSTEM = `You are a technical interviewer. The candidate's answer was unclear or insufficient. Ask a follow-up technical question.
 
-// Job Title: {job_title}
-// Knowledge Areas: {knowledge_points}
-// Difficulty: {difficulty}
-// Language: {language}
-// Remaining Time: {remaining_time} minutes
+Job Title: {job_title}
+Knowledge Areas: {knowledge_points}
+Difficulty: {difficulty}
+Language: {language}
+Remaining Time: {remaining_time} minutes
 
-// Ask a concise follow-up technical question that helps clarify the candidate's understanding. Be specific and reference what they said.`;
+Ask a concise follow-up technical question that helps clarify the candidate's understanding. Be specific and reference what they said.`;
 
 const CREATE_QUESTION_MOVENEXT_INTRO_SYSTEM = `You are a senior technical interviewer conducting an interview for {job_title}.
 
@@ -272,7 +272,7 @@ export function buildCreateQuestionPrompt(params: BuildCreateQuestionPromptParam
     let warningInstruction = '';
 
     if (badCount >= 2) {
-      warningMessage = '⚠️ IMPORTANT: This is the candidate\'s FINAL WARNING. They have given 2 bad/irrelevant answers. You MUST clearly warn them that this is their last chance and if they give one more bad answer, the interview will be ended.';
+      warningMessage = ' IMPORTANT: This is the candidate\'s FINAL WARNING. They have given 2 bad/irrelevant answers. You MUST clearly warn them that this is their last chance and if they give one more bad answer, the interview will be ended.';
       warningInstruction = 'CLEARLY warn the candidate that this is their final chance. State explicitly: "This is your last opportunity. One more insufficient answer and we will need to end the interview."';
     } else {
       warningMessage = '';

@@ -99,6 +99,9 @@ export async function* createQuestion(
   systemMessage: string,
   humanMessage: string
 ): AsyncGenerator<string> {
+  console.log('Creating question...');
+  console.log('System message:', systemMessage);
+  console.log('Human message:', humanMessage);
   const response = await fetch(DEEPSEEK_API_URL, {
     method: 'POST',
     headers: {
@@ -199,6 +202,7 @@ export async function summarizeInterview(
   systemMessage: string,
   humanMessage: string
 ): Promise<{ summary: string; score: number; conclusion: string }> {
+  console.log('Summarizing interview...');
   const response = await fetch(DEEPSEEK_API_URL, {
     method: 'POST',
     headers: {
