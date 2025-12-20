@@ -161,6 +161,8 @@ export default function Interview() {
     resumeListening,
   } = useSpeechRecognition({
     onSpeechResult: (text) => {
+      // Clear previous captions when user responds
+      clearCaption();
       submitAnswer(text);
     },
     enabled: true,
@@ -172,6 +174,7 @@ export default function Interview() {
     stop: stopTts,
     isSpeaking: isTtsActive,
     currentlySpokenText,
+    clearCaption,
   } = useStreamingTTS({
     enabled: isSpeechOutputEnabled,
     onStatusChange: (status) => console.log(`[TTS Status] ${status}`),
@@ -411,6 +414,8 @@ export default function Interview() {
 
   const sendMessage = () => {
     if (input.trim() && submitAnswer) {
+      // Clear previous captions when user responds
+      clearCaption();
       submitAnswer(input);
       setInput("");
     }

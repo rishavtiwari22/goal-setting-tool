@@ -34,7 +34,9 @@ export function useStreamingTTS({
     isActive: false,
     ttsQueue: [] as string[],
     isProcessing: false,
-    accumulatedSpokenText: "",
+    currentChunkText: "",
+    completedText: "",
+    isStreamComplete: false,
   });
 
   const createTokenIterable = (input: string): Iterable<string> => {
@@ -80,9 +82,9 @@ export function useStreamingTTS({
       await ensureReady();
       const tokens = createTokenIterable(text);
 
-      // Accumulate text as it's spoken
-      stateRef.current.accumulatedSpokenText += text + ' ';
-      setCurrentlySpokenText(stateRef.current.accumulatedSpokenText.trim());
+      // Set current chunk text (show only this chunk during streaming)
+      stateRef.current.currentChunkText = text;
+      setCurrentlySpokenText(text.trim());
 
       const handle = await streamTokensToSpeech(tokens, {
         backend: DEFAULT_PIPER_BACKEND,
@@ -91,7 +93,9 @@ export function useStreamingTTS({
         onSentence: () => {},
         onSynthesisTime: () => {},
         onPlayFinished: () => {
-          // Audio chunk finished playing
+          // Audio chunk finished playing - add to completed text
+          stateRef.current.completedText += (stateRef.current.completedText ? ' ' : '') + text.trim();
+          stateRef.current.currentChunkText = "";
         },
       });
 
@@ -172,13 +176,15 @@ export function useStreamingTTS({
     const checkCompletion = () => {
       if (state.ttsQueue.length === 0 && !state.isProcessing) {
         state.isActive = false;
+        state.isStreamComplete = true;
         setIsSpeaking(false);
+        
+        // Show full combined text when streaming completes
+        setCurrentlySpokenText(state.completedText);
+        
         onStopSpeaking?.();
         onStatusChange?.("Streaming complete");
         pollTimeoutRef.current = null;
-        
-        // Keep the accumulated text visible (do NOT clear)
-        // Caption will persist showing all spoken content
       } else {
         pollTimeoutRef.current = setTimeout(
           checkCompletion,
@@ -210,8 +216,18 @@ export function useStreamingTTS({
     stateRef.current.textBuffer = "";
     stateRef.current.isProcessing = false;
     stateRef.current.isActive = false;
-    stateRef.current.accumulatedSpokenText = "";
+    stateRef.current.currentChunkText = "";
+    stateRef.current.completedText = "";
+    stateRef.current.isStreamComplete = false;
     setIsSpeaking(false);
+    setCurrentlySpokenText("");
+  }, []);
+
+  const clearCaption = useCallback(() => {
+    // Clear caption state for new TTS session
+    stateRef.current.currentChunkText = "";
+    stateRef.current.completedText = "";
+    stateRef.current.isStreamComplete = false;
     setCurrentlySpokenText("");
   }, []);
 
@@ -233,5 +249,6 @@ export function useStreamingTTS({
     addChunk,
     finishStreaming,
     stop,
+    clearCaption,
   };
 }
