@@ -70,6 +70,7 @@ export default function Interview() {
         const interviewConfig = JSON.parse(configStr) as InterviewConfig;
         setConfig(interviewConfig);
         setIsInitializing(false);
+        forceEndRef.current = false;
       } else if (sessionId) {
         const session = loadInterviewSessionBySessionId(sessionId);
         if (session) {
@@ -85,6 +86,7 @@ export default function Interview() {
           };
           setConfig(interviewConfig);
           setIsInitializing(false);
+          forceEndRef.current = false;
         } else {
           toast.error("Session not found");
           navigate("/selfapply");
