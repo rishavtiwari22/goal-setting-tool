@@ -49,6 +49,7 @@ export interface BuildDecisionPromptParams {
   recentQAHistory?: QAHistoryItem[];  // Phase 2: Include recent history for context
   consecutiveIrrelevantCount?: number; // Phase 2: Current count of consecutive irrelevant answers
   currentTopicFollowupCount?: number;  // Phase 2: Current count of follow-ups for this topic
+  remainingTime?: number; // Remaining interview time in minutes
 }
 
 export function buildDecisionPrompt(params: BuildDecisionPromptParams): { systemMessage: string; humanMessage: string } {
@@ -82,6 +83,7 @@ Decision Rules (in priority order):
    - Candidate has given ${consecutiveCount >= 2 ? 'MULTIPLE' : 'some'} garbage answers AND this answer shows:
      * Refusal to engage (e.g., "I don't know", "never", "I won't")
    - After 3+ completely garbage answers, the candidate is clearly not a fit → END
+   - Remaining Time is 0 or less → END
 
 ${irrelevantInfo}${followupInfo}
 
@@ -94,7 +96,9 @@ followup OR movenext OR end`;
   let humanMessage = `Question: ${params.question}\nAnswer: ${params.answer}`;
 
   if (recentContext) {
-    humanMessage = `Recent Conversation:\n${recentContext}\n\n---\nCurrent:\nQuestion: ${params.question}\nAnswer: ${params.answer}`;
+    humanMessage = `Context:\nRemaining Time: ${params.remainingTime} minutes\n\nRecent Conversation:\n${recentContext}\n\n---\nCurrent:\nQuestion: ${params.question}\nAnswer: ${params.answer}`;
+  } else {
+    humanMessage = `Context:\nRemaining Time: ${params.remainingTime} minutes\n\nQuestion: ${params.question}\nAnswer: ${params.answer}`;
   }
 
   return { systemMessage, humanMessage };
