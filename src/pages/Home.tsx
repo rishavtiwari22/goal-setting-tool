@@ -162,7 +162,7 @@ export default function Home() {
           ))}
         </div>
 
-        <div className="flex justify-center mt-auto pb-4">
+        <div className="fixed bottom-10 left-0 right-0 flex justify-center pb-4">
           <Badge className="px-3 py-1 font-bold text-sky-600 rounded-sm bg-blue-100">
             Please note that Zoe works best on Google Chrome
           </Badge>

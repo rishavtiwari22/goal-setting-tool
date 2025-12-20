@@ -2,6 +2,8 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { truncateText } from "@/lib/utils";
+import { AlarmClock } from "lucide-react";
+import { Separator } from "@radix-ui/react-separator";
 
 interface SelectionCardProps {
   icon: React.ReactNode;
@@ -27,7 +29,7 @@ export default function SelectionCard({
       onClick={comingSoon ? undefined : onClick}
       className={`
         group relative transition-all duration-200 p-6 pb-8
-        overflow-hidden
+        overflow-hidden flex flex-col
         ${
           comingSoon
             ? "cursor-not-allowed"
@@ -40,9 +42,9 @@ export default function SelectionCard({
         }
       `}
     >
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 flex-1">
         <div className="flex gap-1">
-          <img src={icon} alt="" className="size-6 items-center" />
+          {/* <img src={icon} alt="" className="size-6 items-center" /> */}
           <div className="flex items-start justify-start  gap-3">
             <h3 className="text-sm font-bold text-[#2C5F2D]">{title}</h3>
           </div>
@@ -57,6 +59,18 @@ export default function SelectionCard({
           <p className="text-sm text-gray-600 leading-relaxed">
             {truncateText(description, 100)}
           </p>
+        </div>
+      </div>
+      <div className="mt-auto">
+        <Separator className="mb-3 border-1 mt-5" />
+
+        <div className="flex items-center gap-2 text-base text-gray-500 ">
+          {estimatedTime && (
+            <div className="flex items-center gap-1 font-semibold">
+              <AlarmClock />
+              <span>{estimatedTime}</span>
+            </div>
+          )}
         </div>
       </div>
       <div

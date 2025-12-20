@@ -250,10 +250,6 @@ export default function SelfApply() {
                   Select a job role to practice
                 </h2>
 
-                <p className="text-md font-semibold text-center mb-3">
-                  Select a job role from below :
-                </p>
-
                 {loadingJobs ? (
                   <div className="flex justify-center py-8">
                     <Spinner size="lg" />
@@ -267,7 +263,7 @@ export default function SelfApply() {
                       showAll={showAllJobs}
                     />
 
-                    {jobs.length > 3 && !showAllJobs && (
+                    {/* {jobs.length > 3 && !showAllJobs && (
                       <div className="text-center mb-8">
                         <Button
                           variant="default"
@@ -278,10 +274,17 @@ export default function SelfApply() {
                           See all new roles <ChevronDownIcon />
                         </Button>
                       </div>
-                    )}
+                    )} */}
                   </>
                 )}
               </main>
+            </div>
+
+            {/* Bottom notification */}
+            <div className="fixed bottom-10 left-0 right-0 flex justify-center pb-4">
+              <Badge className="px-3 py-1 font-bold text-sky-600 rounded-sm bg-blue-100">
+                Please note that Zoe works best on Google Chrome
+              </Badge>
             </div>
           </div>
         );
