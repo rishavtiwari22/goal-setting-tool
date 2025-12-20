@@ -34,6 +34,7 @@ export function useStreamingTTS({
     isActive: false,
     ttsQueue: [] as string[],
     isProcessing: false,
+    accumulatedSpokenText: "",
   });
 
   const createTokenIterable = (input: string): Iterable<string> => {
@@ -79,8 +80,9 @@ export function useStreamingTTS({
       await ensureReady();
       const tokens = createTokenIterable(text);
 
-      // Update caption to show ONLY current sentence for perfect synchronization
-      setCurrentlySpokenText(text);
+      // Accumulate text as it's spoken
+      stateRef.current.accumulatedSpokenText += text + ' ';
+      setCurrentlySpokenText(stateRef.current.accumulatedSpokenText.trim());
 
       const handle = await streamTokensToSpeech(tokens, {
         backend: DEFAULT_PIPER_BACKEND,
@@ -175,10 +177,8 @@ export function useStreamingTTS({
         onStatusChange?.("Streaming complete");
         pollTimeoutRef.current = null;
         
-        // Clear caption after a brief delay to allow final sentence to be visible
-        setTimeout(() => {
-          setCurrentlySpokenText('');
-        }, 500);
+        // Keep the accumulated text visible (do NOT clear)
+        // Caption will persist showing all spoken content
       } else {
         pollTimeoutRef.current = setTimeout(
           checkCompletion,
@@ -210,8 +210,9 @@ export function useStreamingTTS({
     stateRef.current.textBuffer = "";
     stateRef.current.isProcessing = false;
     stateRef.current.isActive = false;
+    stateRef.current.accumulatedSpokenText = "";
     setIsSpeaking(false);
-    setCurrentlySpokenText('');
+    setCurrentlySpokenText("");
   }, []);
 
   // Cleanup on unmount
@@ -233,4 +234,5 @@ export function useStreamingTTS({
     finishStreaming,
     stop,
   };
+}
 }

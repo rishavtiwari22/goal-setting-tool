@@ -326,7 +326,7 @@ export default function Interview() {
     videoEl.src = initialSrc;
 
     const handleInitialCanPlay = () => {
-      videoEl.play().catch(() => { });
+      videoEl.play().catch(() => {});
     };
 
     videoEl.addEventListener("canplay", handleInitialCanPlay, { once: true });
@@ -355,7 +355,7 @@ export default function Interview() {
       setIsVideoSwitching(false);
 
       requestAnimationFrame(() => {
-        videoEl.play().catch(() => { });
+        videoEl.play().catch(() => {});
       });
     };
 
@@ -505,8 +505,9 @@ export default function Interview() {
               loop
               muted
               playsInline
-              className={`video-smooth-transition ${isVideoSwitching ? "loading" : ""
-                }`}
+              className={`video-smooth-transition ${
+                isVideoSwitching ? "loading" : ""
+              }`}
               style={{
                 width: "260px",
                 height: "259px",
@@ -521,14 +522,13 @@ export default function Interview() {
           <div
             className="caption-container transition-opacity duration-300"
             style={{
-              opacity:
-                showChatMessage && isTtsActive && currentlySpokenText ? 1 : 0,
+              opacity: showChatMessage && currentlySpokenText ? 1 : 0,
               minHeight: "80px",
               maxHeight: "80px",
               height: "80px",
             }}
           >
-            {showChatMessage && isTtsActive && currentlySpokenText && (
+            {showChatMessage && currentlySpokenText && (
               <p className="caption-text">{currentlySpokenText}</p>
             )}
           </div>
