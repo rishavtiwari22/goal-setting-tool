@@ -30,7 +30,7 @@ export default function SelectionCard({
         overflow-hidden
         ${
           comingSoon
-            ? "cursor-not-allowed opacity-60"
+            ? "cursor-not-allowed"
             : "cursor-pointer hover:shadow-md hover:scale-[1.01]"
         }
         ${
@@ -40,17 +40,18 @@ export default function SelectionCard({
         }
       `}
     >
-      {comingSoon && (
-        <div className="absolute top-3 right-3">
-          <Badge className="bg-orange-500 text-white text-xs px-2 py-0.5 rounded-sm font-semibold">
+      <div className="flex flex-col gap-4">
+        <div className="flex gap-1">
+          <img src={icon} alt="" className="size-6 items-center" />
+          <div className="flex items-start justify-start  gap-3">
+            <h3 className="text-sm font-bold text-[#2C5F2D]">{title}</h3>
+          </div>
+        </div>
+        {comingSoon && (
+          <Badge className="bg-amber-500 text-xs px-2 py-0.5 rounded-sm font-semibold">
             Coming Soon
           </Badge>
-        </div>
-      )}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-start justify-start  gap-3">
-          <h3 className="text-base font-bold text-[#2C5F2D]">{title}</h3>
-        </div>
+        )}
 
         <div className="flex-1">
           <p className="text-sm text-gray-600 leading-relaxed">

@@ -25,7 +25,7 @@ export default function Home() {
     {
       id: "flowchart",
       icon: "/assets/workflow.svg",
-      title: "Flowchart",
+      title: "Critical Thinking with Flowchart",
       description:
         "Design flowcharts to test your problem-solving, algorithm, and process-thinking skills",
       estimatedTime: "15-20 mins",
@@ -163,7 +163,7 @@ export default function Home() {
         </div>
 
         <div className="flex justify-center mt-auto pb-4">
-          <Badge className="px-3 py-1 font-semibold text-blue-600 rounded-sm bg-blue-200">
+          <Badge className="px-3 py-1 font-bold text-sky-600 rounded-sm bg-blue-100">
             Please note that Zoe works best on Google Chrome
           </Badge>
         </div>
