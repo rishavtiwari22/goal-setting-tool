@@ -454,9 +454,20 @@ ${knowledgePointsStr}
 
 Based on the above information, summarize the candidate's performance in 【${params.language}】 and provide an interview conclusion and a score (0-10).
 
+The summary must include:
+1. A "**Top Strengths:**" section with exactly 2 key strengths in the format:
+   * **Strength Name:** Description text
+2. An "**Improvement Areas:**" section with exactly 2 areas for improvement in the format:
+   * **Area Name:** Description text
+
+IMPORTANT: 
+- You must always provide exactly 2 strengths. If the candidate demonstrated limited strengths, identify the most relevant positive aspects of their performance.
+- You must always provide exactly 2 improvement areas. Focus on areas where the candidate could enhance their skills or performance.
+- The summary text should NOT include the Top Strengths or Improvement Areas sections. These sections should be separate and clearly marked.
+
 You must respond with ONLY valid JSON:
 {{
-  "summary": "detailed summary text",
+  "summary": "detailed summary text (without Top Strengths or Improvement Areas sections)",
   "score": number (0-5),
   "conclusion": "final conclusion text"
 }}`;
