@@ -35,6 +35,7 @@ export default function Interview() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasSelectedAlternativeRef = useRef<boolean>(false);
+  const lastSelectedAnimationRef = useRef<string | null>(null);
   const videoTransitionDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const preloadedVideosRef = useRef<Set<string>>(new Set());
   const pendingSessionRef = useRef<InterviewSession | null>(null); // Store session to navigate after TTS
@@ -260,16 +261,33 @@ export default function Interview() {
       clearTimeout(videoTransitionDebounceRef.current);
     }
 
+    // Helper to clean up thinking state when exiting
+    const cleanupThinkingState = () => {
+      if (thinkingTimerRef.current) {
+        clearTimeout(thinkingTimerRef.current);
+        thinkingTimerRef.current = null;
+        // console.log(`[Thinking Animation] Exited thinking mode, timer cleared`);
+      }
+      hasSelectedAlternativeRef.current = false;
+      if (activeThinkingVideo !== "thinking") {
+        // console.log(`[Thinking Animation] Resetting to default: thinking`);
+        setActiveThinkingVideo("thinking");
+      }
+    };
+
     const determineVideoState = () => {
       if (isInitializing) {
+        cleanupThinkingState();
         return "juggling";
       }
 
       if (isActuallyPlaying) {
+        cleanupThinkingState();
         return "speaking";
       }
 
       if (isListening) {
+        cleanupThinkingState();
         return "listening";
       }
 
@@ -279,33 +297,40 @@ export default function Interview() {
       if (isInThinkingState) {
         // Start timer to switch to alternative animation after 3 seconds
         if (!thinkingTimerRef.current) {
+          // console.log(
+          //   `[Thinking Animation] Entered thinking mode, starting 3s timer`
+          // );
           // Reset to default thinking animation when entering thinking mode
           if (activeThinkingVideo !== "thinking") {
             setActiveThinkingVideo("thinking");
           }
-          
+
           thinkingTimerRef.current = setTimeout(() => {
-            const randomValue = Math.random();
-            const randomIndex = Math.floor(
-              randomValue * alternativeThinkingVideos.length
+            // Filter out the last selected animation to ensure variety
+            const lastAnimation = lastSelectedAnimationRef.current;
+            const availableAnimations = alternativeThinkingVideos.filter(
+              (video) => video !== lastAnimation
             );
-            const selectedVideo = alternativeThinkingVideos[randomIndex];
+            const randomIndex = Math.floor(
+              Math.random() * availableAnimations.length
+            );
+            const selectedVideo = availableAnimations[randomIndex];
+
+            // Track this selection to avoid repeating it next time
+            lastSelectedAnimationRef.current = selectedVideo;
+
+            // console.log(
+            //   `[Thinking Animation] Switching to: ${selectedVideo} (from ${
+            //     availableAnimations.length
+            //   } options, previous: ${lastAnimation || "none"})`
+            // );
             setActiveThinkingVideo(selectedVideo);
             hasSelectedAlternativeRef.current = true;
           }, 3000);
         }
         return activeThinkingVideo;
       } else {
-        // Reset when exiting thinking state
-        if (thinkingTimerRef.current) {
-          clearTimeout(thinkingTimerRef.current);
-          thinkingTimerRef.current = null;
-        }
-        // Reset the flag so next thinking session can randomize again
-        hasSelectedAlternativeRef.current = false;
-        if (activeThinkingVideo !== "thinking") {
-          setActiveThinkingVideo("thinking");
-        }
+        cleanupThinkingState();
         return "thinking";
       }
     };
@@ -331,6 +356,7 @@ export default function Interview() {
     isTtsActive,
     isActuallyPlaying,
     config,
+    activeThinkingVideo,
   ]);
 
   useEffect(() => {
