@@ -284,6 +284,7 @@ export default function Interview() {
               Math.random() * alternativeThinkingVideos.length
             );
             const selectedVideo = alternativeThinkingVideos[randomIndex];
+            console.log(`[Thinking Animation] Selected random video: ${selectedVideo} (index: ${randomIndex})`);
             setActiveThinkingVideo(selectedVideo);
             hasSelectedAlternativeRef.current = true;
           }, 3000);
@@ -295,7 +296,9 @@ export default function Interview() {
           thinkingTimerRef.current = null;
         }
         hasSelectedAlternativeRef.current = false;
-        setActiveThinkingVideo("thinking");
+        if (activeThinkingVideo !== "thinking") {
+          setActiveThinkingVideo("thinking");
+        }
         return "thinking";
       }
     };
@@ -320,7 +323,6 @@ export default function Interview() {
     isListening,
     isTtsActive,
     isActuallyPlaying,
-    activeThinkingVideo,
     config,
   ]);
 
