@@ -267,7 +267,8 @@ export function buildCreateQuestionPrompt(params: BuildCreateQuestionPromptParam
       systemTemplate = CREATE_QUESTION_FOLLOWUP_INTRO_SYSTEM;
     } else if (params.currentPhase === 'project') {
       systemTemplate = CREATE_QUESTION_FOLLOWUP_PROJECT_SYSTEM;
-    } else {
+    } else if (params.currentPhase === 'technical') {
+      systemTemplate = CREATE_QUESTION_FOLLOWUP_TECHNICAL_SYSTEM;
     }
   } else if (params.decision === 'retry') {
     // Determine warning message based on bad answer count
