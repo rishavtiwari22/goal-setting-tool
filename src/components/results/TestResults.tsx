@@ -63,17 +63,195 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
     let assessmentText = "";
     for (let i = overallIndex + 1; i < lines.length; i++) {
       const line = lines[i].trim();
-      if (line.startsWith("**") || !line) break;
+      const lowerLine = line.toLowerCase();
+      if (
+        line.startsWith("**") || 
+        !line ||
+        lowerLine.includes("top strengths") ||
+        lowerLine.includes("improvement areas") ||
+        lowerLine.includes("**strengths:**")
+      ) break;
       assessmentText += line + " ";
     }
     result.mainSummary = assessmentText.trim();
+  } else {
+    let summaryText = "";
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      const lowerLine = line.toLowerCase();
+      if (
+        lowerLine.includes("top strengths") ||
+        lowerLine.includes("improvement areas") ||
+        lowerLine.includes("**strengths:**") ||
+        lowerLine.includes("**improvement areas:**")
+      ) break;
+      if (line && !line.startsWith("**")) {
+        summaryText += line + " ";
+      }
+      if (summaryText.length > 200) break;
+    }
+    if (summaryText.trim()) {
+      result.mainSummary = summaryText.trim();
+    }
+  }
+
+  const strengthsIndex = lines.findIndex((line) => {
+    const lowerLine = line.toLowerCase();
+    return lowerLine.includes("top strengths") ||
+           lowerLine.includes("**strengths:**") ||
+           lowerLine.includes("key strengths") ||
+           lowerLine.includes("performance breakdown");
+  });
+  
+  if (strengthsIndex !== -1) {
+    let currentLine = lines[strengthsIndex];
+    const headerMatch = currentLine.match(/\*\*[^:]*top\s+strengths[^:]*:\*\*/i);
+    if (headerMatch) {
+      const afterHeader = currentLine.substring(headerMatch.index! + headerMatch[0].length).trim();
+      if (afterHeader) {
+        const bulletPattern = /\*\s+\*\*([^:]+?):\*\*\s*(.+?)(?:\.\*\s*(?:\*\s+\*\*|$)|$)/g;
+        let match;
+        while ((match = bulletPattern.exec(afterHeader)) !== null && result.topStrengths.length < 2) {
+          const title = match[1].replace(/\*\*/g, "").trim();
+          let description = match[2].replace(/\*\*/g, "").trim();
+          if (description.endsWith(".*")) {
+            description = description.slice(0, -2).trim();
+          }
+          if (title && description && description.length > 5) {
+            result.topStrengths.push({ title, description });
+          }
+        }
+      }
+    }
+    
+    for (let i = strengthsIndex + 1; i < lines.length && result.topStrengths.length < 2; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      if (
+        line.includes("**Interview Conclusion:**") ||
+        line.includes("**Improvement Areas:**") ||
+        line.includes("**Score:**") ||
+        line.includes("**Recommendation:**") ||
+        line.toLowerCase().includes("**weaknesses:**") ||
+        line.toLowerCase().includes("improvement areas")
+      )
+        break;
+
+      const bulletMatch = line.match(/^\*\s+\*\*(.+?):\*\*\s*(.+)/) || 
+                         line.match(/^\*\s+(.+?):\s+(.+)/) ||
+                         line.match(/^[-•]\s+\*\*(.+?):\*\*\s*(.+)/) ||
+                         line.match(/^[-•]\s+(.+?):\s+(.+)/) ||
+                         line.match(/^\d+\.\s+\*\*(.+?):\*\*\s*(.+)/) ||
+                         line.match(/^\d+\.\s+(.+?):\s+(.+)/) ||
+                         line.match(/^\*\*\s*(.+?):\s*\*\*\s*(.+)/);
+      
+      if (bulletMatch) {
+        const title = bulletMatch[1].replace(/\*\*/g, "").trim();
+        let description = bulletMatch[2].replace(/\*\*/g, "").trim();
+        if (description.endsWith(".*")) {
+          description = description.slice(0, -2).trim();
+        }
+        
+        if (title && description && description.length > 5) {
+          result.topStrengths.push({ title, description });
+        }
+      } else if (line && !line.startsWith("**") && line.length > 20) {
+        const colonIndex = line.indexOf(":");
+        if (colonIndex > 0 && colonIndex < 50) {
+          const title = line.substring(0, colonIndex).replace(/^\*\s*/, "").replace(/\*\*/g, "").trim();
+          let description = line.substring(colonIndex + 1).trim().replace(/\*\*/g, "");
+          if (description.endsWith(".*")) {
+            description = description.slice(0, -2).trim();
+          }
+          if (title && description && description.length > 5) {
+            result.topStrengths.push({ title, description });
+          }
+        }
+      }
+    }
+  }
+
+  const improvementIndex = lines.findIndex((line) => {
+    const lowerLine = line.toLowerCase();
+    return lowerLine.includes("improvement areas") ||
+           lowerLine.includes("**improvement areas:**") ||
+           lowerLine.includes("areas for improvement");
+  });
+  
+  if (improvementIndex !== -1) {
+    let currentLine = lines[improvementIndex];
+    const headerMatch = currentLine.match(/\*\*[^:]*improvement\s+areas[^:]*:\*\*/i);
+    if (headerMatch) {
+      const afterHeader = currentLine.substring(headerMatch.index! + headerMatch[0].length).trim();
+      if (afterHeader) {
+        const bulletPattern = /\*\s+\*\*([^:]+?):\*\*\s*(.+?)(?:\.\*\s*(?:\*\s+\*\*|$)|$)/g;
+        let match;
+        while ((match = bulletPattern.exec(afterHeader)) !== null && result.improvementAreas.length < 2) {
+          const title = match[1].replace(/\*\*/g, "").trim();
+          let description = match[2].replace(/\*\*/g, "").trim();
+          if (description.endsWith(".*")) {
+            description = description.slice(0, -2).trim();
+          }
+          if (title && description && description.length > 5) {
+            result.improvementAreas.push({ title, description });
+          }
+        }
+      }
+    }
+    
+    for (let i = improvementIndex + 1; i < lines.length && result.improvementAreas.length < 2; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      if (
+        line.includes("**Interview Conclusion:**") ||
+        line.includes("**Top Strengths:**") ||
+        line.includes("**Score:**") ||
+        line.includes("**Recommendation:**") ||
+        line.toLowerCase().includes("top strengths")
+      )
+        break;
+
+      const bulletMatch = line.match(/^\*\s+\*\*(.+?):\*\*\s*(.+)/) || 
+                         line.match(/^\*\s+(.+?):\s+(.+)/) ||
+                         line.match(/^[-•]\s+\*\*(.+?):\*\*\s*(.+)/) ||
+                         line.match(/^[-•]\s+(.+?):\s+(.+)/) ||
+                         line.match(/^\d+\.\s+\*\*(.+?):\*\*\s*(.+)/) ||
+                         line.match(/^\d+\.\s+(.+?):\s+(.+)/) ||
+                         line.match(/^\*\*\s*(.+?):\s*\*\*\s*(.+)/);
+      
+      if (bulletMatch) {
+        const title = bulletMatch[1].replace(/\*\*/g, "").trim();
+        let description = bulletMatch[2].replace(/\*\*/g, "").trim();
+        if (description.endsWith(".*")) {
+          description = description.slice(0, -2).trim();
+        }
+        
+        if (title && description && description.length > 5) {
+          result.improvementAreas.push({ title, description });
+        }
+      } else if (line && !line.startsWith("**") && line.length > 20) {
+        const colonIndex = line.indexOf(":");
+        if (colonIndex > 0 && colonIndex < 50) {
+          const title = line.substring(0, colonIndex).replace(/^\*\s*/, "").replace(/\*\*/g, "").trim();
+          let description = line.substring(colonIndex + 1).trim().replace(/\*\*/g, "");
+          if (description.endsWith(".*")) {
+            description = description.slice(0, -2).trim();
+          }
+          if (title && description && description.length > 5) {
+            result.improvementAreas.push({ title, description });
+          }
+        }
+      }
+    }
   }
 
   const breakdownIndex = lines.findIndex((line) =>
     line.includes("**Performance Breakdown:**")
   );
-  if (breakdownIndex !== -1) {
-    for (let i = breakdownIndex + 1; i < lines.length; i++) {
+  if (breakdownIndex !== -1 && result.topStrengths.length < 2) {
+    for (let i = breakdownIndex + 1; i < lines.length && result.topStrengths.length < 2; i++) {
       const line = lines[i].trim();
 
       if (
@@ -83,23 +261,30 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
       )
         break;
 
-      const bulletMatch = line.match(/^\*\s+\*\*(.+?):\*\*\s+(.+)/);
+      const bulletMatch = line.match(/^\*\s+\*\*(.+?):\*\*\s+(.+)/) ||
+                         line.match(/^\*\s+(.+?):\s+(.+)/);
       if (bulletMatch) {
         const [, title, description] = bulletMatch;
         const cleanDesc = description.replace(/\*\*/g, "").trim();
+        const cleanTitle = title.replace(/\*\*/g, "").trim();
 
         if (
           title.toLowerCase().includes("technical") ||
           title.toLowerCase().includes("coding") ||
-          title.toLowerCase().includes("problem")
+          title.toLowerCase().includes("problem") ||
+          title.toLowerCase().includes("strength") ||
+          (cleanDesc.length > 10 && !title.toLowerCase().includes("communication") && 
+           !title.toLowerCase().includes("improvement") && !title.toLowerCase().includes("weakness"))
         ) {
-          result.topStrengths.push({ title, description: cleanDesc });
+          if (result.topStrengths.length < 2) {
+            result.topStrengths.push({ title: cleanTitle, description: cleanDesc });
+          }
         } else if (
           title.toLowerCase().includes("communication") ||
           title.toLowerCase().includes("professionalism") ||
           title.toLowerCase().includes("experience")
         ) {
-          result.improvementAreas.push({ title, description: cleanDesc });
+          result.improvementAreas.push({ title: cleanTitle, description: cleanDesc });
         }
       }
     }
@@ -123,6 +308,38 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
     }
   }
 
+  if (result.topStrengths.length === 0) {
+    const summaryText = summary.toLowerCase();
+    const positivePhrases = [
+      { pattern: /(?:demonstrated|showed|exhibited|displayed)\s+(?:strong|excellent|good|solid|impressive)\s+([^.]+)/gi, extract: true },
+      { pattern: /(?:strength|strong point|key strength)[^:]*:\s*([^.]+)/gi, extract: true },
+    ];
+    
+    for (const phrase of positivePhrases) {
+      const matches = [...summaryText.matchAll(phrase.pattern)];
+      for (const match of matches.slice(0, 2)) {
+        if (result.topStrengths.length >= 2) break;
+        const text = match[1] || match[0];
+        if (text && text.length > 15 && text.length < 200) {
+          const cleanText = text.trim().charAt(0).toUpperCase() + text.trim().slice(1);
+          const colonIndex = cleanText.indexOf(":");
+          if (colonIndex > 0) {
+            result.topStrengths.push({
+              title: cleanText.substring(0, colonIndex).trim(),
+              description: cleanText.substring(colonIndex + 1).trim(),
+            });
+          } else {
+            result.topStrengths.push({
+              title: "Key Strength",
+              description: cleanText,
+            });
+          }
+        }
+      }
+      if (result.topStrengths.length >= 2) break;
+    }
+  }
+
   return result;
 };
 
@@ -141,53 +358,28 @@ export const TestResults: React.FC<TestResultsProps> = ({
 
   const navigate = useNavigate();
 
+  const getCleanSummary = (summary: string): string => {
+    if (!summary) return "Interview performance summary";
+    let cleanSummary = summary;
+    const strengthsMatch = cleanSummary.match(/\*\*[^:]*top\s+strengths[^:]*:\*\*/i);
+    if (strengthsMatch) {
+      cleanSummary = cleanSummary.substring(0, strengthsMatch.index).trim();
+    }
+    const improvementMatch = cleanSummary.match(/\*\*[^:]*improvement\s+areas[^:]*:\*\*/i);
+    if (improvementMatch) {
+      cleanSummary = cleanSummary.substring(0, improvementMatch.index).trim();
+    }
+    return cleanSummary.split("\n\n")[0] || "Interview performance summary";
+  };
+
   const displayData = {
     mainSummary:
       parsed.mainSummary ||
-      testResult.summary.split("\n\n")[0] ||
+      getCleanSummary(testResult.summary) ||
       "Interview performance summary",
-    topStrengths:
-      parsed.topStrengths.length > 0
-        ? parsed.topStrengths
-        : [
-            {
-              title: "Technical Knowledge",
-              description:
-                "Demonstrated strong understanding of core concepts.",
-            },
-            {
-              title: "Problem Solving",
-              description:
-                "Showed good analytical thinking and approach to challenges.",
-            },
-          ],
-    improvementAreas:
-      parsed.improvementAreas.length > 0
-        ? parsed.improvementAreas
-        : [
-            {
-              title: "Communication",
-              description: "Could benefit from more detailed explanations.",
-            },
-            {
-              title: "Time Management",
-              description: "Consider practicing under time constraints.",
-            },
-          ],
-    nextSteps:
-      parsed.nextSteps.length > 0
-        ? parsed.nextSteps
-        : [
-            {
-              title: "Practice",
-              description: "Continue practicing similar interview scenarios.",
-            },
-            {
-              title: "Review",
-              description:
-                "Review the questions and answers from this session.",
-            },
-          ],
+    topStrengths: parsed.topStrengths,
+    improvementAreas: parsed.improvementAreas,
+    nextSteps: parsed.nextSteps,
   };
 
   const getFeedbackText = (summary: any): string => {
@@ -296,16 +488,23 @@ export const TestResults: React.FC<TestResultsProps> = ({
               </h2>
             </div>
             <div className="flex flex-col items-stretch gap-6">
-              {displayData.topStrengths.map((item, i) => (
-                <div key={i}>
-                  <p className="font-semibold text-gray-800 mb-2 text-base">
-                    {item.title}
-                  </p>
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    {item.description}
-                  </p>
+              {displayData.topStrengths.length > 0 ? (
+                displayData.topStrengths.map((item, i) => (
+                  <div key={i}>
+                    <p className="font-semibold text-gray-800 mb-2 text-base">
+                      {item.title.replace(/\*/g, "").trim()}
+                    </p>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {item.description.replace(/\*/g, "").trim()}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div>
+                  {/* <p className="font-semibold text-gray-800 mb-2 text-base">-</p> */}
+                  <p className="text-sm text-gray-600 leading-relaxed">-</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
@@ -318,16 +517,23 @@ export const TestResults: React.FC<TestResultsProps> = ({
               </h2>
             </div>
             <div className="flex flex-col items-stretch gap-6">
-              {displayData.improvementAreas.map((item, i) => (
-                <div key={i}>
-                  <p className="font-semibold text-gray-800 mb-2 text-base">
-                    {item.title}
-                  </p>
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    {item.description}
-                  </p>
+              {displayData.improvementAreas.length > 0 ? (
+                displayData.improvementAreas.map((item, i) => (
+                  <div key={i}>
+                    <p className="font-semibold text-gray-800 mb-2 text-base">
+                      {item.title.replace(/\*/g, "").trim()}
+                    </p>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {item.description.replace(/\*/g, "").trim()}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div>
+                  {/* <p className="font-semibold text-gray-800 mb-2 text-base">-</p> */}
+                  <p className="text-sm text-gray-600 leading-relaxed">-</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
