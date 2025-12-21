@@ -1,7 +1,8 @@
 import { DecisionResponse, FeedbackResponse } from '../../models/interview';
 import { ENV } from '../../utils/env';
 
-const DEEPSEEK_API_URL = ENV.DEEPSEEK_API_URL();
+const HUGGINGFACE_API_URL = ENV.HUGGINGFACE_API_URL();
+const HUGGINGFACE_API_KEY = ENV.HUGGINGFACE_API_KEY();
 
 async function* streamResponse(response: Response): AsyncGenerator<string> {
   const reader = response.body?.getReader();
@@ -49,13 +50,19 @@ export async function makeDecision(
   systemMessage: string,
   humanMessage: string
 ): Promise<DecisionResponse> {
-  const response = await fetch(DEEPSEEK_API_URL, {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (HUGGINGFACE_API_KEY) {
+    headers['Authorization'] = `Bearer ${HUGGINGFACE_API_KEY}`;
+  }
+
+  const response = await fetch(HUGGINGFACE_API_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model: ENV.HUGGINGFACE_MODEL() || 'tgi',
       messages: [
         {
           role: 'system',
@@ -66,10 +73,9 @@ export async function makeDecision(
           content: humanMessage,
         },
       ],
-      // No JSON mode - just get plain text response for faster processing
       stream: false,
       temperature: 0.1,
-      max_tokens: 10,  // Decision is just one word, limit tokens for speed
+      max_tokens: 10,
     }),
   });
 
@@ -102,13 +108,20 @@ export async function* createQuestion(
   console.log('Creating question...');
   console.log('System message:', systemMessage);
   console.log('Human message:', humanMessage);
-  const response = await fetch(DEEPSEEK_API_URL, {
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (HUGGINGFACE_API_KEY) {
+    headers['Authorization'] = `Bearer ${HUGGINGFACE_API_KEY}`;
+  }
+
+  const response = await fetch(HUGGINGFACE_API_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model: ENV.HUGGINGFACE_MODEL() || 'tgi',
       messages: [
         {
           role: 'system',
@@ -143,13 +156,19 @@ export async function createFeedback(
   systemMessage: string,
   humanMessage: string
 ): Promise<FeedbackResponse> {
-  const response = await fetch(DEEPSEEK_API_URL, {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (HUGGINGFACE_API_KEY) {
+    headers['Authorization'] = `Bearer ${HUGGINGFACE_API_KEY}`;
+  }
+
+  const response = await fetch(HUGGINGFACE_API_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model: ENV.HUGGINGFACE_MODEL() || 'tgi',
       messages: [
         {
           role: 'system',
@@ -160,7 +179,7 @@ export async function createFeedback(
           content: humanMessage,
         },
       ],
-      response_format: { type: 'json_object' },  // ✅ Use JSON mode
+      response_format: { type: 'json_object' },
       stream: false,
       temperature: 0.3,
     }),
@@ -203,13 +222,20 @@ export async function summarizeInterview(
   humanMessage: string
 ): Promise<{ summary: string; score: number; conclusion: string }> {
   console.log('Summarizing interview...');
-  const response = await fetch(DEEPSEEK_API_URL, {
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (HUGGINGFACE_API_KEY) {
+    headers['Authorization'] = `Bearer ${HUGGINGFACE_API_KEY}`;
+  }
+
+  const response = await fetch(HUGGINGFACE_API_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model: ENV.HUGGINGFACE_MODEL() || 'tgi',
       messages: [
         {
           role: 'system',
@@ -220,7 +246,7 @@ export async function summarizeInterview(
           content: humanMessage,
         },
       ],
-      response_format: { type: 'json_object' },  // ✅ Use JSON mode
+      response_format: { type: 'json_object' },
       stream: false,
       temperature: 0.5,
     }),
