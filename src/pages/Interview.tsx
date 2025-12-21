@@ -179,6 +179,7 @@ export default function Interview() {
     finishStreaming: finishTtsStreaming,
     stop: stopTts,
     isSpeaking: isTtsActive,
+    isActuallyPlaying,
     currentlySpokenText,
     clearCaption,
   } = useStreamingTTS({
@@ -199,6 +200,12 @@ export default function Interview() {
       if (!isCompleted && !forceEndRef.current) {
         resumeListening();
       }
+    },
+    onAudioStart: () => {
+      // Audio actually started playing
+    },
+    onAudioStop: () => {
+      // Audio chunk finished playing
     },
   });
 
@@ -259,7 +266,7 @@ export default function Interview() {
         return "juggling";
       }
 
-      if (isTtsActive) {
+      if (isActuallyPlaying) {
         return "speaking";
       }
 
@@ -267,7 +274,8 @@ export default function Interview() {
         return "listening";
       }
 
-      const isInThinkingState = isLoading || (!isListening && !isTtsActive);
+      const isInThinkingState =
+        isLoading || isTtsActive || (!isListening && !isActuallyPlaying);
 
       if (isInThinkingState) {
         if (!thinkingTimerRef.current && !hasSelectedAlternativeRef.current) {
@@ -295,7 +303,7 @@ export default function Interview() {
     const newState = determineVideoState();
 
     const isHighPriority =
-      (newState === "speaking" && isTtsActive) ||
+      (newState === "speaking" && isActuallyPlaying) ||
       (newState === "listening" && isListening) ||
       (newState === "juggling" && isInitializing);
 
@@ -311,6 +319,7 @@ export default function Interview() {
     isLoading,
     isListening,
     isTtsActive,
+    isActuallyPlaying,
     activeThinkingVideo,
     config,
   ]);
@@ -335,7 +344,7 @@ export default function Interview() {
     videoEl.src = initialSrc;
 
     const handleInitialCanPlay = () => {
-      videoEl.play().catch(() => { });
+      videoEl.play().catch(() => {});
     };
 
     videoEl.addEventListener("canplay", handleInitialCanPlay, { once: true });
@@ -364,7 +373,7 @@ export default function Interview() {
       setIsVideoSwitching(false);
 
       requestAnimationFrame(() => {
-        videoEl.play().catch(() => { });
+        videoEl.play().catch(() => {});
       });
     };
 
@@ -504,8 +513,8 @@ export default function Interview() {
           }}
         >
           <div
-            className="my-12 relative flex items-center justify-center shrink-0"
-            style={{ height: "320px" }}
+            className="relative flex items-center justify-center shrink-0"
+            style={{ height: "320px", marginTop: "48px", marginBottom: "48px" }}
           >
             {isTtsActive && !isListening && (
               <div className="absolute ripple-effect" />
@@ -516,8 +525,9 @@ export default function Interview() {
               loop
               muted
               playsInline
-              className={`video-smooth-transition ${isVideoSwitching ? "loading" : ""
-                }`}
+              className={`video-smooth-transition ${
+                isVideoSwitching ? "loading" : ""
+              }`}
               style={{
                 width: "260px",
                 height: "259px",
@@ -533,9 +543,7 @@ export default function Interview() {
             className="caption-container transition-opacity duration-300"
             style={{
               opacity: showChatMessage && currentlySpokenText ? 1 : 0,
-              minHeight: "80px",
-              maxHeight: "120px",
-              // height: "80px",
+              height: "120px",
             }}
           >
             {showChatMessage && currentlySpokenText && (
@@ -546,9 +554,10 @@ export default function Interview() {
           </div>
 
           <div
-            className="flex gap-6 justify-center items-center mt-20"
+            className="flex gap-6 justify-center items-center"
             style={{
-              minHeight: "64px",
+              height: "64px",
+              marginTop: "80px",
               visibility: config && !isCompleted ? "visible" : "hidden",
             }}
           >

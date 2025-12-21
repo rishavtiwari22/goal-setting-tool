@@ -11,6 +11,8 @@ interface UseStreamingTTSProps {
   onStatusChange?: (status: string) => void;
   onStartSpeaking?: () => void;
   onStopSpeaking?: () => void;
+  onAudioStart?: () => void;
+  onAudioStop?: () => void;
 }
 
 export function useStreamingTTS({
@@ -18,9 +20,12 @@ export function useStreamingTTS({
   onStatusChange,
   onStartSpeaking,
   onStopSpeaking,
+  onAudioStart,
+  onAudioStop,
 }: UseStreamingTTSProps) {
   const [isReady, setIsReady] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isActuallyPlaying, setIsActuallyPlaying] = useState(false);
   const [currentlySpokenText, setCurrentlySpokenText] = useState("");
 
   const activeHandlesRef = useRef<any[]>([]);
@@ -92,6 +97,14 @@ export function useStreamingTTS({
         onStatus: (s: string) => onStatusChange?.(s),
         onSentence: () => {},
         onSynthesisTime: () => {},
+        onAudioChunkStart: () => {
+          setIsActuallyPlaying(true);
+          onAudioStart?.();
+        },
+        onAudioChunkEnd: () => {
+          setIsActuallyPlaying(false);
+          onAudioStop?.();
+        },
         onPlayFinished: () => {
           // Audio chunk finished playing - add to completed text
           stateRef.current.completedText +=
@@ -221,6 +234,7 @@ export function useStreamingTTS({
     stateRef.current.completedText = "";
     stateRef.current.isStreamComplete = false;
     setIsSpeaking(false);
+    setIsActuallyPlaying(false);
     setCurrentlySpokenText("");
   }, []);
 
@@ -245,6 +259,7 @@ export function useStreamingTTS({
   return {
     isReady,
     isSpeaking,
+    isActuallyPlaying,
     currentlySpokenText,
     ensureReady,
     addChunk,

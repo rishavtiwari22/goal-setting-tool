@@ -2,7 +2,6 @@
 import "./ort-setup";
 import * as tts from "@mintplex-labs/piper-tts-web";
 
-
 export type TtsStatusCallback = (status: string) => void;
 
 export type TtsBackend = "cpu";
@@ -118,7 +117,9 @@ async function ensureOrtReady(
     // Check if ONNX is configured globally (from ort-setup.ts)
     // The import at the top of this file should have already handled this
     if (!(globalThis as any).ort) {
-      console.error("CRITICAL: ONNX Runtime not configured properly. ort-setup.ts did not run effectively.");
+      console.error(
+        "CRITICAL: ONNX Runtime not configured properly. ort-setup.ts did not run effectively."
+      );
     }
 
     state.ortReady = true;
@@ -307,7 +308,9 @@ async function synthesizerWorker(
       if (sentence === null) {
         if (!nullReceived) {
           nullReceived = true;
-          onStatusUpdate?.(`[Synthesizer] 🛑 Synthesis complete - all sentences processed`);
+          onStatusUpdate?.(
+            `[Synthesizer] 🛑 Synthesis complete - all sentences processed`
+          );
           qAudio.put(null);
           break;
         }
@@ -317,7 +320,11 @@ async function synthesizerWorker(
       sentenceCount++;
       try {
         const preview = sentence.substring(0, 60);
-        onStatusUpdate?.(`[Synthesizer] 📋 Processing sentence #${sentenceCount}: "${preview}${sentence.length > 60 ? "..." : ""}"`);
+        onStatusUpdate?.(
+          `[Synthesizer] 📋 Processing sentence #${sentenceCount}: "${preview}${
+            sentence.length > 60 ? "..." : ""
+          }"`
+        );
 
         const synthStart = performance.now();
         const wavBlob: Blob = await tts.predict({
@@ -332,7 +339,11 @@ async function synthesizerWorker(
           await new Promise((r) => setTimeout(r, 40));
         }
 
-        onStatusUpdate?.(`[Synthesizer] ✅ Sentence #${sentenceCount} synthesized (${(synthTimeMs / 1000).toFixed(3)}s) - queuing for playback`);
+        onStatusUpdate?.(
+          `[Synthesizer] ✅ Sentence #${sentenceCount} synthesized (${(
+            synthTimeMs / 1000
+          ).toFixed(3)}s) - queuing for playback`
+        );
         onSynthesisTime?.(sentenceCount, synthTimeMs);
 
         logs.push({
@@ -345,7 +356,9 @@ async function synthesizerWorker(
         qAudio.put(wavBlob);
       } catch (error) {
         console.log("[Synthesizer] Error", error);
-        onStatusUpdate?.(`[Synthesizer] ❌ Error: Failed to synthesize sentence #${sentenceCount}`);
+        onStatusUpdate?.(
+          `[Synthesizer] ❌ Error: Failed to synthesize sentence #${sentenceCount}`
+        );
         qAudio.put(null);
         break;
       }
@@ -362,7 +375,9 @@ async function playerWorker(
   logs: Log[],
   onStatusUpdate?: TtsStatusCallback,
   abortRef?: { aborted: boolean },
-  currentSourceRef?: { source: AudioBufferSourceNode | null }
+  currentSourceRef?: { source: AudioBufferSourceNode | null },
+  onAudioChunkStart?: () => void,
+  onAudioChunkEnd?: () => void
 ): Promise<void> {
   onStatusUpdate?.("🎧 Player thread started - waiting for audio chunks");
 
@@ -387,7 +402,9 @@ async function playerWorker(
       audioChunkCount++;
       try {
         const preview = audioChunk.size;
-        onStatusUpdate?.(`[Player] 🎵 Playing audio chunk #${audioChunkCount} (${preview} bytes)`);
+        onStatusUpdate?.(
+          `[Player] 🎵 Playing audio chunk #${audioChunkCount} (${preview} bytes)`
+        );
 
         const playStart = performance.now();
         const audioBlob = audioChunk;
@@ -404,12 +421,17 @@ async function playerWorker(
         const playPromise = new Promise<void>((resolve) => {
           let finished = false;
 
-          const timeoutDuration = Math.max(2000, decodedBuffer.duration * 1000 + 500);
+          const timeoutDuration = Math.max(
+            2000,
+            decodedBuffer.duration * 1000 + 500
+          );
           const timeout = setTimeout(() => {
             if (!finished) {
               finished = true;
               playEnd = performance.now();
-              onStatusUpdate?.(`[Player] ⏱️ Chunk #${audioChunkCount} timeout - continuing`);
+              onStatusUpdate?.(
+                `[Player] ⏱️ Chunk #${audioChunkCount} timeout - continuing`
+              );
               resolve();
             }
           }, timeoutDuration);
@@ -419,11 +441,15 @@ async function playerWorker(
             finished = true;
             clearTimeout(timeout);
             playEnd = performance.now();
-            onStatusUpdate?.(`[Player] ✅ Finished playing chunk #${audioChunkCount} - ready for next`);
+            onStatusUpdate?.(
+              `[Player] ✅ Finished playing chunk #${audioChunkCount} - ready for next`
+            );
+            onAudioChunkEnd?.();
             resolve();
           };
 
           source.onended = finalize;
+          onAudioChunkStart?.();
           source.start(0);
         });
 
@@ -435,7 +461,7 @@ async function playerWorker(
               if (abortRef?.aborted) {
                 try {
                   currentSourceRef?.source?.stop();
-                } catch { }
+                } catch {}
                 resolve();
               } else {
                 setTimeout(checkAbort, 30);
@@ -470,6 +496,8 @@ interface StreamToSpeechOptions {
   onSentence?: (sentence: string, index: number) => void;
   onSynthesisTime?: (sentenceId: number, timeMs: number) => void;
   onPlayFinished?: () => void;
+  onAudioChunkStart?: () => void;
+  onAudioChunkEnd?: () => void;
 }
 
 export async function streamTokensToSpeech(
@@ -485,7 +513,9 @@ export async function streamTokensToSpeech(
   const qAudio = new SimpleQueue<Blob | null>();
   const logs: Log[] = [];
   const abortRef = { aborted: false };
-  const currentSourceRef: { source: AudioBufferSourceNode | null } = { source: null };
+  const currentSourceRef: { source: AudioBufferSourceNode | null } = {
+    source: null,
+  };
 
   const synthPromise = synthesizerWorker(
     qText,
@@ -501,7 +531,9 @@ export async function streamTokensToSpeech(
     logs,
     options.onStatus,
     abortRef,
-    currentSourceRef
+    currentSourceRef,
+    options.onAudioChunkStart,
+    options.onAudioChunkEnd
   );
 
   const sentenceBuffer: { text: string } = { text: "" };
@@ -558,14 +590,16 @@ export async function streamTokensToSpeech(
     stop: (reason?: string) => {
       try {
         abortRef.aborted = true;
-        options.onStatus?.(`🛑 Playback stopped${reason ? ` (${reason})` : ""}`);
+        options.onStatus?.(
+          `🛑 Playback stopped${reason ? ` (${reason})` : ""}`
+        );
         // Clear queues
         qText.put(null);
         qAudio.put(null);
         // Stop current source if any
         try {
           currentSourceRef.source?.stop();
-        } catch { }
+        } catch {}
       } catch (e) {
         console.log("[TTS] Stop error", e);
       }
