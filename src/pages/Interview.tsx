@@ -184,7 +184,6 @@ export default function Interview() {
     clearCaption,
   } = useStreamingTTS({
     enabled: isSpeechOutputEnabled,
-    onStatusChange: (status) => console.log(`[TTS Status] ${status}`),
     onStartSpeaking: () => {
       pauseListening();
     },
@@ -278,23 +277,31 @@ export default function Interview() {
         isLoading || isTtsActive || (!isListening && !isActuallyPlaying);
 
       if (isInThinkingState) {
-        if (!thinkingTimerRef.current && !hasSelectedAlternativeRef.current) {
+        // Start timer to switch to alternative animation after 3 seconds
+        if (!thinkingTimerRef.current) {
+          // Reset to default thinking animation when entering thinking mode
+          if (activeThinkingVideo !== "thinking") {
+            setActiveThinkingVideo("thinking");
+          }
+          
           thinkingTimerRef.current = setTimeout(() => {
+            const randomValue = Math.random();
             const randomIndex = Math.floor(
-              Math.random() * alternativeThinkingVideos.length
+              randomValue * alternativeThinkingVideos.length
             );
             const selectedVideo = alternativeThinkingVideos[randomIndex];
-            console.log(`[Thinking Animation] Selected random video: ${selectedVideo} (index: ${randomIndex})`);
             setActiveThinkingVideo(selectedVideo);
             hasSelectedAlternativeRef.current = true;
           }, 3000);
         }
         return activeThinkingVideo;
       } else {
+        // Reset when exiting thinking state
         if (thinkingTimerRef.current) {
           clearTimeout(thinkingTimerRef.current);
           thinkingTimerRef.current = null;
         }
+        // Reset the flag so next thinking session can randomize again
         hasSelectedAlternativeRef.current = false;
         if (activeThinkingVideo !== "thinking") {
           setActiveThinkingVideo("thinking");
