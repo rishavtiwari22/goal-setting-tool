@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { TestResults } from "../components/results/TestResults";
 import type { InterviewSession } from "../models/interview";
-import { getUser } from "../services/api/serverApi";
+// import { getUser } from "../services/api/serverApi";
 import { getEmailFromJWT } from "../utils/jwt";
 
 export default function Results() {
@@ -32,33 +32,33 @@ export default function Results() {
         }
 
         // If not in localStorage, try to fetch from API
-        const storedToken = localStorage.getItem("studentToken");
-        const storedEmail = localStorage.getItem("studentEmail");
+        // const storedToken = localStorage.getItem("studentToken");
+        // const storedEmail = localStorage.getItem("studentEmail");
 
-        if (storedToken) {
-          const email = getEmailFromJWT(storedToken);
-          if (email) {
-            try {
-              const user = await getUser(email);
-              if (user.name) {
-                setUserName(user.name);
-                localStorage.setItem("userName", user.name);
-              }
-            } catch (error) {
-              console.error("Failed to fetch user details:", error);
-            }
-          }
-        } else if (storedEmail) {
-          try {
-            const user = await getUser(storedEmail);
-            if (user.name) {
-              setUserName(user.name);
-              localStorage.setItem("userName", user.name);
-            }
-          } catch (error) {
-            console.error("Failed to fetch user details:", error);
-          }
-        }
+        // if (storedToken) {
+        //   const email = getEmailFromJWT(storedToken);
+        //   if (email) {
+        //     try {
+        //       const user = await getUser(email);
+        //       if (user.name) {
+        //         setUserName(user.name);
+        //         localStorage.setItem("userName", user.name);
+        //       }
+        //     } catch (error) {
+        //       console.error("Failed to fetch user details:", error);
+        //     }
+        //   }
+        // } else if (storedEmail) {
+        //   try {
+        //     const user = await getUser(storedEmail);
+        //     if (user.name) {
+        //       setUserName(user.name);
+        //       localStorage.setItem("userName", user.name);
+        //     }
+        //   } catch (error) {
+        //     console.error("Failed to fetch user details:", error);
+        //   }
+        // }
       } catch (error) {
         console.error("Error parsing interview session:", error);
         toast.error("Invalid interview session data");

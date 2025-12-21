@@ -7,7 +7,8 @@ import DeviceTester from "@/components/DeviceTester";
 import { DEFAULT_PIPER_BACKEND, preparePiperVoice } from "../lib/piper";
 import JobSelection from "@/components/JobSelection";
 import { ChevronDownIcon, ChevronLeft } from "lucide-react";
-import { checkUser, getJobs, getJob } from "../services/api/serverApi";
+// import { checkUser, getJob } from "../services/api/serverApi";
+import { getJobs } from "../services/api/serverApi";
 import type { Job } from "../models/job";
 import { getEmailFromJWT } from "../utils/jwt";
 import { Badge } from "@/components/ui/badge";
@@ -75,70 +76,75 @@ export default function SelfApply() {
           return;
         }
 
-        try {
-          const response = await checkUser(email);
-          if (response.exists) {
-            setFormData((prev) => ({ ...prev, email }));
-            if (response.user?.user_id) {
-              setUserId(response.user.user_id);
-            } else {
-              setUserId(email);
-            }
-            // Store user name if available
-            if (response.user?.name) {
-              localStorage.setItem("userName", response.user.name);
-            }
-          } else {
-            localStorage.removeItem("studentToken");
-            toast.error(
-              "Your data is not with us. Ask an admin to add your data."
-            );
-            navigate("/");
-          }
-        } catch (error) {
-          console.error("Error checking stored token:", error);
-          localStorage.removeItem("studentToken");
-          toast.error("Failed to verify authentication.");
-          navigate("/");
-        }
+        localStorage.setItem("studentEmail", email);
+        setFormData((prev) => ({ ...prev, email }));
+        setUserId(email);
+        // try {
+        //   const response = await checkUser(email);
+        //   if (response.exists) {
+        //     setFormData((prev) => ({ ...prev, email }));
+        //     if (response.user?.user_id) {
+        //       setUserId(response.user.user_id);
+        //     } else {
+        //       setUserId(email);
+        //     }
+        //     // Store user name if available
+        //     if (response.user?.name) {
+        //       localStorage.setItem("userName", response.user.name);
+        //     }
+        //   } else {
+        //     localStorage.removeItem("studentToken");
+        //     toast.error(
+        //       "Your data is not with us. Ask an admin to add your data."
+        //     );
+        //     navigate("/");
+        //   }
+        // } catch (error) {
+        //   console.error("Error checking stored token:", error);
+        //   localStorage.removeItem("studentToken");
+        //   toast.error("Failed to verify authentication.");
+        //   navigate("/");
+        // }
         return;
       }
 
       const storedEmail = localStorage.getItem("studentEmail");
       if (storedEmail) {
-        try {
-          const response = await checkUser(storedEmail);
-          if (response.exists) {
-            setFormData((prev) => ({ ...prev, email: storedEmail }));
-            if (response.user?.user_id) {
-              setUserId(response.user.user_id);
-            } else {
-              setUserId(storedEmail);
-            }
-            // Store user name if available
-            if (response.user?.name) {
-              localStorage.setItem("userName", response.user.name);
-            }
-          } else {
-            localStorage.removeItem("studentEmail");
-            toast.error(
-              "Your data is not with us. Ask an admin to add your data."
-            );
-            navigate("/");
-          }
-        } catch (error) {
-          console.error("Error checking stored email:", error);
-          localStorage.removeItem("studentEmail");
-          toast.error("Failed to verify authentication.");
-          navigate("/");
-        }
+        setFormData((prev) => ({ ...prev, email: storedEmail }));
+        setUserId(storedEmail);
+        // try {
+        //   const response = await checkUser(storedEmail);
+        //   if (response.exists) {
+        //     setFormData((prev) => ({ ...prev, email: storedEmail }));
+        //     if (response.user?.user_id) {
+        //       setUserId(response.user.user_id);
+        //     } else {
+        //       setUserId(storedEmail);
+        //     }
+        //     // Store user name if available
+        //     if (response.user?.name) {
+        //       localStorage.setItem("userName", response.user.name);
+        //     }
+        //   } else {
+        //     localStorage.removeItem("studentEmail");
+        //     toast.error(
+        //       "Your data is not with us. Ask an admin to add your data."
+        //     );
+        //     navigate("/");
+        //   }
+        // } catch (error) {
+        //   console.error("Error checking stored email:", error);
+        //   localStorage.removeItem("studentEmail");
+        //   toast.error("Failed to verify authentication.");
+        //   navigate("/");
+        // }
         return;
       }
 
-      toast.error(
-        "Please provide authentication via URL parameter: ?token=your_jwt_token or ?email=your@email.com"
-      );
-      navigate("/");
+      // toast.error(
+      //   "Please provide authentication via URL parameter: ?token=your_jwt_token or ?email=your@email.com"
+      // );
+      // navigate("/");
     };
 
     checkStoredAuth();
@@ -185,7 +191,13 @@ export default function SelfApply() {
     try {
       let job: Job;
       if (formData.selectedJobId) {
-        job = await getJob(formData.selectedJobId);
+        const selectedJob = jobs.find((j) => j.job_id === formData.selectedJobId);
+        if (selectedJob) {
+          job = selectedJob;
+        } else {
+          throw new Error("Selected job not found");
+        }
+        // job = await getJob(formData.selectedJobId);
       } else {
         job = {
           job_id: `custom_${Date.now()}`,

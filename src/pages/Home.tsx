@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import SelectionCard from "@/components/SelectionCard";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { checkUser } from "../services/api/serverApi";
+// import { checkUser } from "../services/api/serverApi";
 import { getEmailFromJWT, isValidJWTFormat } from "../utils/jwt";
 import { Badge } from "@/components/ui/badge";
 
@@ -57,23 +57,26 @@ export default function Home() {
         if (isValidJWTFormat(token)) {
           const email = getEmailFromJWT(token);
           if (email) {
-            try {
-              const response = await checkUser(email);
-              if (response.exists) {
-                localStorage.setItem("studentToken", token);
-                localStorage.removeItem("studentEmail");
-                // Store user name if available
-                if (response.user?.name) {
-                  localStorage.setItem("userName", response.user.name);
-                }
-                toast.success("Authentication successful");
-              } else {
-                toast.error("Email not found. Please contact support.");
-              }
-            } catch (error) {
-              console.error("Error checking user:", error);
-              toast.error("Failed to verify email. Please contact support.");
-            }
+            localStorage.setItem("studentToken", token);
+            localStorage.setItem("studentEmail", email);
+            toast.success("Authentication successful");
+            // try {
+            //   const response = await checkUser(email);
+            //   if (response.exists) {
+            //     localStorage.setItem("studentToken", token);
+            //     localStorage.removeItem("studentEmail");
+            //     // Store user name if available
+            //     if (response.user?.name) {
+            //       localStorage.setItem("userName", response.user.name);
+            //     }
+            //     toast.success("Authentication successful");
+            //   } else {
+            //     toast.error("Email not found. Please contact support.");
+            //   }
+            // } catch (error) {
+            //   console.error("Error checking user:", error);
+            //   toast.error("Failed to verify email. Please contact support.");
+            // }
           } else {
             toast.error("Invalid JWT token: no email found in payload");
           }
@@ -83,25 +86,25 @@ export default function Home() {
         return;
       }
 
-      const email = searchParams.get("email");
-      if (email) {
-        try {
-          const response = await checkUser(email);
-          if (response.exists) {
-            localStorage.setItem("studentEmail", email);
-            // Store user name if available
-            if (response.user?.name) {
-              localStorage.setItem("userName", response.user.name);
-            }
-            toast.success("Authentication successful");
-          } else {
-            toast.error("Email not found. Please contact support.");
-          }
-        } catch (error) {
-          console.error("Error checking user:", error);
-          toast.error("Failed to verify email. Please contact support.");
-        }
-      }
+      // const email = searchParams.get("email");
+      // if (email) {
+      //   try {
+      //     const response = await checkUser(email);
+      //     if (response.exists) {
+      //       localStorage.setItem("studentEmail", email);
+      //       // Store user name if available
+      //       if (response.user?.name) {
+      //         localStorage.setItem("userName", response.user.name);
+      //       }
+      //       toast.success("Authentication successful");
+      //     } else {
+      //       toast.error("Email not found. Please contact support.");
+      //     }
+      //   } catch (error) {
+      //     console.error("Error checking user:", error);
+      //     toast.error("Failed to verify email. Please contact support.");
+      //   }
+      // }
     };
 
     authenticateFromQuery();
