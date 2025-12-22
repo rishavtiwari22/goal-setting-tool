@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default function Home() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [consentChecked, setConsentChecked] = useState(true);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -157,6 +158,18 @@ export default function Home() {
         <h3 className="text-xl font-bold text-muted-foreground text-center mb-8">
           What would you like to practice today?
         </h3>
+
+        <div className="flex items-center justify-center mb-6">
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={consentChecked}
+              onChange={(e) => setConsentChecked(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <span>I consent to the storage, processing, and use of my data for the operation and improvement of this AI tool.</span>
+          </label>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto mb-8">
           {interviewTypes.map((type) => (
