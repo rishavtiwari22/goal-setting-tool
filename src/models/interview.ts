@@ -63,6 +63,8 @@ export interface InterviewResult {
   totalQuestions: number;
   correctAnswers: number;
   elapsedTime: number;
+  topStrengths?: Array<{ name: string; description: string }>;
+  improvementAreas?: Array<{ name: string; description: string }>;
 }
 
 // export interface AnalyzeAnswerResponse {

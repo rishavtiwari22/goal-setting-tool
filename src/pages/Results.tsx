@@ -94,6 +94,8 @@ export default function Results() {
       answer: qa.answer,
       summary: "",
     })),
+    topStrengths: session.result?.topStrengths || [],
+    improvementAreas: session.result?.improvementAreas || [],
     created_at: session.startTime,
     updated_at: session.endTime || new Date().toISOString(),
   };
