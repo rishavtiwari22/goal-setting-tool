@@ -452,25 +452,25 @@ ${knowledgePointsStr}
 
 # The interview duration is ${params.interviewTime} minutes.
 
-Based on the above information, summarize the candidate's performance in 【${params.language}】 and provide an interview conclusion and a score (0-10).
-
-The summary must include:
-1. A "**Top Strengths:**" section with exactly 2 key strengths in the format:
-   * **Strength Name:** Description text
-2. An "**Improvement Areas:**" section with exactly 2 areas for improvement in the format:
-   * **Area Name:** Description text
+Based on the above information, summarize the candidate's performance in 【${params.language}】 and provide an interview conclusion.
 
 IMPORTANT: 
 - You must always provide exactly 2 strengths. If the candidate demonstrated limited strengths, identify the most relevant positive aspects of their performance.
 - You must always provide exactly 2 improvement areas. Focus on areas where the candidate could enhance their skills or performance.
-- The summary text should NOT include the Top Strengths or Improvement Areas sections. These sections should be separate and clearly marked.
 
-You must respond with ONLY valid JSON:
-{{
-  "summary": "detailed summary text (without Top Strengths or Improvement Areas sections)",
-  "score": number (0-5),
-  "conclusion": "final conclusion text"
-}}`;
+You must respond with ONLY valid JSON matching this EXACT structure:
+{
+  "summary": "detailed summary text describing the candidate's overall performance",
+  "conclusion": "final conclusion text with recommendations",
+  "topStrengths": [
+    {"name": "First Strength Name", "description": "Description of this strength"},
+    {"name": "Second Strength Name", "description": "Description of this strength"}
+  ],
+  "improvementAreas": [
+    {"name": "First Area Name", "description": "Description of improvement needed"},
+    {"name": "Second Area Name", "description": "Description of improvement needed"}
+  ]
+}`;
 
   const humanMessage = `# The questions and answers from the interview are as follows:
 ${qaHistoryStr}

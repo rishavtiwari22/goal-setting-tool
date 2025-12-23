@@ -451,6 +451,8 @@ export class InterviewStateManager {
         totalQuestions: this.session.qaHistory.length,
         correctAnswers: this.session.qaHistory.filter(qa => qa.isCorrect).length,
         elapsedTime: Math.floor((Date.now() - this.startTime.getTime()) / 1000 / 60),
+        topStrengths: result.topStrengths,
+        improvementAreas: result.improvementAreas,
       };
 
       this.saveSession();
