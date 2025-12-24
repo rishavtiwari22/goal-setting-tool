@@ -3,11 +3,35 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
 import './styles/codeHighlight.css'
-import { validateEnvironment } from './utils/env'
+import { validateEnvironment, ENV } from './utils/env'
 import { Toaster } from '@/components/ui/sonner'
+
+declare global {
+  interface Window {
+    dataLayer: any[];
+    gtag: (...args: any[]) => void;
+  }
+}
 
 try {
   validateEnvironment();
+  
+  const ga4MeasurementId = ENV.GA4_MEASUREMENT_ID();
+  if (ga4MeasurementId) {
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function(...args: any[]) {
+      window.dataLayer.push(args);
+    };
+    window.gtag('js', new Date());
+    window.gtag('config', ga4MeasurementId, {
+      send_page_view: false
+    });
+    
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${ga4MeasurementId}`;
+    document.head.appendChild(script);
+  }
 } catch (error) {
   const errorElement = document.createElement('div');
   errorElement.style.cssText = `

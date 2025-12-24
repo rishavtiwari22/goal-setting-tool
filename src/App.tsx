@@ -9,8 +9,10 @@ import {
   preparePiperVoice,
   type TtsBackend,
 } from "./lib/piper";
+import { usePageTracking } from "./hooks/usePageTracking";
 
-function App() {
+function AppContent() {
+  usePageTracking();
   const [status, setStatus] = useState<string>("idle");
   const preparePromiseRef = useRef<Promise<void> | null>(null);
   const voiceReadyRef = useRef(false);
@@ -61,13 +63,19 @@ function App() {
   }, [ensureVoiceReady, handleStatus]);
 
   return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/selfapply" element={<SelfApply />} />
+      <Route path="/interview/:sessionId?" element={<Interview />} />
+      <Route path="/results" element={<Results />} />
+    </Routes>
+  );
+}
+
+function App() {
+  return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/selfapply" element={<SelfApply />} />
-        <Route path="/interview/:sessionId?" element={<Interview />} />
-        <Route path="/results" element={<Results />} />
-      </Routes>
+      <AppContent />
     </BrowserRouter>
   );
 }

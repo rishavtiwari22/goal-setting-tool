@@ -3,7 +3,7 @@ function getEnvVar(name: string): string {
   if (!value || value.trim() === '') {
     throw new Error(
       `Missing required environment variable: ${name}. ` +
-      `Please set it in your .env file or environment.`
+      `Please set it in your environment variables (e.g., Amplify console or .env file).`
     );
   }
   return value;
@@ -28,7 +28,7 @@ export function validateEnvironment(): void {
   if (missing.length > 0) {
     const errorMessage = 
       `Missing required environment variables:\n${missing.map(v => `  - ${v}`).join('\n')}\n\n` +
-      `Please create a .env file with these variables. See .env.example for reference.`;
+      `Please set these variables in your environment (e.g., Amplify console or .env file).`;
     
     console.error(errorMessage);
     throw new Error(errorMessage);
@@ -46,5 +46,9 @@ export const ENV = {
   HUGGINGFACE_MODEL: () => {
     const model = import.meta.env['VITE_HUGGINGFACE_MODEL'];
     return model && model.trim() !== '' ? model : '';
+  },
+  GA4_MEASUREMENT_ID: () => {
+    const id = import.meta.env['VITE_GA4_MEASUREMENT_ID'];
+    return id && id.trim() !== '' ? id : '';
   },
 };
