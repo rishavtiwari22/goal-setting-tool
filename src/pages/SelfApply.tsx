@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import DeviceTester from "@/components/DeviceTester";
 import { DEFAULT_PIPER_BACKEND, preparePiperVoice } from "../lib/piper";
 import JobSelection from "@/components/JobSelection";
-import { ChevronDownIcon, ChevronLeft } from "lucide-react";
+import CreateJobModal from "@/components/CreateJobModal";
+import { ChevronDownIcon, ChevronLeft, Plus } from "lucide-react";
 // import { checkUser, getJob } from "../services/api/serverApi";
 import { getJobs } from "../services/api/serverApi";
 import type { Job } from "../models/job";
@@ -34,6 +35,7 @@ export default function SelfApply() {
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAllJobs, setShowAllJobs] = useState(false);
+  const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     email: "",
@@ -167,6 +169,24 @@ export default function SelfApply() {
     }
   };
 
+  const handleCustomJobSubmit = (jobData: {
+    job_title: string;
+    job_description: string;
+    technical_skills: string[];
+    soft_skills: string[];
+  }) => {
+    setFormData({
+      ...formData,
+      selectedJobId: null,
+      jobTitle: jobData.job_title,
+      jobDescription: jobData.job_description,
+      technicalSkills: jobData.technical_skills,
+      softSkills: jobData.soft_skills,
+    });
+    setIsCreateJobModalOpen(false);
+    setStep("speakerandmiccheck");
+  };
+
   const handleStartInterview = async () => {
     if (!userId) {
       toast.error("User ID not found");
@@ -283,6 +303,18 @@ export default function SelfApply() {
                       showAll={showAllJobs}
                     />
 
+                    <div className="text-center mb-8">
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={() => setIsCreateJobModalOpen(true)}
+                        className="bg-white rounded-full shadow-sm border-dashed border-2 hover:border-primary"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Custom Interview
+                      </Button>
+                    </div>
+
                     {/* {jobs.length > 3 && !showAllJobs && (
                       <div className="text-center mb-8">
                         <Button
@@ -306,6 +338,13 @@ export default function SelfApply() {
                 Please note that Zoe works best on Google Chrome
               </Badge>
             </div>
+
+            {/* Create Job Modal */}
+            <CreateJobModal
+              isOpen={isCreateJobModalOpen}
+              onClose={() => setIsCreateJobModalOpen(false)}
+              onSubmit={handleCustomJobSubmit}
+            />
           </div>
         );
 
