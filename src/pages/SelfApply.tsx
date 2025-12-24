@@ -303,14 +303,16 @@ export default function SelfApply() {
                       showAll={showAllJobs}
                     />
 
-                    <div className="text-center mb-8">
+                    <div className="text-center mb-8 mt-12">
+                      <h3 className="text-lg font-bold text-gray-800 mb-4">
+                        Can't find a job role to practice?
+                      </h3>
                       <Button
-                        variant="outline"
-                        size="lg"
+                        variant="default"
+                        size="default"
                         onClick={() => setIsCreateJobModalOpen(true)}
-                        className="bg-white rounded-full shadow-sm border-dashed border-2 hover:border-primary"
+                        className="bg-[#2C5F2D] hover:bg-[#1f4420] text-white text-sm font-semibold px-6 py-5 rounded-md shadow-md transition-all hover:scale-[1.02]"
                       >
-                        <Plus className="mr-2 h-4 w-4" />
                         Create Custom Interview
                       </Button>
                     </div>
