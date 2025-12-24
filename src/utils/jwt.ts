@@ -52,3 +52,34 @@ export function isValidJWTFormat(token: string): boolean {
   const parts = token.split('.');
   return parts.length === 3;
 }
+
+export function isTokenExpired(token: string): boolean {
+  const payload = decodeJWT(token);
+  
+  if (!payload) {
+    return true;
+  }
+  
+  if (!payload.exp) {
+    return false;
+  }
+  
+  const currentTime = Math.floor(Date.now() / 1000);
+  return payload.exp < currentTime;
+}
+
+export function isTokenValid(token: string | null): boolean {
+  if (!token) {
+    return false;
+  }
+  
+  if (!isValidJWTFormat(token)) {
+    return false;
+  }
+  
+  if (isTokenExpired(token)) {
+    return false;
+  }
+  
+  return true;
+}
