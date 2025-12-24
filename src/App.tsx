@@ -10,6 +10,7 @@ import {
   type TtsBackend,
 } from "./lib/piper";
 import { usePageTracking } from "./hooks/usePageTracking";
+import { AuthGuard } from "./components/AuthGuard";
 
 function AppContent() {
   usePageTracking();
@@ -64,10 +65,38 @@ function AppContent() {
 
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/selfapply" element={<SelfApply />} />
-      <Route path="/interview/:sessionId?" element={<Interview />} />
-      <Route path="/results" element={<Results />} />
+      <Route
+        path="/"
+        element={
+          <AuthGuard>
+            <Home />
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/selfapply"
+        element={
+          <AuthGuard>
+            <SelfApply />
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/interview/:sessionId?"
+        element={
+          <AuthGuard>
+            <Interview />
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/results"
+        element={
+          <AuthGuard>
+            <Results />
+          </AuthGuard>
+        }
+      />
     </Routes>
   );
 }
