@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import fs from "fs";
@@ -54,41 +54,45 @@ function patchPiperTtsWeb() {
   };
 }
 
-export default defineConfig({
-  plugins: [react(), serveOrtFiles(), patchPiperTtsWeb()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-  optimizeDeps: {
-    exclude: ["onnxruntime-web", "@mintplex-labs/piper-tts-web"],
-  },
-  server: {
-    headers: {
-      "Cross-Origin-Opener-Policy": "same-origin",
-      "Cross-Origin-Embedder-Policy": "require-corp",
-    },
-    allowedHosts: ["stage-zoe.zuvy.org"],
-    fs: {
-      // Allow serving files from node_modules
-      allow: [".."],
-    },
-    proxy: {
-      "/api/deepseek": {
-        target: "https://api.deepseek.com",
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/deepseek/, ""),
+export default defineConfig(({ mode }) => {
+  loadEnv(mode, process.cwd(), '');
+  
+  return {
+    plugins: [react(), serveOrtFiles(), patchPiperTtsWeb()],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
       },
     },
-  },
-  preview: {
-    headers: {
-      "Cross-Origin-Opener-Policy": "same-origin",
-      "Cross-Origin-Embedder-Policy": "require-corp",
+    optimizeDeps: {
+      exclude: ["onnxruntime-web", "@mintplex-labs/piper-tts-web"],
     },
-  },
-  build: {
-    assetsInlineLimit: 0,
-  },
+    envPrefix: 'VITE_',
+    server: {
+      headers: {
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+      },
+      allowedHosts: ["stage-zoe.zuvy.org"],
+      fs: {
+        allow: [".."],
+      },
+      proxy: {
+        "/api/deepseek": {
+          target: "https://api.deepseek.com",
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/deepseek/, ""),
+        },
+      },
+    },
+    preview: {
+      headers: {
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+      },
+    },
+    build: {
+      assetsInlineLimit: 0,
+    },
+  };
 });
