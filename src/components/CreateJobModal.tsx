@@ -6,13 +6,14 @@ import {
     DialogTitle,
     DialogFooter,
     DialogClose,
+    DialogDescription,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TagInput } from "@/components/ui/tag-input";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { X } from "lucide-react";
+import { X, ChevronDown } from "lucide-react";
 
 // Predefined suggestions
 const JOB_TITLE_SUGGESTIONS = [
@@ -79,6 +80,7 @@ export default function CreateJobModal({
 }: CreateJobModalProps) {
     // Revert to string for job title as per user request
     const [jobTitle, setJobTitle] = useState("");
+    const [jobTitleFocused, setJobTitleFocused] = useState(false);
     const [jobDescription, setJobDescription] = useState("");
     // Store skills as arrays directly for TagInput
     const [technicalSkills, setTechnicalSkills] = useState<string[]>([]);
@@ -131,6 +133,30 @@ export default function CreateJobModal({
         setErrors({});
     };
 
+    const clearError = (field: string) => {
+        if (errors[field]) {
+            setErrors((prev) => {
+                const newErrors = { ...prev };
+                delete newErrors[field];
+                return newErrors;
+            });
+        }
+    };
+
+    const handleJobTitleChange = (value: string) => {
+        setJobTitle(value);
+        if (value.trim()) clearError("jobTitle");
+    };
+
+    const handleSkillsChange = (
+        tags: string[],
+        setSkills: React.Dispatch<React.SetStateAction<string[]>>,
+        fieldName: string
+    ) => {
+        setSkills(tags);
+        if (tags.length >= 2) clearError(fieldName);
+    };
+
     const handleClose = () => {
         resetForm();
         onClose();
@@ -139,12 +165,15 @@ export default function CreateJobModal({
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
             <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 gap-0 rounded-xl overflow-hidden">
-                <div className="px-6 py-4 border-b flex justify-between items-center bg-white sticky top-0 z-10">
+                <DialogDescription className="sr-only">
+                    Form to create a new job role including title, description, and required skills.
+                </DialogDescription>
+                <DialogHeader className="p-6 pb-2 border-b flex justify-between items-center bg-white sticky top-0 z-10">
                     <DialogTitle className="text-xl font-bold">Create Custom Interview</DialogTitle>
                     <DialogClose className="opacity-70 hover:opacity-100 transition-opacity" onClick={handleClose}>
                         <X className="w-5 h-5" />
                     </DialogClose>
-                </div>
+                </DialogHeader>
 
                 {/* Remove default header close since we added custom one */}
                 <style>{`
@@ -158,28 +187,63 @@ export default function CreateJobModal({
                         <label className="text-sm font-semibold text-gray-900">
                             Job Title<span className="text-red-500">*</span>
                         </label>
-                        <Input
-                            placeholder="e.g. Senior Software Engineer"
-                            value={jobTitle}
-                            onChange={(e) => setJobTitle(e.target.value)}
-                            className={errors.jobTitle ? "border-red-500" : ""}
-                        />
-                        {jobTitle && (
-                            <div className="flex flex-wrap gap-1.5 mt-2">
-                                {JOB_TITLE_SUGGESTIONS.filter(
-                                    (s) => s.toLowerCase().includes(jobTitle.toLowerCase()) && s !== jobTitle
-                                ).slice(0, 5).map((suggestion) => (
-                                    <Badge
-                                        key={suggestion}
-                                        variant="outline"
-                                        className="cursor-pointer hover:bg-gray-100"
-                                        onClick={() => setJobTitle(suggestion)}
-                                    >
-                                        + {suggestion}
-                                    </Badge>
-                                ))}
+                        <div className="relative">
+                            <Input
+                                placeholder="Type or choose a job role.."
+                                value={jobTitle}
+                                onChange={(e) => {
+                                    handleJobTitleChange(e.target.value);
+                                    setJobTitleFocused(true);
+                                }}
+                                className={cn("pr-8", errors.jobTitle && "border-red-500")}
+                                onFocus={() => setJobTitleFocused(true)}
+                                onBlur={() => setTimeout(() => setJobTitleFocused(false), 200)}
+                            />
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                <ChevronDown className="h-4 w-4 text-gray-500" />
                             </div>
-                        )}
+
+                            {/* Job Title Suggestions */}
+                            {(() => {
+                                const filteredJobTitles = JOB_TITLE_SUGGESTIONS.filter(
+                                    (s) => s.toLowerCase().includes(jobTitle.toLowerCase()) && s !== jobTitle
+                                ).slice(0, 8);
+                                const showCreateOption = jobTitle && !JOB_TITLE_SUGGESTIONS.includes(jobTitle) && !filteredJobTitles.includes(jobTitle);
+
+                                if (!jobTitleFocused || (filteredJobTitles.length === 0 && !showCreateOption)) return null;
+
+                                return (
+                                    <div className="absolute top-full left-0 w-full z-50 mt-1 max-h-60 overflow-auto rounded-lg bg-white shadow-lg border border-gray-200">
+                                        <ul className="p-1">
+                                            {filteredJobTitles.map((suggestion) => (
+                                                <li
+                                                    key={suggestion}
+                                                    className="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                                                    onMouseDown={(e) => {
+                                                        e.preventDefault();
+                                                        handleJobTitleChange(suggestion);
+                                                        setJobTitleFocused(false);
+                                                    }}
+                                                >
+                                                    {suggestion}
+                                                </li>
+                                            ))}
+                                            {showCreateOption && (
+                                                <li
+                                                    className="cursor-pointer px-3 py-2 text-sm text-[#386641] hover:bg-green-50 font-medium rounded-md transition-colors border-t border-gray-100 mt-1"
+                                                    onMouseDown={(e) => {
+                                                        e.preventDefault();
+                                                        setJobTitleFocused(false);
+                                                    }}
+                                                >
+                                                    + Create "{jobTitle}"
+                                                </li>
+                                            )}
+                                        </ul>
+                                    </div>
+                                );
+                            })()}
+                        </div>
                         {errors.jobTitle && (
                             <p className="text-xs text-red-500">{errors.jobTitle}</p>
                         )}
@@ -208,7 +272,7 @@ export default function CreateJobModal({
                         </label>
                         <TagInput
                             tags={technicalSkills}
-                            setTags={setTechnicalSkills}
+                            setTags={(tags) => handleSkillsChange(tags, setTechnicalSkills, "technicalSkills")}
                             suggestions={TECHNICAL_SKILL_SUGGESTIONS}
                             placeholder="Type and press Enter to add skills (e.g. React, Python)"
                             className={errors.technicalSkills ? "border-red-500" : ""}
@@ -225,7 +289,7 @@ export default function CreateJobModal({
                         </label>
                         <TagInput
                             tags={softSkills}
-                            setTags={setSoftSkills}
+                            setTags={(tags) => handleSkillsChange(tags, setSoftSkills, "softSkills")}
                             suggestions={SOFT_SKILL_SUGGESTIONS}
                             placeholder="Type and press Enter to add skills (e.g. Communication)"
                             className={errors.softSkills ? "border-red-500" : ""}
