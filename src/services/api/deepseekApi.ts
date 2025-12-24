@@ -53,7 +53,7 @@ export async function makeDecision(
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  
+
   if (HUGGINGFACE_API_KEY) {
     headers['Authorization'] = `Bearer ${HUGGINGFACE_API_KEY}`;
   }
@@ -108,11 +108,11 @@ export async function* createQuestion(
   console.log('Creating question...');
   console.log('System message:', systemMessage);
   console.log('Human message:', humanMessage);
-  
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  
+
   if (HUGGINGFACE_API_KEY) {
     headers['Authorization'] = `Bearer ${HUGGINGFACE_API_KEY}`;
   }
@@ -159,7 +159,7 @@ export async function createFeedback(
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  
+
   if (HUGGINGFACE_API_KEY) {
     headers['Authorization'] = `Bearer ${HUGGINGFACE_API_KEY}`;
   }
@@ -220,13 +220,19 @@ export async function createFeedback(
 export async function summarizeInterview(
   systemMessage: string,
   humanMessage: string
-): Promise<{ summary: string; score: number; conclusion: string }> {
+): Promise<{
+  summary: string;
+  score: number;
+  conclusion: string;
+  topStrengths?: Array<{ name: string; description: string }>;
+  improvementAreas?: Array<{ name: string; description: string }>;
+}> {
   console.log('Summarizing interview...');
-  
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  
+
   if (HUGGINGFACE_API_KEY) {
     headers['Authorization'] = `Bearer ${HUGGINGFACE_API_KEY}`;
   }
@@ -274,6 +280,8 @@ export async function summarizeInterview(
       summary: result.summary || '',
       score: result.score || 0,
       conclusion: result.conclusion || '',
+      topStrengths: result.topStrengths || [],
+      improvementAreas: result.improvementAreas || [],
     };
   } catch (parseError) {
     console.error('Failed to parse summarize response:', parseError, 'Content:', content);
@@ -282,6 +290,8 @@ export async function summarizeInterview(
       summary: 'Unable to generate summary due to an error.',
       score: 0,
       conclusion: 'Interview completed but summary generation failed.',
+      topStrengths: [],
+      improvementAreas: [],
     };
   }
 }

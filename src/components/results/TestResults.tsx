@@ -26,6 +26,8 @@ interface TestResult {
     answer: string;
     summary: string;
   }[];
+  topStrengths?: Array<{ name: string; description: string }>;
+  improvementAreas?: Array<{ name: string; description: string }>;
   created_at: string;
   updated_at: string;
 }
@@ -65,7 +67,7 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
       const line = lines[i].trim();
       const lowerLine = line.toLowerCase();
       if (
-        line.startsWith("**") || 
+        line.startsWith("**") ||
         !line ||
         lowerLine.includes("top strengths") ||
         lowerLine.includes("improvement areas") ||
@@ -98,11 +100,11 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
   const strengthsIndex = lines.findIndex((line) => {
     const lowerLine = line.toLowerCase();
     return lowerLine.includes("top strengths") ||
-           lowerLine.includes("**strengths:**") ||
-           lowerLine.includes("key strengths") ||
-           lowerLine.includes("performance breakdown");
+      lowerLine.includes("**strengths:**") ||
+      lowerLine.includes("key strengths") ||
+      lowerLine.includes("performance breakdown");
   });
-  
+
   if (strengthsIndex !== -1) {
     let currentLine = lines[strengthsIndex];
     const headerMatch = currentLine.match(/\*\*[^:]*top\s+strengths[^:]*:\*\*/i);
@@ -123,7 +125,7 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
         }
       }
     }
-    
+
     for (let i = strengthsIndex + 1; i < lines.length && result.topStrengths.length < 2; i++) {
       const line = lines[i].trim();
       if (!line) continue;
@@ -138,21 +140,21 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
       )
         break;
 
-      const bulletMatch = line.match(/^\*\s+\*\*(.+?):\*\*\s*(.+)/) || 
-                         line.match(/^\*\s+(.+?):\s+(.+)/) ||
-                         line.match(/^[-•]\s+\*\*(.+?):\*\*\s*(.+)/) ||
-                         line.match(/^[-•]\s+(.+?):\s+(.+)/) ||
-                         line.match(/^\d+\.\s+\*\*(.+?):\*\*\s*(.+)/) ||
-                         line.match(/^\d+\.\s+(.+?):\s+(.+)/) ||
-                         line.match(/^\*\*\s*(.+?):\s*\*\*\s*(.+)/);
-      
+      const bulletMatch = line.match(/^\*\s+\*\*(.+?):\*\*\s*(.+)/) ||
+        line.match(/^\*\s+(.+?):\s+(.+)/) ||
+        line.match(/^[-•]\s+\*\*(.+?):\*\*\s*(.+)/) ||
+        line.match(/^[-•]\s+(.+?):\s+(.+)/) ||
+        line.match(/^\d+\.\s+\*\*(.+?):\*\*\s*(.+)/) ||
+        line.match(/^\d+\.\s+(.+?):\s+(.+)/) ||
+        line.match(/^\*\*\s*(.+?):\s*\*\*\s*(.+)/);
+
       if (bulletMatch) {
         const title = bulletMatch[1].replace(/\*\*/g, "").trim();
         let description = bulletMatch[2].replace(/\*\*/g, "").trim();
         if (description.endsWith(".*")) {
           description = description.slice(0, -2).trim();
         }
-        
+
         if (title && description && description.length > 5) {
           result.topStrengths.push({ title, description });
         }
@@ -175,10 +177,10 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
   const improvementIndex = lines.findIndex((line) => {
     const lowerLine = line.toLowerCase();
     return lowerLine.includes("improvement areas") ||
-           lowerLine.includes("**improvement areas:**") ||
-           lowerLine.includes("areas for improvement");
+      lowerLine.includes("**improvement areas:**") ||
+      lowerLine.includes("areas for improvement");
   });
-  
+
   if (improvementIndex !== -1) {
     let currentLine = lines[improvementIndex];
     const headerMatch = currentLine.match(/\*\*[^:]*improvement\s+areas[^:]*:\*\*/i);
@@ -199,7 +201,7 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
         }
       }
     }
-    
+
     for (let i = improvementIndex + 1; i < lines.length && result.improvementAreas.length < 2; i++) {
       const line = lines[i].trim();
       if (!line) continue;
@@ -213,21 +215,21 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
       )
         break;
 
-      const bulletMatch = line.match(/^\*\s+\*\*(.+?):\*\*\s*(.+)/) || 
-                         line.match(/^\*\s+(.+?):\s+(.+)/) ||
-                         line.match(/^[-•]\s+\*\*(.+?):\*\*\s*(.+)/) ||
-                         line.match(/^[-•]\s+(.+?):\s+(.+)/) ||
-                         line.match(/^\d+\.\s+\*\*(.+?):\*\*\s*(.+)/) ||
-                         line.match(/^\d+\.\s+(.+?):\s+(.+)/) ||
-                         line.match(/^\*\*\s*(.+?):\s*\*\*\s*(.+)/);
-      
+      const bulletMatch = line.match(/^\*\s+\*\*(.+?):\*\*\s*(.+)/) ||
+        line.match(/^\*\s+(.+?):\s+(.+)/) ||
+        line.match(/^[-•]\s+\*\*(.+?):\*\*\s*(.+)/) ||
+        line.match(/^[-•]\s+(.+?):\s+(.+)/) ||
+        line.match(/^\d+\.\s+\*\*(.+?):\*\*\s*(.+)/) ||
+        line.match(/^\d+\.\s+(.+?):\s+(.+)/) ||
+        line.match(/^\*\*\s*(.+?):\s*\*\*\s*(.+)/);
+
       if (bulletMatch) {
         const title = bulletMatch[1].replace(/\*\*/g, "").trim();
         let description = bulletMatch[2].replace(/\*\*/g, "").trim();
         if (description.endsWith(".*")) {
           description = description.slice(0, -2).trim();
         }
-        
+
         if (title && description && description.length > 5) {
           result.improvementAreas.push({ title, description });
         }
@@ -262,7 +264,7 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
         break;
 
       const bulletMatch = line.match(/^\*\s+\*\*(.+?):\*\*\s+(.+)/) ||
-                         line.match(/^\*\s+(.+?):\s+(.+)/);
+        line.match(/^\*\s+(.+?):\s+(.+)/);
       if (bulletMatch) {
         const [, title, description] = bulletMatch;
         const cleanDesc = description.replace(/\*\*/g, "").trim();
@@ -273,8 +275,8 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
           title.toLowerCase().includes("coding") ||
           title.toLowerCase().includes("problem") ||
           title.toLowerCase().includes("strength") ||
-          (cleanDesc.length > 10 && !title.toLowerCase().includes("communication") && 
-           !title.toLowerCase().includes("improvement") && !title.toLowerCase().includes("weakness"))
+          (cleanDesc.length > 10 && !title.toLowerCase().includes("communication") &&
+            !title.toLowerCase().includes("improvement") && !title.toLowerCase().includes("weakness"))
         ) {
           if (result.topStrengths.length < 2) {
             result.topStrengths.push({ title: cleanTitle, description: cleanDesc });
@@ -314,7 +316,7 @@ const parseSummaryContent = (summary: string): ParsedSummary => {
       { pattern: /(?:demonstrated|showed|exhibited|displayed)\s+(?:strong|excellent|good|solid|impressive)\s+([^.]+)/gi, extract: true },
       { pattern: /(?:strength|strong point|key strength)[^:]*:\s*([^.]+)/gi, extract: true },
     ];
-    
+
     for (const phrase of positivePhrases) {
       const matches = [...summaryText.matchAll(phrase.pattern)];
       for (const match of matches.slice(0, 2)) {
@@ -354,7 +356,17 @@ export const TestResults: React.FC<TestResultsProps> = ({
   testResult,
   userName,
 }) => {
+  // Prefer structured data from props, fallback to parsing summary string
   const parsed = parseSummaryContent(testResult.summary);
+
+  // Use structured data from props if available, otherwise use parsed data
+  const structuredStrengths = testResult.topStrengths && testResult.topStrengths.length > 0
+    ? testResult.topStrengths.map(s => ({ title: s.name, description: s.description }))
+    : parsed.topStrengths;
+
+  const structuredImprovements = testResult.improvementAreas && testResult.improvementAreas.length > 0
+    ? testResult.improvementAreas.map(a => ({ title: a.name, description: a.description }))
+    : parsed.improvementAreas;
 
   const navigate = useNavigate();
 
@@ -377,8 +389,8 @@ export const TestResults: React.FC<TestResultsProps> = ({
       parsed.mainSummary ||
       getCleanSummary(testResult.summary) ||
       "Interview performance summary",
-    topStrengths: parsed.topStrengths,
-    improvementAreas: parsed.improvementAreas,
+    topStrengths: structuredStrengths,
+    improvementAreas: structuredImprovements,
     nextSteps: parsed.nextSteps,
   };
 
@@ -484,7 +496,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
             <div className="flex items-center gap-3 mb-6">
               <img src="/assets/assessment.png" alt="" className="w-10 h-10" />
               <h2 className="text-normal text-gray-800 font-semibold">
-                Detailed Assessment
+                Top Strengths
               </h2>
             </div>
             <div className="flex flex-col items-stretch gap-6">
@@ -513,7 +525,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
             <div className="flex items-center gap-3 mb-6">
               <img src="/assets/conclusion.png" alt="" className="w-10 h-10" />
               <h2 className="text-normal text-gray-800 font-semibold">
-                Interview Conclusion
+                Improvement Areas
               </h2>
             </div>
             <div className="flex flex-col items-stretch gap-6">
