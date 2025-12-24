@@ -35,7 +35,7 @@ export function TagInput({
 
     const addTag = (tag: string) => {
         const trimmedTag = tag.trim();
-        if (trimmedTag && !tags.includes(trimmedTag)) {
+        if (trimmedTag && !tags.some(t => t.toLowerCase() === trimmedTag.toLowerCase())) {
             setTags([...tags, trimmedTag]);
             setInputValue("");
         }
@@ -53,11 +53,11 @@ export function TagInput({
         .filter(
             (s) =>
                 s.toLowerCase().includes(inputValue.toLowerCase()) &&
-                !tags.includes(s)
+                !tags.some(t => t.toLowerCase() === s.toLowerCase())
         )
         .slice(0, 8);
 
-    const showCreateOption = inputValue && !tags.includes(inputValue) && !filteredSuggestions.includes(inputValue);
+    const showCreateOption = inputValue && !tags.some(t => t.toLowerCase() === inputValue.trim().toLowerCase()) && !filteredSuggestions.includes(inputValue);
 
     return (
         <div className="space-y-2 relative" ref={containerRef}>
@@ -78,6 +78,7 @@ export function TagInput({
                         {tag}
                         <button
                             type="button"
+                            aria-label={`Remove ${tag}`}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 removeTag(index);

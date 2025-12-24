@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
     Dialog,
     DialogContent,
@@ -162,6 +162,14 @@ export default function CreateJobModal({
         onClose();
     };
 
+    const filteredJobTitles = useMemo(() => {
+        return JOB_TITLE_SUGGESTIONS.filter(
+            (s) => s.toLowerCase().includes(jobTitle.toLowerCase()) && s !== jobTitle
+        ).slice(0, 8);
+    }, [jobTitle]);
+
+    const showCreateOption = jobTitle && !JOB_TITLE_SUGGESTIONS.includes(jobTitle) && !filteredJobTitles.includes(jobTitle);
+
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
             <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 gap-0 rounded-xl overflow-hidden">
@@ -170,7 +178,7 @@ export default function CreateJobModal({
                 </DialogDescription>
                 <DialogHeader className="p-6 pb-2 border-b flex justify-between items-center bg-white sticky top-0 z-10">
                     <DialogTitle className="text-xl font-bold">Create Custom Interview</DialogTitle>
-                    <DialogClose className="opacity-70 hover:opacity-100 transition-opacity" onClick={handleClose}>
+                    <DialogClose className="absolute right-4 top-4 opacity-70 hover:opacity-100 transition-opacity" onClick={handleClose}>
                         <X className="w-5 h-5" />
                     </DialogClose>
                 </DialogHeader>
@@ -204,45 +212,36 @@ export default function CreateJobModal({
                             </div>
 
                             {/* Job Title Suggestions */}
-                            {(() => {
-                                const filteredJobTitles = JOB_TITLE_SUGGESTIONS.filter(
-                                    (s) => s.toLowerCase().includes(jobTitle.toLowerCase()) && s !== jobTitle
-                                ).slice(0, 8);
-                                const showCreateOption = jobTitle && !JOB_TITLE_SUGGESTIONS.includes(jobTitle) && !filteredJobTitles.includes(jobTitle);
-
-                                if (!jobTitleFocused || (filteredJobTitles.length === 0 && !showCreateOption)) return null;
-
-                                return (
-                                    <div className="absolute top-full left-0 w-full z-50 mt-1 max-h-60 overflow-auto rounded-lg bg-white shadow-lg border border-gray-200">
-                                        <ul className="p-1">
-                                            {filteredJobTitles.map((suggestion) => (
-                                                <li
-                                                    key={suggestion}
-                                                    className="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                                                    onMouseDown={(e) => {
-                                                        e.preventDefault();
-                                                        handleJobTitleChange(suggestion);
-                                                        setJobTitleFocused(false);
-                                                    }}
-                                                >
-                                                    {suggestion}
-                                                </li>
-                                            ))}
-                                            {showCreateOption && (
-                                                <li
-                                                    className="cursor-pointer px-3 py-2 text-sm text-[#386641] hover:bg-green-50 font-medium rounded-md transition-colors border-t border-gray-100 mt-1"
-                                                    onMouseDown={(e) => {
-                                                        e.preventDefault();
-                                                        setJobTitleFocused(false);
-                                                    }}
-                                                >
-                                                    + Create "{jobTitle}"
-                                                </li>
-                                            )}
-                                        </ul>
-                                    </div>
-                                );
-                            })()}
+                            {(jobTitleFocused && (filteredJobTitles.length > 0 || showCreateOption)) && (
+                                <div className="absolute top-full left-0 w-full z-50 mt-1 max-h-60 overflow-auto rounded-lg bg-white shadow-lg border border-gray-200">
+                                    <ul className="p-1">
+                                        {filteredJobTitles.map((suggestion) => (
+                                            <li
+                                                key={suggestion}
+                                                className="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    handleJobTitleChange(suggestion);
+                                                    setJobTitleFocused(false);
+                                                }}
+                                            >
+                                                {suggestion}
+                                            </li>
+                                        ))}
+                                        {showCreateOption && (
+                                            <li
+                                                className="cursor-pointer px-3 py-2 text-sm text-[#386641] hover:bg-green-50 font-medium rounded-md transition-colors border-t border-gray-100 mt-1"
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    setJobTitleFocused(false);
+                                                }}
+                                            >
+                                                + Create "{jobTitle}"
+                                            </li>
+                                        )}
+                                    </ul>
+                                </div>
+                            )}
                         </div>
                         {errors.jobTitle && (
                             <p className="text-xs text-red-500">{errors.jobTitle}</p>
