@@ -236,7 +236,7 @@ export default function SelfApply() {
         interviewTime: formData.testTime,
         language: "English",
         difficulty: "medium",
-        examinationPoints: [],
+        examinationPoints: [...formData.technicalSkills, ...formData.softSkills],
       };
 
       sessionStorage.setItem(
