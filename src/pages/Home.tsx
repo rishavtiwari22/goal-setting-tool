@@ -161,13 +161,13 @@ export default function Home() {
 
         <div className="flex items-center justify-center mb-6">
           <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground">
-            <input
+            {/* <input
               type="checkbox"
               checked={consentChecked}
               onChange={(e) => setConsentChecked(e.target.checked)}
               className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-            />
-            <span>I consent to the storage, processing, and use of my data for the operation and improvement of this AI tool.</span>
+            /> */}
+            <span>By continuing, you agree to let us use this data to enhance learning experience.</span>
           </label>
         </div>
 
