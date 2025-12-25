@@ -162,17 +162,29 @@ export default function CreateJobModal({
         onClose();
     };
 
+
     const filteredJobTitles = useMemo(() => {
+
+        const isAlreadySelected = JOB_TITLE_SUGGESTIONS.includes(jobTitle);
+
+        if (isAlreadySelected) {
+            return JOB_TITLE_SUGGESTIONS.filter((s) => s !== jobTitle).slice(0, 8);
+        }
+
         return JOB_TITLE_SUGGESTIONS.filter(
             (s) => s.toLowerCase().includes(jobTitle.toLowerCase()) && s !== jobTitle
         ).slice(0, 8);
     }, [jobTitle]);
 
+
     const showCreateOption = jobTitle && !JOB_TITLE_SUGGESTIONS.includes(jobTitle) && !filteredJobTitles.includes(jobTitle);
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 gap-0 rounded-xl overflow-hidden">
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 gap-0 rounded-xl overflow-hidden"
+                onInteractOutside={(e) => {
+                    e.preventDefault();
+                }}>
                 <DialogDescription className="sr-only">
                     Form to create a new job role including title, description, and required skills.
                 </DialogDescription>
