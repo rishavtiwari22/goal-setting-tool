@@ -11,6 +11,7 @@ import {
 } from "./lib/piper";
 import { usePageTracking } from "./hooks/usePageTracking";
 import { AuthGuard } from "./components/AuthGuard";
+import { cleanupSyncedSessions } from "./services/storage/interviewStorage";
 
 function AppContent() {
   usePageTracking();
@@ -61,6 +62,8 @@ function AppContent() {
     ensureVoiceReady(DEFAULT_PIPER_BACKEND).catch((error: any) => {
       handleStatus(`Initial Piper prepare failed: ${String(error)}`);
     });
+
+    cleanupSyncedSessions();
   }, [ensureVoiceReady, handleStatus]);
 
   return (
