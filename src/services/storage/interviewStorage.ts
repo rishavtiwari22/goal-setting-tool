@@ -10,8 +10,9 @@ const MAX_LOCALSTORAGE_SESSIONS = 10;
 const CLEANUP_AGE_DAYS = 30;
 
 export function saveInterviewSessionBySessionId(session: InterviewSession, isInitialCreate: boolean = false): void {
+  const sessionKey = `${SESSION_KEY_PREFIX}${session.sessionId}`;
+  
   try {
-    const sessionKey = `${SESSION_KEY_PREFIX}${session.sessionId}`;
     localStorage.setItem(sessionKey, JSON.stringify(session));
     addToHistory(session);
 

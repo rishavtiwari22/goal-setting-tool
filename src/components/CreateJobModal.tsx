@@ -171,7 +171,7 @@ export default function CreateJobModal({
     const showCreateOption = jobTitle && !JOB_TITLE_SUGGESTIONS.includes(jobTitle) && !filteredJobTitles.includes(jobTitle);
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+        <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && handleClose()}>
             <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 gap-0 rounded-xl overflow-hidden">
                 <DialogDescription className="sr-only">
                     Form to create a new job role including title, description, and required skills.
