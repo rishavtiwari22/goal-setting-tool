@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import DeviceTester from "@/components/DeviceTester";
 import { DEFAULT_PIPER_BACKEND, preparePiperVoice } from "../lib/piper";
 import JobSelection from "@/components/JobSelection";
-import { ChevronDownIcon, ChevronLeft } from "lucide-react";
+import CreateJobModal from "@/components/CreateJobModal";
+import { ChevronDownIcon, ChevronLeft, Plus } from "lucide-react";
 // import { checkUser, getJob } from "../services/api/serverApi";
 import { getJobs } from "../services/api/serverApi";
 import type { Job } from "../models/job";
@@ -34,6 +35,7 @@ export default function SelfApply() {
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAllJobs, setShowAllJobs] = useState(false);
+  const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     email: "",
@@ -167,6 +169,24 @@ export default function SelfApply() {
     }
   };
 
+  const handleCustomJobSubmit = (jobData: {
+    job_title: string;
+    job_description: string;
+    technical_skills: string[];
+    soft_skills: string[];
+  }) => {
+    setFormData({
+      ...formData,
+      selectedJobId: null,
+      jobTitle: jobData.job_title,
+      jobDescription: jobData.job_description,
+      technicalSkills: jobData.technical_skills,
+      softSkills: jobData.soft_skills,
+    });
+    setIsCreateJobModalOpen(false);
+    setStep("speakerandmiccheck");
+  };
+
   const handleStartInterview = async () => {
     if (!userId) {
       toast.error("User ID not found");
@@ -283,6 +303,20 @@ export default function SelfApply() {
                       showAll={showAllJobs}
                     />
 
+                    <div className="text-center mb-8 mt-12">
+                      <h3 className="text-lg font-bold text-gray-800 mb-4">
+                        Can't find a job role to practice?
+                      </h3>
+                      <Button
+                        variant="default"
+                        size="default"
+                        onClick={() => setIsCreateJobModalOpen(true)}
+                        className="bg-[#2C5F2D] hover:bg-[#1f4420] text-white text-sm font-semibold px-6 py-5 rounded-md shadow-md transition-all hover:scale-[1.02]"
+                      >
+                        Create Custom Interview
+                      </Button>
+                    </div>
+
                     {/* {jobs.length > 3 && !showAllJobs && (
                       <div className="text-center mb-8">
                         <Button
@@ -306,6 +340,13 @@ export default function SelfApply() {
                 Please note that Zoe works best on Google Chrome
               </Badge>
             </div>
+
+            {/* Create Job Modal */}
+            <CreateJobModal
+              isOpen={isCreateJobModalOpen}
+              onClose={() => setIsCreateJobModalOpen(false)}
+              onSubmit={handleCustomJobSubmit}
+            />
           </div>
         );
 
