@@ -51,4 +51,28 @@ export const ENV = {
     const id = import.meta.env['VITE_GA4_MEASUREMENT_ID'];
     return id && id.trim() !== '' ? id : '';
   },
+  FIREBASE_API_KEY: () => {
+    const key = import.meta.env['VITE_FIREBASE_API_KEY'];
+    return key && key.trim() !== '' ? key : '';
+  },
+  FIREBASE_AUTH_DOMAIN: () => {
+    const domain = import.meta.env['VITE_FIREBASE_AUTH_DOMAIN'];
+    return domain && domain.trim() !== '' ? domain : '';
+  },
+  FIREBASE_PROJECT_ID: () => {
+    const id = import.meta.env['VITE_FIREBASE_PROJECT_ID'];
+    return id && id.trim() !== '' ? id : '';
+  },
+  FIREBASE_STORAGE_BUCKET: () => {
+    const bucket = import.meta.env['VITE_FIREBASE_STORAGE_BUCKET'];
+    return bucket && bucket.trim() !== '' ? bucket : '';
+  },
+  FIREBASE_MESSAGING_SENDER_ID: () => {
+    const id = import.meta.env['VITE_FIREBASE_MESSAGING_SENDER_ID'];
+    return id && id.trim() !== '' ? id : '';
+  },
+  FIREBASE_APP_ID: () => {
+    const id = import.meta.env['VITE_FIREBASE_APP_ID'];
+    return id && id.trim() !== '' ? id : '';
+  },
 };

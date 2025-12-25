@@ -29,3 +29,8 @@ dist-ssr
 .env*.local
 pem
 *.pem
+
+# Package lock files
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
