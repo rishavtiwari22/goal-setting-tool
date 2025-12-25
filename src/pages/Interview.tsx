@@ -13,7 +13,7 @@ import { useStreamingTTS } from "../hooks/useStreamingTTS";
 import { useScreenWakeLock } from "../hooks/useScreenWakeLock";
 import AudioVisualizer from "@/components/AudioVisualizer";
 import type { InterviewSession } from "../models/interview";
-import { loadInterviewSessionBySessionId } from "../services/storage/interviewStorage";
+import { loadInterviewSessionBySessionId, recoverOngoingSessionFromFirebase } from "../services/storage/interviewStorage";
 
 export default function Interview() {
   const navigate = useNavigate();
@@ -59,21 +59,50 @@ export default function Interview() {
   ];
 
   useEffect(() => {
-    const configStr = sessionStorage.getItem("interviewConfig");
-    if (!configStr && !sessionId) {
-      toast.error("No interview configuration found");
-      navigate("/selfapply");
-      return;
-    }
+    const initializeInterview = async () => {
+      const configStr = sessionStorage.getItem("interviewConfig");
+      if (!configStr && !sessionId) {
+        const storedEmail = localStorage.getItem("studentEmail");
+        if (storedEmail) {
+          const recoveredSession = await recoverOngoingSessionFromFirebase(storedEmail);
+          if (recoveredSession) {
+            const interviewConfig: InterviewConfig = {
+              userId: recoveredSession.userId,
+              jobId: recoveredSession.jobId,
+              jobTitle: recoveredSession.jobTitle,
+              jobDescription: recoveredSession.jobDescription,
+              interviewTime: recoveredSession.interviewTime,
+              language: recoveredSession.language,
+              difficulty: recoveredSession.difficulty,
+              examinationPoints: recoveredSession.examinationPoints,
+            };
+            setConfig(interviewConfig);
+            setIsInitializing(false);
+            forceEndRef.current = false;
+            navigate(`/interview/${recoveredSession.sessionId}`, { replace: true });
+            return;
+          }
+        }
+        toast.error("No interview configuration found");
+        navigate("/selfapply");
+        return;
+      }
 
-    try {
-      if (configStr) {
-        const interviewConfig = JSON.parse(configStr) as InterviewConfig;
-        setConfig(interviewConfig);
-        setIsInitializing(false);
-        forceEndRef.current = false;
-      } else if (sessionId) {
-        const session = loadInterviewSessionBySessionId(sessionId);
+      try {
+        if (configStr) {
+          const interviewConfig = JSON.parse(configStr) as InterviewConfig;
+          setConfig(interviewConfig);
+          setIsInitializing(false);
+          forceEndRef.current = false;
+        } else if (sessionId) {
+        let session = loadInterviewSessionBySessionId(sessionId);
+        if (!session) {
+          const storedEmail = localStorage.getItem("studentEmail");
+          if (storedEmail) {
+            const { recoverSessionFromFirebase } = await import("../services/storage/interviewStorage");
+            session = await recoverSessionFromFirebase(storedEmail, sessionId);
+          }
+        }
         if (session) {
           const interviewConfig: InterviewConfig = {
             userId: session.userId,
@@ -98,6 +127,9 @@ export default function Interview() {
       toast.error("Invalid interview configuration");
       navigate("/selfapply");
     }
+    };
+
+    initializeInterview();
   }, [navigate, sessionId]);
 
   const handleComplete = (session: InterviewSession) => {

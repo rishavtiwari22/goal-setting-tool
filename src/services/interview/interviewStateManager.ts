@@ -3,6 +3,7 @@ import { InterviewSession, DecisionResponse, InterviewPhase, ProjectInfo } from 
 import { loadInterviewSessionBySessionId, saveInterviewSessionBySessionId } from '../storage/interviewStorage';
 import { makeDecision, createQuestion as apiCreateQuestion, createFeedback as apiCreateFeedback, summarizeInterview } from '../api/deepseekApi';
 import { buildDecisionPrompt, buildCreateQuestionPrompt, buildCreateFeedbackPrompt, buildSummarizePrompt } from './promptBuilder';
+import { syncManager } from '../storage/syncManager';
 
 // Configuration constants for Phase 2: Irrelevant answer handling
 const MAX_CONSECUTIVE_IRRELEVANT = 2;  // Max retries before ending (so 3 bad answers total = 2 retries + 1 final)
@@ -11,6 +12,7 @@ const MAX_TOPIC_FOLLOWUPS = 3;         // Max follow-ups on a single topic befor
 export class InterviewStateManager {
   private session!: InterviewSession;
   private startTime!: Date;
+  private isInitialCreate: boolean = false;
 
   constructor(config: InterviewConfig, sessionId?: string) {
     if (sessionId) {
@@ -60,6 +62,7 @@ export class InterviewStateManager {
 
   private initializeNewSession(config: InterviewConfig): void {
     this.startTime = new Date();
+    this.isInitialCreate = true;
     this.session = {
       sessionId: `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
       userId: config.userId,
@@ -90,6 +93,7 @@ export class InterviewStateManager {
       currentProjectQuestionCount: 0,
     };
     this.saveSession();
+    this.isInitialCreate = false;
   }
 
   private checkAndRecoverFeedback(): void {
@@ -111,7 +115,7 @@ export class InterviewStateManager {
 
   private saveSession(): void {
     this.session.remainingTime = this.getRemainingTime();
-    saveInterviewSessionBySessionId(this.session);
+    saveInterviewSessionBySessionId(this.session, this.isInitialCreate);
   }
 
   async kickoff(onChunk: (content: string) => void): Promise<{ question: string; sessionId: string }> {
@@ -356,6 +360,19 @@ export class InterviewStateManager {
 
       this.session.summary = feedbackResult.summary;
 
+      if (this.session.userId) {
+        syncManager.syncFeedbackItem(
+          this.session.userId,
+          this.session.sessionId,
+          feedbackResult.feedback,
+          feedbackResult.summary,
+          this.session.currentPhase,
+          feedbackResult.nextPhase
+        ).catch((error) => {
+          console.error('Background feedback sync failed:', error);
+        });
+      }
+
       // Track phase transition
       const previousPhase = this.session.currentPhase;
       this.session.currentPhase = feedbackResult.nextPhase || this.session.currentPhase;
@@ -494,6 +511,17 @@ export class InterviewStateManager {
         };
         this.session.qaHistory.push(qaItem);
         this.saveSession();
+
+        if (this.session.userId) {
+          syncManager.syncQAItem(
+            this.session.userId,
+            this.session.sessionId,
+            qaItem,
+            this.session.currentPhase
+          ).catch((error) => {
+            console.error('Background QA item sync failed:', error);
+          });
+        }
 
         const decision = await this.decision(params.question, params.answer);
 
