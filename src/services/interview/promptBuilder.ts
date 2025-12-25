@@ -442,34 +442,66 @@ export function buildSummarizePrompt(params: BuildSummarizePromptParams): { syst
   const knowledgePointsStr = params.knowledgePoints.join(", ");
   const qaHistoryStr = formatQAHistory(params.qaHistory);
 
-  const systemMessage = `You are a world-class software technology expert tasked with hiring a ${params.jobTitle}. The candidate has completed the interview. Please summarize the candidate's performance.
+  const systemMessage = `You are a world-class software technology expert tasked with hiring a ${params.jobTitle}. The candidate has completed the interview. Please summarize the candidate's performance clearly, objectively, and concisely.
 
 # Role Description:
 ${params.jobDescription}
 
-# The knowledge points to be assessed in the interview are as follows:
+# Knowledge Points Assessed:
 ${knowledgePointsStr}
 
-# The interview duration is ${params.interviewTime} minutes.
+# Interview Duration:
+${params.interviewTime} minutes
 
-Based on the above information, summarize the candidate's performance in 【${params.language}】 and provide an interview conclusion.
+Your goal is to produce an evaluation that is specific, evidence-based, and useful for decision making. Base your judgment strictly on the interview content.
 
-IMPORTANT: 
-- You must always provide exactly 2 strengths. If the candidate demonstrated limited strengths, identify the most relevant positive aspects of their performance.
-- You must always provide exactly 2 improvement areas. Focus on areas where the candidate could enhance their skills or performance.
+When writing the summary and conclusion:
+- Focus on observable behaviors, decisions, reasoning, and communication — not personality traits.
+- Reference concrete moments or patterns from the interview when appropriate (without quoting verbatim).
+- Avoid vague comments (e.g., "needs improvement") unless paired with a clear explanation.
+- Ensure all suggested improvements are actionable and relevant to the job.
+- In the summary, describe strengths first, then areas for improvement, and finish with an objective overall assessment.
+- Where possible, reference specific interview moments (e.g., how you solved a problem or structured an answer), without quoting verbatim.
+- For each strength, briefly describe how You can continue to leverage or build on it in future interviews or work scenarios.
+IMPORTANT REQUIREMENTS:
+- Adress Candidate as "You" or with his name, if name is given
+- You must always provide exactly 4 strengths. If strengths were limited, identify the most relevant positive aspects.
+- You must always provide exactly 4 improvement areas focused on realistic development opportunities.
+- You must address the candidate as "You" throughout.
+- You must not use bold, italics, bullet points, or any markdown formatting.
+- Do not include headings or extra commentary outside the JSON.
+- The conclusion should clearly indicate your recommendation (e.g., move forward, on hold, or not recommended) with a short rationale.
+- Maintain a balanced tone: acknowledge what went well before discussing improvement areas so the feedback remains encouraging and fair.
+- Avoid judgmental language. Focus on behavior and outcomes instead of value-laden words such as “bad,” “weak,” or “failure.”
+LANGUAGE:
+- Write the full response in 【${params.language}】.
 
-You must respond with ONLY valid JSON matching this EXACT structure:
+OUTPUT FORMAT:
+You must respond with ONLY valid JSON matching this EXACT structure and field names (no additional fields, no trailing comments):
+
 {
   "summary": "detailed summary text describing the candidate's overall performance",
   "conclusion": "final conclusion text with recommendations",
   "topStrengths": [
-    {"name": "First Strength Name", "description": "Description of this strength"},
-    {"name": "Second Strength Name", "description": "Description of this strength"}
-  ],
+  { 
+    "name": "First Strength Name", 
+    "description": "What you did well (with a specific example), why it helped in the interview, and how you can continue to leverage and further develop this strength" 
+  },
+  { 
+    "name": "Second Strength Name", 
+    "description": "What you did well (with a specific example), why it helped in the interview, and how you can continue to leverage and further develop this strength" 
+  }
+],
   "improvementAreas": [
-    {"name": "First Area Name", "description": "Description of improvement needed"},
-    {"name": "Second Area Name", "description": "Description of improvement needed"}
-  ]
+  { 
+    "name": "First Area Name", 
+    "description": "What needs improvement (with a concrete example), why it matters, and step-by-step actions you can take to improve, including practice suggestions" 
+  },
+  { 
+    "name": "Second Area Name", 
+    "description": "What needs improvement (with a concrete example), why it matters, and step-by-step actions you can take to improve, including practice suggestions" 
+  }
+]
 }`;
 
   const humanMessage = `# The questions and answers from the interview are as follows:
@@ -477,7 +509,7 @@ ${qaHistoryStr}
 
 # Notes:
 1. Question numbers are generally in the format Q<number>.
-2. Some questions may have follow-up questions due to brief answers. Please merge these questions and answers into one for summarization.`;
+2. If a question had follow-up questions due to brief answers, treat them as part of the same topic and merge them when summarizing.`;
 
   return { systemMessage, humanMessage };
 }
