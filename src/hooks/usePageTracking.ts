@@ -6,7 +6,11 @@ export function usePageTracking(): void {
   const location = useLocation();
 
   useEffect(() => {
-    trackPageView(location.pathname + location.search);
+    const fullPath = location.pathname + location.search;
+    console.log('📄 Page tracking:', fullPath);
+    
+    // Pass correct title explicitly
+    trackPageView(fullPath, "Zoe - Your Learning Assistant");
   }, [location]);
 }
 

@@ -25,16 +25,21 @@ export function initializeGA4(measurementId: string): void {
     // Custom campaign tracking for referrals
     custom_map: {
       'custom_parameter_1': 'source_platform'
-    }
+    },
+    // Enable debug mode for localhost
+    debug_mode: window.location.hostname === 'localhost'
   });
 }
 
 export function trackPageView(path: string, title?: string): void {
   if (typeof window === 'undefined' || !window.gtag) return;
 
+  // Use provided title, or document title, or default to "Zoe - Your Learning Assistant"
+  const pageTitle = title || document.title || "Zoe - Your Learning Assistant";
+
   window.gtag('event', 'page_view', {
     page_path: path,
-    page_title: title || document.title,
+    page_title: pageTitle,
     page_location: window.location.href,
     // Add session identifier to help GA4 distinguish users
     session_id: 'session_' + Math.random().toString(36).substr(2, 9),
