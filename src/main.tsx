@@ -31,6 +31,16 @@ try {
     script.async = true;
     script.src = `https://www.googletagmanager.com/gtag/js?id=${ga4MeasurementId}`;
     document.head.appendChild(script);
+    
+    // Track token-based entry if token exists in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    if (token) {
+      // Import and use the token tracking function
+      import('./services/analytics/ga4').then(({ trackTokenEntry }) => {
+        trackTokenEntry(token);
+      });
+    }
   }
 } catch (error) {
   const errorElement = document.createElement('div');

@@ -15,7 +15,17 @@ export function initializeGA4(measurementId: string): void {
 
   window.gtag('js', new Date());
   window.gtag('config', measurementId, {
-    send_page_view: false
+    send_page_view: false,
+    // Generate unique user ID for each session
+    user_id: 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now(),
+    // Cross-domain tracking for app.zuvy.org → zoe.zuvy.org
+    linker: {
+      domains: ['app.zuvy.org', 'zoe.zuvy.org']
+    },
+    // Custom campaign tracking for referrals
+    custom_map: {
+      'custom_parameter_1': 'source_platform'
+    }
   });
 }
 
@@ -25,7 +35,10 @@ export function trackPageView(path: string, title?: string): void {
   window.gtag('event', 'page_view', {
     page_path: path,
     page_title: title || document.title,
-    page_location: window.location.href
+    page_location: window.location.href,
+    // Add session identifier to help GA4 distinguish users
+    session_id: 'session_' + Math.random().toString(36).substr(2, 9),
+    timestamp: Date.now()
   });
 }
 
@@ -71,10 +84,36 @@ export function trackResultsView(sessionId: string): void {
   });
 }
 
-export function trackDeviceTest(testType: string, result: 'pass' | 'fail'): void {
-  trackEvent('device_test', {
-    test_type: testType,
-    result: result
-  });
+export function trackTokenEntry(token: string): void {
+  if (!token) return;
+  
+  try {
+    // Decode JWT to get user info (basic decode, not verification)
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    
+    trackEvent('user_entry_from_platform', {
+      source_platform: 'app.zuvy.org',
+      user_id: payload.sub || 'unknown',
+      user_email: payload.email || 'unknown',
+      user_role: payload.role || 'unknown',
+      entry_method: 'token_redirect',
+      timestamp: Date.now()
+    });
+    
+    // Set user properties for better tracking
+    if (window.gtag) {
+      window.gtag('config', import.meta.env.VITE_GA4_MEASUREMENT_ID, {
+        user_id: payload.sub || 'user_' + Date.now(),
+        custom_parameter_1: 'app_zuvy_referral'
+      });
+    }
+  } catch (error) {
+    console.warn('Could not decode token for analytics:', error);
+    trackEvent('user_entry_from_platform', {
+      source_platform: 'app.zuvy.org',
+      entry_method: 'token_redirect_failed',
+      timestamp: Date.now()
+    });
+  }
 }
 
