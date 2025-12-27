@@ -95,6 +95,8 @@ function getDomainPrefixForTitle(domain: string): string {
     return 'Zoe AI Interviewer (Production)';
   } else if (domain.includes('amplifyapp.com')) {
     return 'AI Interview (Staging)';
+  } else if (domain.includes('app.zuvy.org')) {
+    return 'Zuvy Learning Platform';
   } else {
     return 'AI Interview';
   }
@@ -106,6 +108,8 @@ function getEnvironmentFromDomain(domain: string): string {
     return 'production';
   } else if (domain.includes('amplifyapp.com')) {
     return 'staging';
+  } else if (domain.includes('app.zuvy.org')) {
+    return 'platform';
   } else {
     return 'other';
   }
