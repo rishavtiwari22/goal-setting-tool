@@ -5,6 +5,7 @@ import './index.css'
 import './styles/codeHighlight.css'
 import { validateEnvironment, ENV } from './utils/env'
 import { Toaster } from '@/components/ui/sonner'
+import { initializeAnalytics } from './services/analytics'
 
 declare global {
   interface Window {
@@ -39,6 +40,9 @@ try {
         debug_mode: window.location.hostname === 'localhost'
       });
       console.log('✅ GA4 initialized successfully');
+      
+      // Initialize unified analytics (GA4 + Mixpanel)
+      initializeAnalytics();
     };
     
     script.onerror = () => {

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { trackPageView } from '@/services/analytics/ga4';
+import { trackPageView } from '@/services/analytics';
 
 // Dynamic page titles based on routes and domain
 const getPageTitle = (pathname: string, domain: string): string => {

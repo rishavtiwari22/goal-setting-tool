@@ -18,7 +18,7 @@ import {
   trackUserEngagement, 
   trackFeatureUsage,
   trackCrossPlatformJourney 
-} from "../services/analytics/ga4";
+} from "../services/analytics";
 
 interface FormData {
   email: string;
