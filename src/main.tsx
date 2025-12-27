@@ -18,19 +18,44 @@ try {
   
   const ga4MeasurementId = ENV.GA4_MEASUREMENT_ID();
   if (ga4MeasurementId) {
+    // Initialize dataLayer first
     window.dataLayer = window.dataLayer || [];
+    
+    // Create the gtag function
     window.gtag = function(...args: any[]) {
       window.dataLayer.push(args);
     };
-    window.gtag('js', new Date());
-    window.gtag('config', ga4MeasurementId, {
-      send_page_view: false
-    });
     
+    // Load the GA4 script first, then configure
     const script = document.createElement('script');
     script.async = true;
     script.src = `https://www.googletagmanager.com/gtag/js?id=${ga4MeasurementId}`;
+    
+    // Configure GA4 after script loads
+    script.onload = () => {
+      window.gtag('js', new Date());
+      window.gtag('config', ga4MeasurementId, {
+        send_page_view: false,
+        debug_mode: window.location.hostname === 'localhost'
+      });
+      console.log('✅ GA4 initialized successfully');
+    };
+    
+    script.onerror = () => {
+      console.error('❌ Failed to load GA4 script');
+    };
+    
     document.head.appendChild(script);
+    
+    // Track token-based entry if token exists in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    if (token) {
+      // Import and use the token tracking function
+      import('./services/analytics/ga4').then(({ trackTokenEntry }) => {
+        trackTokenEntry(token);
+      });
+    }
   }
 } catch (error) {
   const errorElement = document.createElement('div');

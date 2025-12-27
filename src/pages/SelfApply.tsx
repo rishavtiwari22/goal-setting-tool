@@ -13,6 +13,12 @@ import { getJobs } from "../services/api/serverApi";
 import type { Job } from "../models/job";
 import { getEmailFromJWT } from "../utils/jwt";
 import { Badge } from "@/components/ui/badge";
+import { 
+  trackJobSelection, 
+  trackUserEngagement, 
+  trackFeatureUsage,
+  trackCrossPlatformJourney 
+} from "../services/analytics/ga4";
 
 interface FormData {
   email: string;
@@ -37,6 +43,8 @@ export default function SelfApply() {
   const [showAllJobs, setShowAllJobs] = useState(false);
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const pageStartTime = useRef<number>(Date.now());
+  const jobSelectionStartTime = useRef<number>(Date.now());
   const [formData, setFormData] = useState<FormData>({
     email: "",
     selectedJobId: undefined,
@@ -49,6 +57,23 @@ export default function SelfApply() {
 
   useEffect(() => {
     fetchJobs();
+    
+    // Track page entry and cross-platform journey
+    trackCrossPlatformJourney('selfapply_page_entered', {
+      referrer: document.referrer,
+      has_token: !!new URLSearchParams(window.location.search).get('token')
+    });
+    
+    // Track page engagement on unmount
+    return () => {
+      const timeSpent = Date.now() - pageStartTime.current;
+      trackUserEngagement('page_exit', {
+        page: 'selfapply',
+        time_spent_ms: timeSpent,
+        step_reached: step,
+        jobs_loaded: jobs.length
+      });
+    };
   }, []);
 
   const fetchJobs = async () => {
@@ -156,6 +181,18 @@ export default function SelfApply() {
     if (jobId) {
       const selectedJob = jobs.find((j) => j.job_id === jobId);
       if (selectedJob) {
+        const selectionTime = Date.now() - jobSelectionStartTime.current;
+        
+        // Track job selection
+        trackJobSelection(selectedJob.job_title);
+        trackUserEngagement('job_selected', {
+          job_id: jobId,
+          job_title: selectedJob.job_title,
+          selection_time_ms: selectionTime,
+          total_jobs_available: jobs.length,
+          job_type: 'predefined'
+        });
+        
         setFormData({
           ...formData,
           selectedJobId: jobId,
@@ -165,6 +202,12 @@ export default function SelfApply() {
           softSkills: selectedJob.soft_skills,
         });
         setStep("speakerandmiccheck");
+        
+        // Track progression to device check
+        trackCrossPlatformJourney('device_check_started', {
+          job_title: selectedJob.job_title,
+          previous_step: 'job_selection'
+        });
       }
     }
   };
@@ -175,6 +218,22 @@ export default function SelfApply() {
     technical_skills: string[];
     soft_skills: string[];
   }) => {
+    const selectionTime = Date.now() - jobSelectionStartTime.current;
+    
+    // Track custom job creation
+    trackUserEngagement('custom_job_created', {
+      job_title: jobData.job_title,
+      creation_time_ms: selectionTime,
+      technical_skills_count: jobData.technical_skills.length,
+      soft_skills_count: jobData.soft_skills.length,
+      job_type: 'custom'
+    });
+    
+    trackFeatureUsage('custom_job_creation', 'completed', {
+      job_title: jobData.job_title,
+      description_length: jobData.job_description.length
+    });
+    
     setFormData({
       ...formData,
       selectedJobId: null,
