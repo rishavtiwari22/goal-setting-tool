@@ -9,7 +9,7 @@ import {
   trackInterviewAbandon,
   trackUserEngagement,
   trackInterviewEngagement
-} from '../services/analytics/ga4';
+} from '../services/analytics';
 
 export interface Message {
   id: string;
