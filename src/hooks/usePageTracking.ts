@@ -27,11 +27,9 @@ const getDomainPrefix = (domain: string): string => {
   if (domain.includes('zoe.zuvy.org')) {
     return 'Zoe AI Interviewer (Production)';
   } else if (domain.includes('amplifyapp.com')) {
-    return 'Zoe AI Interviewer (Staging)';
-  } else if (domain.includes('localhost')) {
-    return 'Zoe AI Interviewer (Development)';
+    return 'AI Interview (Staging)';
   } else {
-    return 'Zoe AI Interviewer';
+    return 'AI Interview';
   }
 };
 
