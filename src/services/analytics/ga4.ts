@@ -34,11 +34,7 @@ export function initializeGA4(measurementId: string): void {
 export function trackPageView(path: string, title?: string): void {
   if (typeof window === 'undefined' || !window.gtag) return;
 
-  // Smart title resolution:
-  // 1. Use provided title
-  // 2. Use document title if it's meaningful (not just the default)
-  // 3. Generate title from path
-  // 4. Fallback to default
+  // Smart title resolution with domain awareness
   let pageTitle = title;
   
   if (!pageTitle) {
@@ -46,35 +42,39 @@ export function trackPageView(path: string, title?: string): void {
     if (docTitle && docTitle !== 'Zoe - Your Learning Assistant') {
       pageTitle = docTitle;
     } else {
-      // Generate title from path
-      pageTitle = generateTitleFromPath(path);
+      // Generate title from path with domain context
+      pageTitle = generateTitleFromPath(path, window.location.hostname);
     }
   }
 
+  // Enhanced page view tracking with domain information
   window.gtag('event', 'page_view', {
     page_path: path,
     page_title: pageTitle,
     page_location: window.location.href,
+    page_domain: window.location.hostname,
+    environment: getEnvironmentFromDomain(window.location.hostname),
     // Add session identifier to help GA4 distinguish users
     session_id: 'session_' + Math.random().toString(36).substr(2, 9),
     timestamp: Date.now()
   });
 }
 
-// Helper function to generate meaningful titles from paths
-function generateTitleFromPath(path: string): string {
+// Helper function to generate meaningful titles from paths with domain context
+function generateTitleFromPath(path: string, domain: string): string {
   const pathname = path.split('?')[0]; // Remove query params for title generation
+  const domainPrefix = getDomainPrefixForTitle(domain);
   
   switch (pathname) {
     case '/':
-      return 'Home - Zoe AI Interviewer';
+      return `Home - ${domainPrefix}`;
     case '/selfapply':
-      return 'Job Selection - Zoe AI Interviewer';
+      return `Job Selection - ${domainPrefix}`;
     case '/results':
-      return 'Interview Results - Zoe AI Interviewer';
+      return `Interview Results - ${domainPrefix}`;
     default:
       if (pathname.startsWith('/interview/')) {
-        return 'AI Interview Session - Zoe AI Interviewer';
+        return `AI Interview Session - ${domainPrefix}`;
       }
       // Convert path to readable title
       const segments = pathname.split('/').filter(Boolean);
@@ -83,9 +83,35 @@ function generateTitleFromPath(path: string): string {
         const readable = lastSegment
           .replace(/[-_]/g, ' ')
           .replace(/\b\w/g, l => l.toUpperCase());
-        return `${readable} - Zoe AI Interviewer`;
+        return `${readable} - ${domainPrefix}`;
       }
-      return 'Zoe - Your Learning Assistant';
+      return domainPrefix;
+  }
+}
+
+// Helper to get domain-specific branding for titles
+function getDomainPrefixForTitle(domain: string): string {
+  if (domain.includes('zoe.zuvy.org')) {
+    return 'Zoe AI Interviewer (Production)';
+  } else if (domain.includes('amplifyapp.com')) {
+    return 'Zoe AI Interviewer (Staging)';
+  } else if (domain.includes('localhost')) {
+    return 'Zoe AI Interviewer (Development)';
+  } else {
+    return 'Zoe AI Interviewer';
+  }
+}
+
+// Helper to determine environment from domain
+function getEnvironmentFromDomain(domain: string): string {
+  if (domain.includes('zoe.zuvy.org')) {
+    return 'production';
+  } else if (domain.includes('amplifyapp.com')) {
+    return 'staging';
+  } else if (domain.includes('localhost')) {
+    return 'development';
+  } else {
+    return 'unknown';
   }
 }
 
@@ -178,6 +204,8 @@ export function trackUserEngagement(engagementType: string, details?: Record<str
   trackEvent('user_engagement', {
     engagement_type: engagementType,
     platform: 'zoe.zuvy.org',
+    domain: window.location.hostname,
+    environment: getEnvironmentFromDomain(window.location.hostname),
     timestamp: Date.now(),
     ...details
   });
@@ -215,7 +243,8 @@ export function trackCrossPlatformJourney(step: string, details?: Record<string,
   trackUserEngagement('cross_platform_journey', {
     journey_step: step,
     source_platform: 'app.zuvy.org',
-    target_platform: 'zoe.zuvy.org',
+    target_platform: window.location.hostname,
+    target_environment: getEnvironmentFromDomain(window.location.hostname),
     ...details
   });
 }
