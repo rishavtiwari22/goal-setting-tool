@@ -34,8 +34,22 @@ export function initializeGA4(measurementId: string): void {
 export function trackPageView(path: string, title?: string): void {
   if (typeof window === 'undefined' || !window.gtag) return;
 
-  // Use provided title, or document title, or default to "Zoe - Your Learning Assistant"
-  const pageTitle = title || document.title || "Zoe - Your Learning Assistant";
+  // Smart title resolution:
+  // 1. Use provided title
+  // 2. Use document title if it's meaningful (not just the default)
+  // 3. Generate title from path
+  // 4. Fallback to default
+  let pageTitle = title;
+  
+  if (!pageTitle) {
+    const docTitle = document.title;
+    if (docTitle && docTitle !== 'Zoe - Your Learning Assistant') {
+      pageTitle = docTitle;
+    } else {
+      // Generate title from path
+      pageTitle = generateTitleFromPath(path);
+    }
+  }
 
   window.gtag('event', 'page_view', {
     page_path: path,
@@ -45,6 +59,34 @@ export function trackPageView(path: string, title?: string): void {
     session_id: 'session_' + Math.random().toString(36).substr(2, 9),
     timestamp: Date.now()
   });
+}
+
+// Helper function to generate meaningful titles from paths
+function generateTitleFromPath(path: string): string {
+  const pathname = path.split('?')[0]; // Remove query params for title generation
+  
+  switch (pathname) {
+    case '/':
+      return 'Home - Zoe AI Interviewer';
+    case '/selfapply':
+      return 'Job Selection - Zoe AI Interviewer';
+    case '/results':
+      return 'Interview Results - Zoe AI Interviewer';
+    default:
+      if (pathname.startsWith('/interview/')) {
+        return 'AI Interview Session - Zoe AI Interviewer';
+      }
+      // Convert path to readable title
+      const segments = pathname.split('/').filter(Boolean);
+      if (segments.length > 0) {
+        const lastSegment = segments[segments.length - 1];
+        const readable = lastSegment
+          .replace(/[-_]/g, ' ')
+          .replace(/\b\w/g, l => l.toUpperCase());
+        return `${readable} - Zoe AI Interviewer`;
+      }
+      return 'Zoe - Your Learning Assistant';
+  }
 }
 
 export function trackEvent(
