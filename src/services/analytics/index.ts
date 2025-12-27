@@ -75,8 +75,18 @@ export function identifyUser(userId: string, properties?: Record<string, any>): 
 
 // Initialize both analytics services
 export function initializeAnalytics(): void {
-  initializeMixpanel();
-  console.log('✅ Unified analytics initialized (GA4 + Mixpanel)');
+  // Wait for Mixpanel to be fully loaded before initializing
+  const waitForMixpanel = () => {
+    if (typeof window !== 'undefined' && window.mixpanel && typeof window.mixpanel.init === 'function') {
+      initializeMixpanel();
+      console.log('✅ Unified analytics initialized (GA4 + Mixpanel)');
+    } else {
+      console.log('⏳ Waiting for Mixpanel to load...');
+      setTimeout(waitForMixpanel, 500);
+    }
+  };
+  
+  waitForMixpanel();
 }
 
 // Export individual services for specific use cases

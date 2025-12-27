@@ -41,8 +41,10 @@ try {
       });
       console.log('✅ GA4 initialized successfully');
       
-      // Initialize unified analytics (GA4 + Mixpanel)
-      initializeAnalytics();
+      // Initialize unified analytics (GA4 + Mixpanel) with delay to ensure Mixpanel is loaded
+      setTimeout(() => {
+        initializeAnalytics();
+      }, 1000);
     };
     
     script.onerror = () => {
