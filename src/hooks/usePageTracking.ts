@@ -25,11 +25,9 @@ const getPageTitle = (pathname: string, domain: string): string => {
 // Helper to get domain-specific branding
 const getDomainPrefix = (domain: string): string => {
   if (domain.includes('zoe.zuvy.org')) {
-    return 'Zoe AI Interviewer (Production)';
+    return 'Zoe: Your Learning Assistant';
   } else if (domain.includes('amplifyapp.com')) {
     return 'AI Interview (Staging)';
-  } else if (domain.includes('app.zuvy.org')) {
-    return 'Zuvy Learning Platform';
   } else {
     return 'AI Interview';
   }
