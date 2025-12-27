@@ -9,6 +9,12 @@ export function trackMixpanelEvent(eventName: string, properties?: Record<string
   if (typeof window === 'undefined' || !window.mixpanel) return;
 
   try {
+    // Check if Mixpanel is properly loaded
+    if (typeof window.mixpanel.track !== 'function') {
+      console.warn('Mixpanel not fully loaded yet, skipping event:', eventName);
+      return;
+    }
+
     window.mixpanel.track(eventName, {
       ...properties,
       timestamp: new Date().toISOString(),
@@ -32,8 +38,14 @@ export function identifyMixpanelUser(userId: string, properties?: Record<string,
   if (typeof window === 'undefined' || !window.mixpanel) return;
 
   try {
+    // Check if Mixpanel is properly loaded
+    if (typeof window.mixpanel.identify !== 'function') {
+      console.warn('Mixpanel not fully loaded yet, skipping identify');
+      return;
+    }
+
     window.mixpanel.identify(userId);
-    if (properties) {
+    if (properties && typeof window.mixpanel.people?.set === 'function') {
       window.mixpanel.people.set(properties);
     }
   } catch (error) {
@@ -74,7 +86,10 @@ export function trackMixpanelUserEngagement(engagementType: string, details?: Re
 
 // Initialize Mixpanel with user properties
 export function initializeMixpanel(): void {
-  if (typeof window === 'undefined' || !window.mixpanel) return;
+  if (typeof window === 'undefined' || !window.mixpanel) {
+    console.warn('Mixpanel script not loaded');
+    return;
+  }
 
   try {
     // Get token from environment or window
@@ -82,24 +97,38 @@ export function initializeMixpanel(): void {
                          (window as any).mixpanelToken || 
                          '8c8b5f2aa31e658bef51b6ded4ae056c';
 
-    // Initialize Mixpanel if not already initialized
-    if (!window.mixpanel.__loaded) {
-      window.mixpanel.init(mixpanelToken, {
-        autocapture: true,
-        record_sessions_percent: 100,
-        debug: window.location.hostname === 'localhost'
-      });
+    // Check if Mixpanel is already initialized
+    if (window.mixpanel.__loaded) {
+      console.log('✅ Mixpanel already initialized');
+      return;
     }
 
-    // Set super properties (sent with every event)
-    window.mixpanel.register({
-      platform: 'web',
-      app_name: 'Zoe AI Interviewer',
-      environment: getEnvironmentFromDomain(window.location.hostname),
-      domain: window.location.hostname
-    });
+    // Initialize Mixpanel with proper configuration
+    if (typeof window.mixpanel.init === 'function') {
+      window.mixpanel.init(mixpanelToken, {
+        autocapture: false, // Disable autocapture to avoid CORS issues
+        record_sessions_percent: 0, // Disable session recording to avoid CORS issues
+        debug: window.location.hostname === 'localhost',
+        cross_subdomain_cookie: false,
+        secure_cookie: true,
+        persistence: 'localStorage',
+        api_host: 'https://api.mixpanel.com' // Use standard API endpoint
+      });
 
-    console.log('✅ Mixpanel initialized successfully');
+      // Set super properties (sent with every event)
+      if (typeof window.mixpanel.register === 'function') {
+        window.mixpanel.register({
+          platform: 'web',
+          app_name: 'Zoe AI Interviewer',
+          environment: getEnvironmentFromDomain(window.location.hostname),
+          domain: window.location.hostname
+        });
+      }
+
+      console.log('✅ Mixpanel initialized successfully');
+    } else {
+      console.warn('Mixpanel init function not available');
+    }
   } catch (error) {
     console.warn('Mixpanel initialization error:', error);
   }
