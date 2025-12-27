@@ -3,6 +3,13 @@ import type { InterviewConfig } from '../services/interview/interviewEngine';
 import { InterviewStateManager } from '../services/interview/interviewStateManager';
 import type { InterviewSession } from '../models/interview';
 import { saveInterviewResult, loadInterviewSessionBySessionId } from '../services/storage/interviewStorage';
+import { 
+  trackInterviewStart, 
+  trackInterviewComplete, 
+  trackInterviewAbandon,
+  trackUserEngagement,
+  trackInterviewEngagement
+} from '../services/analytics/ga4';
 
 export interface Message {
   id: string;
@@ -38,6 +45,9 @@ export function useInterview({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isCompletedRef = useRef(false);
   const hasStartedRef = useRef(false);
+  const interviewStartTime = useRef<number>(Date.now());
+  const questionStartTime = useRef<number>(Date.now());
+  const totalInteractions = useRef<number>(0);
 
   useEffect(() => {
     isCompletedRef.current = isCompleted;
@@ -116,16 +126,27 @@ export function useInterview({
       isCompletedRef.current = true;
       setIsCompleted(true);
       setIsLoading(true);
+      
+      const session = managerRef.current.getSession();
+      const interviewDuration = Date.now() - interviewStartTime.current;
+      
+      // Track interview abandonment due to timeout
+      trackInterviewAbandon(session.sessionId, 'timeout');
+      trackUserEngagement('interview_timeout', {
+        session_id: session.sessionId,
+        duration_ms: interviewDuration,
+        questions_answered: totalInteractions.current,
+        job_title: session.jobTitle
+      });
+      
       try {
         const result = await managerRef.current.manageInterviewState('end');
-        const session = managerRef.current.getSession();
         if (session.result) {
           saveInterviewResult(session.sessionId, session.result);
         }
         onComplete(session);
       } catch (error) {
         console.error('Error ending interview:', error);
-        const session = managerRef.current.getSession();
         onComplete(session);
       } finally {
         setIsLoading(false);
@@ -137,6 +158,20 @@ export function useInterview({
     if (!managerRef.current || isCompletedRef.current) return;
 
     setIsLoading(true);
+    interviewStartTime.current = Date.now();
+    questionStartTime.current = Date.now();
+    
+    const session = managerRef.current.getSession();
+    
+    // Track interview start
+    trackInterviewStart(session.sessionId, session.jobTitle);
+    trackUserEngagement('interview_started', {
+      session_id: session.sessionId,
+      job_title: session.jobTitle,
+      difficulty: session.difficulty,
+      language: session.language
+    });
+    
     try {
       const questionId = `q_${Date.now()}`;
       setCurrentQuestion('');
@@ -174,6 +209,12 @@ export function useInterview({
       });
 
       setCurrentQuestion(result.question);
+      
+      // Track first question engagement
+      trackInterviewEngagement('first_question_presented', session.sessionId, {
+        question_length: result.question.length,
+        stage: 'introduction'
+      });
 
       // Signal streaming complete
       if (onStreamComplete) {
@@ -185,6 +226,11 @@ export function useInterview({
       }
     } catch (error) {
       console.error('Error starting interview:', error);
+      trackUserEngagement('interview_error', {
+        session_id: session.sessionId,
+        error_type: 'start_failed',
+        error_message: error instanceof Error ? error.message : 'Unknown error'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -195,6 +241,18 @@ export function useInterview({
       if (!managerRef.current || !currentQuestion || isCompletedRef.current || isLoading) {
         return;
       }
+
+      const session = managerRef.current.getSession();
+      const questionResponseTime = Date.now() - questionStartTime.current;
+      totalInteractions.current += 1;
+      
+      // Track answer submission engagement
+      trackInterviewEngagement('answer_submitted', session.sessionId, {
+        question_number: totalInteractions.current,
+        response_time_ms: questionResponseTime,
+        answer_length: answer.length,
+        stage: totalInteractions.current <= 3 ? 'introduction' : 'technical'
+      });
 
       const answerId = `a_${Date.now()}`;
       setMessages((prev) => [
@@ -208,6 +266,7 @@ export function useInterview({
       ]);
 
       setIsLoading(true);
+      questionStartTime.current = Date.now(); // Reset for next question
 
       try {
         const questionId = `q_${Date.now()}`;
@@ -244,6 +303,13 @@ export function useInterview({
           },
         });
 
+        // Track question generation engagement
+        trackInterviewEngagement('question_generated', session.sessionId, {
+          question_number: totalInteractions.current + 1,
+          question_length: accumulatedQuestion.length,
+          has_feedback: !!result.decision?.feedback
+        });
+
         // Send feedback to TTS if present
         if (result.decision?.feedback && result.decision.feedback.trim() && onFeedback) {
           onFeedback(result.decision.feedback);
@@ -255,6 +321,18 @@ export function useInterview({
         }
 
         if (result.decision.decision === 'end') {
+          const interviewDuration = Date.now() - interviewStartTime.current;
+          
+          // Track interview completion
+          trackInterviewComplete(session.sessionId, interviewDuration);
+          trackUserEngagement('interview_completed', {
+            session_id: session.sessionId,
+            duration_ms: interviewDuration,
+            questions_answered: totalInteractions.current,
+            job_title: session.jobTitle,
+            completion_reason: 'natural_end'
+          });
+
           // Add thank you/feedback message to the chat
           const feedbackMessage = result.decision?.feedback?.trim() || 'Thank you for the interview! We are now generating your results.';
           const feedbackMsgId = `feedback_${Date.now()}`;
@@ -273,14 +351,17 @@ export function useInterview({
 
           try {
             const endResult = await managerRef.current.manageInterviewState('end');
-            const session = managerRef.current.getSession();
             if (session.result) {
               saveInterviewResult(session.sessionId, session.result);
             }
             onComplete(session);
           } catch (endError) {
             console.error('Error generating summary:', endError);
-            const session = managerRef.current.getSession();
+            trackUserEngagement('interview_error', {
+              session_id: session.sessionId,
+              error_type: 'summary_generation_failed',
+              error_message: endError instanceof Error ? endError.message : 'Unknown error'
+            });
             onComplete(session);
           }
         } else if (result.nextQuestion) {
@@ -290,6 +371,12 @@ export function useInterview({
         }
       } catch (error) {
         console.error('Error processing answer:', error);
+        trackUserEngagement('interview_error', {
+          session_id: session.sessionId,
+          error_type: 'answer_processing_failed',
+          question_number: totalInteractions.current,
+          error_message: error instanceof Error ? error.message : 'Unknown error'
+        });
       } finally {
         setIsLoading(false);
       }

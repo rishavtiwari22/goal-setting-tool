@@ -105,6 +105,15 @@ export function trackTokenEntry(token: string): void {
       timestamp: Date.now()
     });
     
+    // Track user engagement for cross-platform flow
+    trackEvent('user_engagement', {
+      engagement_type: 'cross_platform_entry',
+      source_platform: 'app.zuvy.org',
+      target_platform: 'zoe.zuvy.org',
+      user_id: payload.sub || 'unknown',
+      session_start: true
+    });
+    
     // Set user properties for better tracking
     if (window.gtag) {
       window.gtag('config', import.meta.env.VITE_GA4_MEASUREMENT_ID, {
@@ -120,5 +129,52 @@ export function trackTokenEntry(token: string): void {
       timestamp: Date.now()
     });
   }
+}
+
+// Enhanced user engagement tracking functions
+export function trackUserEngagement(engagementType: string, details?: Record<string, any>): void {
+  trackEvent('user_engagement', {
+    engagement_type: engagementType,
+    platform: 'zoe.zuvy.org',
+    timestamp: Date.now(),
+    ...details
+  });
+}
+
+export function trackInterviewEngagement(action: string, sessionId: string, details?: Record<string, any>): void {
+  trackUserEngagement('interview_interaction', {
+    action,
+    session_id: sessionId,
+    interview_stage: details?.stage || 'unknown',
+    time_spent: details?.timeSpent || 0,
+    ...details
+  });
+}
+
+export function trackPageEngagement(pagePath: string, timeSpent: number, interactions: number = 0): void {
+  trackUserEngagement('page_interaction', {
+    page_path: pagePath,
+    time_spent_seconds: Math.round(timeSpent / 1000),
+    interaction_count: interactions,
+    engagement_level: timeSpent > 30000 ? 'high' : timeSpent > 10000 ? 'medium' : 'low'
+  });
+}
+
+export function trackFeatureUsage(feature: string, usage_type: string, details?: Record<string, any>): void {
+  trackUserEngagement('feature_usage', {
+    feature_name: feature,
+    usage_type,
+    platform: 'zoe.zuvy.org',
+    ...details
+  });
+}
+
+export function trackCrossPlatformJourney(step: string, details?: Record<string, any>): void {
+  trackUserEngagement('cross_platform_journey', {
+    journey_step: step,
+    source_platform: 'app.zuvy.org',
+    target_platform: 'zoe.zuvy.org',
+    ...details
+  });
 }
 
