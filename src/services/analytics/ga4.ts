@@ -5,36 +5,40 @@ declare global {
   }
 }
 
-export function initializeGA4(measurementId: string): void {
-  if (typeof window === 'undefined') return;
+export function extractUTMParams(): { utm_source?: string; utm_medium?: string } {
+  if (typeof window === 'undefined') return {};
+  
+  const params: { utm_source?: string; utm_medium?: string } = {};
+  const fullUrl = window.location.href;
+  
+  const utmSourceMatch = fullUrl.match(/[?&]utm_source=([^&]*)/);
+  const utmMediumMatch = fullUrl.match(/[?&]utm_medium=([^&]*)/);
+  
+  if (utmSourceMatch && utmSourceMatch[1]) {
+    params.utm_source = decodeURIComponent(utmSourceMatch[1]);
+  }
+  
+  if (utmMediumMatch && utmMediumMatch[1]) {
+    params.utm_medium = decodeURIComponent(utmMediumMatch[1]);
+  }
+  
+  return params;
+}
 
-  window.dataLayer = window.dataLayer || [];
-  window.gtag = function(...args: any[]) {
-    window.dataLayer.push(args);
-  };
-
-  window.gtag('js', new Date());
-  window.gtag('config', measurementId, {
-    send_page_view: false,
-    // Generate unique user ID for each session
-    user_id: 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now(),
-    // Cross-domain tracking for app.zuvy.org → zoe.zuvy.org
-    linker: {
-      domains: ['app.zuvy.org', 'zoe.zuvy.org']
-    },
-    // Custom campaign tracking for referrals
-    custom_map: {
-      'custom_parameter_1': 'source_platform'
-    },
-    // Enable debug mode for localhost
-    debug_mode: window.location.hostname === 'localhost'
-  });
+export function setUTMUserProperties(): void {
+  if (typeof window === 'undefined' || !window.gtag) return;
+  
+  const utmParams = extractUTMParams();
+  if (Object.keys(utmParams).length > 0) {
+    window.gtag('set', 'user_properties', utmParams);
+  }
 }
 
 export function trackPageView(path: string, title?: string): void {
   if (typeof window === 'undefined' || !window.gtag) return;
 
-  // Smart title resolution with domain awareness
+  setUTMUserProperties();
+
   let pageTitle = title;
   
   if (!pageTitle) {
@@ -42,19 +46,16 @@ export function trackPageView(path: string, title?: string): void {
     if (docTitle && docTitle !== 'Zoe - Your Learning Assistant') {
       pageTitle = docTitle;
     } else {
-      // Generate title from path with domain context
       pageTitle = generateTitleFromPath(path, window.location.hostname);
     }
   }
 
-  // Enhanced page view tracking with domain information
   window.gtag('event', 'page_view', {
     page_path: path,
     page_title: pageTitle,
     page_location: window.location.href,
     page_domain: window.location.hostname,
     environment: getEnvironmentFromDomain(window.location.hostname),
-    // Add session identifier to help GA4 distinguish users
     session_id: 'session_' + Math.random().toString(36).substr(2, 9),
     timestamp: Date.now()
   });
@@ -156,8 +157,9 @@ export function trackResultsView(sessionId: string): void {
 export function trackTokenEntry(token: string): void {
   if (!token) return;
   
+  setUTMUserProperties();
+  
   try {
-    // Decode JWT to get user info (basic decode, not verification)
     const payload = JSON.parse(atob(token.split('.')[1]));
     
     trackEvent('user_entry_from_platform', {
@@ -169,7 +171,6 @@ export function trackTokenEntry(token: string): void {
       timestamp: Date.now()
     });
     
-    // Track user engagement for cross-platform flow
     trackEvent('user_engagement', {
       engagement_type: 'cross_platform_entry',
       source_platform: 'app.zuvy.org',
@@ -178,12 +179,18 @@ export function trackTokenEntry(token: string): void {
       session_start: true
     });
     
-    // Set user properties for better tracking
     if (window.gtag) {
-      window.gtag('config', import.meta.env.VITE_GA4_MEASUREMENT_ID, {
+      const utmParams = extractUTMParams();
+      const configParams: Record<string, any> = {
         user_id: payload.sub || 'user_' + Date.now(),
         custom_parameter_1: 'app_zuvy_referral'
-      });
+      };
+      
+      if (Object.keys(utmParams).length > 0) {
+        configParams.user_properties = utmParams;
+      }
+      
+      window.gtag('config', import.meta.env.VITE_GA4_MEASUREMENT_ID, configParams);
     }
   } catch (error) {
     console.warn('Could not decode token for analytics:', error);
