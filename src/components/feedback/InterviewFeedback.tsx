@@ -10,8 +10,8 @@ interface InterviewFeedbackProps {
 }
 
 export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
-  const [questionRelevance, setQuestionRelevance] = useState<number | null>(null);
-  const [referralLikelihood, setReferralLikelihood] = useState<number | null>(null);
+  const [questionRelevance, setQuestionRelevance] = useState<number>(4);
+  const [referralLikelihood, setReferralLikelihood] = useState<number>(4);
 
   const isComplete = questionRelevance !== null && referralLikelihood !== null;
 
@@ -28,10 +28,14 @@ export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
     value,
     onChange,
     label,
+    leftLabel,
+    rightLabel,
   }: {
-    value: number | null;
+    value: number;
     onChange: (value: number) => void;
     label: string;
+    leftLabel: string;
+    rightLabel: string;
   }) => {
     return (
       <div className="flex flex-col gap-4">
@@ -39,7 +43,7 @@ export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
           {label}
         </label>
         <div className="flex items-center justify-center gap-3">
-          {[1, 2, 3, 4, 5].map((rating) => (
+          {[1, 2, 3, 4].map((rating) => (
             <button
               key={rating}
               type="button"
@@ -58,8 +62,8 @@ export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
           ))}
         </div>
         <div className="flex justify-between text-xs text-muted-foreground px-2">
-          <span>Poor</span>
-          <span>Excellent</span>
+          <span>{leftLabel}</span>
+          <span>{rightLabel}</span>
         </div>
       </div>
     );
@@ -81,7 +85,9 @@ export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
             <RatingScale
               value={questionRelevance}
               onChange={setQuestionRelevance}
-              label="Were the questions relevant to the jd?"
+              label="How helpful were the interview questions for the role or concepts you were practicing?"
+              leftLabel="Not useful"
+              rightLabel="Very useful"
             />
           </div>
 
@@ -89,7 +95,9 @@ export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
             <RatingScale
               value={referralLikelihood}
               onChange={setReferralLikelihood}
-              label="Would you refer others to the platform?"
+              label="Would you recommend this AI interviewer to others preparing for interviews?"
+              leftLabel="Unlikely to recommend"
+              rightLabel="Likely to recommend"
             />
           </div>
 
