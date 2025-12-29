@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { TestResults } from "../components/results/TestResults";
+import { InterviewFeedback } from "../components/feedback/InterviewFeedback";
 import type { InterviewSession } from "../models/interview";
+import { createUserFeedbackDocument } from "../services/storage/firebaseStorage";
 // import { getUser } from "../services/api/serverApi";
 import { getEmailFromJWT } from "../utils/jwt";
 
@@ -69,12 +71,49 @@ export default function Results() {
     loadSessionAndUserName();
   }, [navigate]);
 
+  const handleFeedbackSubmit = async (feedback: {
+    questionRelevance: number;
+    referralLikelihood: number;
+  }) => {
+    if (!session) return;
+
+    const updatedSession: InterviewSession = {
+      ...session,
+      userFeedback: {
+        questionRelevance: feedback.questionRelevance,
+        referralLikelihood: feedback.referralLikelihood,
+        submittedAt: new Date().toISOString(),
+      },
+    };
+
+    sessionStorage.setItem("interviewSession", JSON.stringify(updatedSession));
+    setSession(updatedSession);
+
+    const email = localStorage.getItem("studentEmail") || session.userId;
+    if (email) {
+      try {
+        await createUserFeedbackDocument(
+          email,
+          session.sessionId,
+          feedback.questionRelevance,
+          feedback.referralLikelihood
+        );
+      } catch (error) {
+        console.error("Failed to save feedback to Firebase:", error);
+      }
+    }
+  };
+
   if (!session) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div>Loading...</div>
       </div>
     );
+  }
+
+  if (!session.userFeedback) {
+    return <InterviewFeedback onSubmit={handleFeedbackSubmit} />;
   }
 
   const testResult = {

@@ -40,6 +40,11 @@ export interface InterviewSession {
   upcomingQuestions?: string[];
   feedbackHistory?: string[];
   summary?: string;
+  userFeedback?: {
+    questionRelevance: number;
+    referralLikelihood: number;
+    submittedAt: string;
+  };
 
   // Phase 2: Irrelevant answer tracking
   consecutiveIrrelevantCount: number;       // Track consecutive irrelevant answers

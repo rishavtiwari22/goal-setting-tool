@@ -20,12 +20,15 @@ import {
   getQAItemDocumentPath,
   getFeedbackCollectionPath,
   getFeedbackDocumentPath,
+  getUserFeedbackCollectionPath,
+  getUserFeedbackDocumentPath,
 } from '../firebase/schema';
 import type {
   FirestoreUser,
   FirestoreSession,
   FirestoreQAItem,
   FirestoreFeedbackItem,
+  FirestoreUserFeedback,
 } from '../firebase/types';
 import type { InterviewSession, QAHistoryItem, InterviewPhase } from '../../models/interview';
 import { writeQueue } from './writeQueue';
@@ -312,6 +315,54 @@ export async function createFeedbackItemDocument(
       data: { ...cleanedFeedback, feedbackId, userId: email },
       timestamp: Date.now(),
       priority: 'normal',
+    });
+    throw error;
+  }
+}
+
+export async function createUserFeedbackDocument(
+  email: string,
+  sessionId: string,
+  questionRelevance: number,
+  referralLikelihood: number
+): Promise<void> {
+  const db = await getFirestoreDb();
+  if (!db) {
+    throw new Error('Firebase not available');
+  }
+
+  const emailId = await normalizeEmailForId(email);
+  const feedbackRef = doc(db, getUserFeedbackDocumentPath(emailId, sessionId));
+
+  const userFeedback: FirestoreUserFeedback = {
+    sessionId,
+    questionRelevance,
+    referralLikelihood,
+    submittedAt: new Date().toISOString(),
+  };
+
+  const cleanedFeedback = removeUndefinedFields(userFeedback);
+
+  try {
+    await retryWithBackoff(async () => {
+      await setDoc(feedbackRef, cleanedFeedback);
+    });
+    console.log('User feedback document created successfully:', sessionId);
+  } catch (error: any) {
+    console.error('Failed to create user feedback document after retries:', error);
+    console.error('Error details:', {
+      message: error?.message,
+      code: error?.code,
+      sessionId,
+      email,
+    });
+    writeQueue.enqueue({
+      sessionId,
+      operation: 'feedback',
+      data: { ...cleanedFeedback, userId: email, feedbackType: 'userFeedback' },
+      timestamp: Date.now(),
+      priority: 'normal',
+      retryCount: MAX_RETRY_ATTEMPTS,
     });
     throw error;
   }

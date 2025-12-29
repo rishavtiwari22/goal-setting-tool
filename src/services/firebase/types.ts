@@ -62,6 +62,13 @@ export interface FirestoreFeedbackItem {
   nextPhase?: InterviewPhase;
 }
 
+export interface FirestoreUserFeedback {
+  sessionId: string;
+  questionRelevance: number;
+  referralLikelihood: number;
+  submittedAt: string;
+}
+
 export interface SyncStatus {
   sessionId: string;
   lastSyncedAt: string;

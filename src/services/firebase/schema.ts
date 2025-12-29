@@ -39,6 +39,14 @@ export function getFeedbackDocumentPath(emailId: string, sessionId: string, feed
   return `users/${emailId}/sessions/${sessionId}/feedback/${feedbackId}`;
 }
 
+export function getUserFeedbackCollectionPath(emailId: string, sessionId: string): string {
+  return `users/${emailId}/sessions/${sessionId}/userFeedback`;
+}
+
+export function getUserFeedbackDocumentPath(emailId: string, sessionId: string): string {
+  return `users/${emailId}/sessions/${sessionId}/userFeedback/feedback`;
+}
+
 export async function getFirestoreDb(): Promise<Firestore | null> {
   return await getFirestoreInstance();
 }
