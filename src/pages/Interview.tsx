@@ -142,12 +142,12 @@ export default function Interview() {
         setTimeout(() => {
           if (pendingSessionRef.current) {
             pendingSessionRef.current = null;
-            navigate("/results");
+            navigate(`/results/${session.sessionId}`);
           }
         }, 5000);
       } else {
         // TTS disabled, navigate immediately
-        navigate("/results");
+        navigate(`/results/${session.sessionId}`);
       }
     } catch (error) {
       console.error("Failed to save session:", error);

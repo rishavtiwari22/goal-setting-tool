@@ -458,6 +458,9 @@ export class InterviewStateManager {
       language: this.session.language,
     });
 
+    const { resultGenerationStatus } = await import('../resultGenerationStatus');
+    resultGenerationStatus.setGenerating(this.session.sessionId);
+
     try {
       const result = await summarizeInterview(systemMessage, humanMessage);
 
@@ -473,10 +476,12 @@ export class InterviewStateManager {
       };
 
       this.saveSession();
+      resultGenerationStatus.setComplete(this.session.sessionId);
 
       return result;
     } catch (error) {
       console.error('Error generating summary:', error);
+      resultGenerationStatus.setComplete(this.session.sessionId);
       throw new Error('Failed to generate summary');
     }
   }

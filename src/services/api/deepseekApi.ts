@@ -271,11 +271,37 @@ export async function summarizeInterview(
   }
 
   const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || '{}';
+  let content = data.choices?.[0]?.message?.content || '{}';
+
+  // Clean content - remove markdown code blocks if present
+  content = content.trim();
+  
+  // Remove markdown code blocks (handles ```json or ``` with optional newlines)
+  // Pattern: matches ```json or ``` at start, optional whitespace/newline, then content, then closing ```
+  const codeBlockPattern = /^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```\s*$/i;
+  const match = content.match(codeBlockPattern);
+  if (match) {
+    content = match[1].trim();
+  } else {
+    // Fallback: try simpler patterns
+    if (content.startsWith('```json')) {
+      content = content.replace(/^```json\s*\n?/i, '').replace(/\n?\s*```\s*$/i, '');
+    } else if (content.startsWith('```')) {
+      content = content.replace(/^```\s*\n?/i, '').replace(/\n?\s*```\s*$/i, '');
+    }
+  }
+  
+  content = content.trim();
 
   // Safe JSON parse with error handling
   try {
     const result = JSON.parse(content);
+    
+    // Validate required fields
+    if (!result.summary && !result.conclusion) {
+      throw new Error('Missing required fields in response');
+    }
+
     return {
       summary: result.summary || '',
       score: result.score || 0,
@@ -284,7 +310,27 @@ export async function summarizeInterview(
       improvementAreas: result.improvementAreas || [],
     };
   } catch (parseError) {
-    console.error('Failed to parse summarize response:', parseError, 'Content:', content);
+    console.error('Failed to parse summarize response:', parseError);
+    console.error('Raw content:', content);
+    console.error('Full response data:', JSON.stringify(data, null, 2));
+    
+    // Try to extract JSON from text if it's embedded
+    try {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const extractedJson = JSON.parse(jsonMatch[0]);
+        return {
+          summary: extractedJson.summary || '',
+          score: extractedJson.score || 0,
+          conclusion: extractedJson.conclusion || '',
+          topStrengths: extractedJson.topStrengths || [],
+          improvementAreas: extractedJson.improvementAreas || [],
+        };
+      }
+    } catch (extractError) {
+      console.error('Failed to extract JSON from content:', extractError);
+    }
+    
     // Return default values on parse failure
     return {
       summary: 'Unable to generate summary due to an error.',

@@ -1,75 +1,108 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { TestResults } from "../components/results/TestResults";
 import { InterviewFeedback } from "../components/feedback/InterviewFeedback";
 import type { InterviewSession } from "../models/interview";
 import { createUserFeedbackDocument } from "../services/storage/firebaseStorage";
-// import { getUser } from "../services/api/serverApi";
-import { getEmailFromJWT } from "../utils/jwt";
+import { loadInterviewSessionBySessionId } from "../services/storage/interviewStorage";
+import { resultGenerationStatus } from "../services/resultGenerationStatus";
 
 export default function Results() {
   const navigate = useNavigate();
+  const { sessionId } = useParams<{ sessionId?: string }>();
   const [session, setSession] = useState<InterviewSession | null>(null);
   const [userName, setUserName] = useState<string | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingResult, setIsGeneratingResult] = useState(false);
 
   useEffect(() => {
     const loadSessionAndUserName = async () => {
+      setIsLoading(true);
+      
+      let interviewSession: InterviewSession | null = null;
+
       const sessionStr = sessionStorage.getItem("interviewSession");
-      if (!sessionStr) {
+      if (sessionStr) {
+        try {
+          interviewSession = JSON.parse(sessionStr) as InterviewSession;
+        } catch (error) {
+          console.error("Error parsing session from sessionStorage:", error);
+        }
+      }
+
+      if (sessionId) {
+        const localStorageSession = loadInterviewSessionBySessionId(sessionId);
+        if (localStorageSession) {
+          if (interviewSession) {
+            interviewSession = {
+              ...localStorageSession,
+              ...interviewSession,
+              result: localStorageSession.result || interviewSession.result,
+            };
+          } else {
+            interviewSession = localStorageSession;
+          }
+        }
+      }
+
+      if (!interviewSession) {
         toast.error("No interview session found");
         navigate("/selfapply");
+        setIsLoading(false);
         return;
       }
 
-      try {
-        const interviewSession = JSON.parse(sessionStr) as InterviewSession;
-        setSession(interviewSession);
-
-        // Try to get user name from localStorage
-        const storedUserName = localStorage.getItem("userName");
-        if (storedUserName) {
-          setUserName(storedUserName);
-          return;
-        }
-
-        // If not in localStorage, try to fetch from API
-        // const storedToken = localStorage.getItem("studentToken");
-        // const storedEmail = localStorage.getItem("studentEmail");
-
-        // if (storedToken) {
-        //   const email = getEmailFromJWT(storedToken);
-        //   if (email) {
-        //     try {
-        //       const user = await getUser(email);
-        //       if (user.name) {
-        //         setUserName(user.name);
-        //         localStorage.setItem("userName", user.name);
-        //       }
-        //     } catch (error) {
-        //       console.error("Failed to fetch user details:", error);
-        //     }
-        //   }
-        // } else if (storedEmail) {
-        //   try {
-        //     const user = await getUser(storedEmail);
-        //     if (user.name) {
-        //       setUserName(user.name);
-        //       localStorage.setItem("userName", user.name);
-        //     }
-        //   } catch (error) {
-        //     console.error("Failed to fetch user details:", error);
-        //   }
-        // }
-      } catch (error) {
-        console.error("Error parsing interview session:", error);
-        toast.error("Invalid interview session data");
-        navigate("/selfapply");
+      if (interviewSession) {
+        sessionStorage.setItem("interviewSession", JSON.stringify(interviewSession));
       }
+
+      setSession(interviewSession);
+
+      const storedUserName = localStorage.getItem("userName");
+      if (storedUserName) {
+        setUserName(storedUserName);
+      }
+
+      setIsLoading(false);
+
     };
 
     loadSessionAndUserName();
-  }, [navigate]);
+  }, [navigate, sessionId]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const checkStatus = () => {
+      const generating = resultGenerationStatus.isCurrentlyGenerating(sessionId);
+      setIsGeneratingResult(generating);
+
+      if (!generating && !session?.result) {
+        const sessionWithResult = loadInterviewSessionBySessionId(sessionId);
+        if (sessionWithResult?.result) {
+          const updatedSession: InterviewSession = {
+            ...session!,
+            result: sessionWithResult.result,
+          };
+          sessionStorage.setItem("interviewSession", JSON.stringify(updatedSession));
+          setSession(updatedSession);
+        }
+      }
+    };
+
+    checkStatus();
+    const unsubscribe = resultGenerationStatus.subscribe((isGenerating, currentSessionId) => {
+      if (currentSessionId === sessionId) {
+        setIsGeneratingResult(isGenerating);
+        if (!isGenerating) {
+          checkStatus();
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [session, sessionId]);
 
   const handleFeedbackSubmit = async (feedback: {
     questionRelevance: number;
@@ -77,8 +110,14 @@ export default function Results() {
   }) => {
     if (!session) return;
 
+    const latestSession = sessionId 
+      ? loadInterviewSessionBySessionId(sessionId)
+      : null;
+    
+    const sessionToUpdate = latestSession || session;
+
     const updatedSession: InterviewSession = {
-      ...session,
+      ...sessionToUpdate,
       userFeedback: {
         questionRelevance: feedback.questionRelevance,
         referralLikelihood: feedback.referralLikelihood,
@@ -89,12 +128,12 @@ export default function Results() {
     sessionStorage.setItem("interviewSession", JSON.stringify(updatedSession));
     setSession(updatedSession);
 
-    const email = localStorage.getItem("studentEmail") || session.userId;
+    const email = localStorage.getItem("studentEmail") || sessionToUpdate.userId;
     if (email) {
       try {
         await createUserFeedbackDocument(
           email,
-          session.sessionId,
+          sessionToUpdate.sessionId,
           feedback.questionRelevance,
           feedback.referralLikelihood
         );
@@ -102,9 +141,34 @@ export default function Results() {
         console.error("Failed to save feedback to Firebase:", error);
       }
     }
+
+    if (!updatedSession.result && sessionId) {
+      const checkForResult = () => {
+        if (!resultGenerationStatus.isCurrentlyGenerating(sessionId)) {
+          const sessionWithResult = loadInterviewSessionBySessionId(sessionId);
+          if (sessionWithResult?.result) {
+            const finalSession: InterviewSession = {
+              ...updatedSession,
+              result: sessionWithResult.result,
+            };
+            sessionStorage.setItem("interviewSession", JSON.stringify(finalSession));
+            setSession(finalSession);
+          }
+        }
+      };
+      
+      checkForResult();
+      
+      const unsubscribe = resultGenerationStatus.subscribe((isGenerating, currentSessionId) => {
+        if (currentSessionId === sessionId && !isGenerating) {
+          checkForResult();
+          unsubscribe();
+        }
+      });
+    }
   };
 
-  if (!session) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div>Loading...</div>
@@ -112,8 +176,32 @@ export default function Results() {
     );
   }
 
+  if (!session) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div>No session found</div>
+      </div>
+    );
+  }
+
   if (!session.userFeedback) {
     return <InterviewFeedback onSubmit={handleFeedbackSubmit} />;
+  }
+
+  if (!session.result && isGeneratingResult) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Generating results...</div>
+      </div>
+    );
+  }
+  
+  if (!session.result) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Waiting for results...</div>
+      </div>
+    );
   }
 
   const testResult = {

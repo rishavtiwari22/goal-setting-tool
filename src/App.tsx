@@ -93,7 +93,7 @@ function AppContent() {
         }
       />
       <Route
-        path="/results"
+        path="/results/:sessionId?"
         element={
           <AuthGuard>
             <Results />
