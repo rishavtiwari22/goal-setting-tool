@@ -275,7 +275,7 @@ export async function summarizeInterview(
 
   // Clean content - remove markdown code blocks if present
   content = content.trim();
-  
+
   // Remove markdown code blocks (handles ```json or ``` with optional newlines)
   // Pattern: matches ```json or ``` at start, optional whitespace/newline, then content, then closing ```
   const codeBlockPattern = /^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```\s*$/i;
@@ -290,13 +290,13 @@ export async function summarizeInterview(
       content = content.replace(/^```\s*\n?/i, '').replace(/\n?\s*```\s*$/i, '');
     }
   }
-  
+
   content = content.trim();
 
   // Safe JSON parse with error handling
   try {
     const result = JSON.parse(content);
-    
+
     // Validate required fields
     if (!result.summary && !result.conclusion) {
       throw new Error('Missing required fields in response');
@@ -313,7 +313,7 @@ export async function summarizeInterview(
     console.error('Failed to parse summarize response:', parseError);
     console.error('Raw content:', content);
     console.error('Full response data:', JSON.stringify(data, null, 2));
-    
+
     // Try to extract JSON from text if it's embedded
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -330,7 +330,7 @@ export async function summarizeInterview(
     } catch (extractError) {
       console.error('Failed to extract JSON from content:', extractError);
     }
-    
+
     // Return default values on parse failure
     return {
       summary: 'Unable to generate summary due to an error.',
