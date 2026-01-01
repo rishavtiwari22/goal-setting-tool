@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import SelfApply from "./pages/SelfApply";
 import Interview from "./pages/Interview";
 import Results from "./pages/Results";
+import DataPolicy from "./pages/DataPolicy";
 import {
   DEFAULT_PIPER_BACKEND,
   preparePiperVoice,
@@ -99,6 +100,10 @@ function AppContent() {
             <Results />
           </AuthGuard>
         }
+      />
+      <Route
+        path="/data-policy"
+        element={<DataPolicy />}
       />
     </Routes>
   );
