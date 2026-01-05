@@ -336,31 +336,35 @@ Generate:
 2. Summary of what we've learned about the candidate so far
 3. Next phase: "introduction" (if < 2 questions) OR "project" (if >= 2 questions and rapport established)
 
-You must respond with ONLY valid JSON:
-{{
-  "feedback": "string",
-  "summary": "string",
-  "nextPhase": "introduction" | "project"
-}}`;
+You must respond with ONLY valid JSON. 
+Do NOT use markdown code blocks or "json" wrappers. Return the raw JSON object only.
+
+  {
+    "feedback": "string",
+    "summary": "string",
+    "nextPhase": "introduction" | "project"
+}`;
 
 const CREATE_FEEDBACK_PROJECT_SYSTEM = `You are a technical interviewer providing feedback. Generate feedback and summary for the interview so far.
 
-Job Title: {job_title}
-Knowledge Areas: {knowledge_points}
+Job Title: { job_title }
+Knowledge Areas: { knowledge_points }
 
 Current Phase: Project Discussion
 
 Generate:
-1. Feedback for the most recent answer (if applicable)
-2. Summary of all questions and answers so far (concise, for use in generating next questions)
+1. Feedback for the most recent answer(if applicable)
+  2. Summary of all questions and answers so far(concise, for use in generating next questions)
 3. Next phase determination: Based on the conversation, determine if we should move to 'technical' phase or stay in 'project'
 
-You must respond with ONLY valid JSON:
-{{
+You must respond with ONLY valid JSON.
+Do NOT use markdown code blocks or "json" wrappers. Return the raw JSON object only.
+
+{
   "feedback": "string",
   "summary": "string",
   "nextPhase": "project" | "technical"
-}}`;
+}`;
 
 const CREATE_FEEDBACK_TECHNICAL_SYSTEM = `You are a technical interviewer providing feedback. Generate feedback and summary for the interview so far.
 
@@ -380,14 +384,16 @@ Generate:
 4. Whether the current project's technical discussion is complete
 5. List any project names mentioned in the conversation
 
-You must respond with ONLY valid JSON:
-{{
+You must respond with ONLY valid JSON.
+Do NOT use markdown code blocks or "json" wrappers. Return the raw JSON object only.
+
+  {
   "feedback": "string",
   "summary": "string",
   "nextPhase": "project" | "technical",
   "currentProjectComplete": boolean,
   "projectsMentioned": ["array of project names mentioned"]
-}}`;
+}`;
 
 export interface BuildCreateFeedbackPromptParams {
   jobTitle: string;
@@ -481,28 +487,28 @@ You must respond with ONLY valid JSON matching this EXACT structure and field na
 
 {
   "summary": "detailed summary text describing the candidate's overall performance",
-  "conclusion": "final conclusion text with recommendations",
-  "topStrengths": [
-  { 
-    "name": "First Strength Name", 
-    "description": "What you did well (with a specific example), why it helped in the interview, and how you can continue to leverage and further develop this strength" 
-  },
-  { 
-    "name": "Second Strength Name", 
-    "description": "What you did well (with a specific example), why it helped in the interview, and how you can continue to leverage and further develop this strength" 
-  }
-],
-  "improvementAreas": [
-  { 
-    "name": "First Area Name", 
-    "description": "What needs improvement (with a concrete example), why it matters, and step-by-step actions you can take to improve, including practice suggestions" 
-  },
-  { 
-    "name": "Second Area Name", 
-    "description": "What needs improvement (with a concrete example), why it matters, and step-by-step actions you can take to improve, including practice suggestions" 
-  }
-]
-}`;
+    "conclusion": "final conclusion text with recommendations",
+      "topStrengths": [
+        {
+          "name": "First Strength Name",
+          "description": "What you did well (with a specific example), why it helped in the interview, and how you can continue to leverage and further develop this strength"
+        },
+        {
+          "name": "Second Strength Name",
+          "description": "What you did well (with a specific example), why it helped in the interview, and how you can continue to leverage and further develop this strength"
+        }
+      ],
+        "improvementAreas": [
+          {
+            "name": "First Area Name",
+            "description": "What needs improvement (with a concrete example), why it matters, and step-by-step actions you can take to improve, including practice suggestions"
+          },
+          {
+            "name": "Second Area Name",
+            "description": "What needs improvement (with a concrete example), why it matters, and step-by-step actions you can take to improve, including practice suggestions"
+          }
+        ]
+} `;
 
   const humanMessage = `# The questions and answers from the interview are as follows:
 ${qaHistoryStr}
