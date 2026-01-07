@@ -1,8 +1,7 @@
 import { DecisionResponse, FeedbackResponse } from '../../models/interview';
 import { ENV } from '../../utils/env';
 
-const HUGGINGFACE_API_URL = ENV.HUGGINGFACE_API_URL();
-const HUGGINGFACE_API_KEY = ENV.HUGGINGFACE_API_KEY();
+const LAMBDA_API_URL = ENV.LAMBDA_API_URL();
 
 async function* streamResponse(response: Response): AsyncGenerator<string> {
   const reader = response.body?.getReader();
@@ -10,6 +9,7 @@ async function* streamResponse(response: Response): AsyncGenerator<string> {
 
   const decoder = new TextDecoder();
   let buffer = "";
+  let metadataSkipped = false;
 
   try {
     while (true) {
@@ -24,6 +24,17 @@ async function* streamResponse(response: Response): AsyncGenerator<string> {
         const trimmedLine = line.trim();
         if (!trimmedLine) continue;
 
+        if (!metadataSkipped && trimmedLine.startsWith("{")) {
+          try {
+            const parsed = JSON.parse(trimmedLine);
+            if (parsed.statusCode !== undefined) {
+              metadataSkipped = true;
+              continue;
+            }
+          } catch {
+          }
+        }
+
         if (trimmedLine.startsWith("data: ")) {
           const data = trimmedLine.slice(6).trim();
           if (data === "[DONE]") {
@@ -33,6 +44,7 @@ async function* streamResponse(response: Response): AsyncGenerator<string> {
             const parsed = JSON.parse(data);
             const content = parsed.choices?.[0]?.delta?.content || "";
             if (content) {
+              metadataSkipped = true;
               yield content;
             }
           } catch (e) {
@@ -54,11 +66,7 @@ export async function makeDecision(
     'Content-Type': 'application/json',
   };
 
-  if (HUGGINGFACE_API_KEY) {
-    headers['Authorization'] = `Bearer ${HUGGINGFACE_API_KEY}`;
-  }
-
-  const response = await fetch(HUGGINGFACE_API_URL, {
+  const response = await fetch(LAMBDA_API_URL, {
     method: 'POST',
     headers,
     body: JSON.stringify({
@@ -91,7 +99,23 @@ export async function makeDecision(
     throw new Error(errorMessage);
   }
 
-  const data = await response.json();
+  const responseText = await response.text();
+  let data;
+  try {
+    const lines = responseText.split('\n');
+    const jsonLine = lines.find(line => {
+      const trimmed = line.trim();
+      return trimmed.startsWith('{') && !trimmed.includes('statusCode');
+    }) || responseText;
+    data = JSON.parse(jsonLine.trim());
+  } catch (e) {
+    try {
+      data = JSON.parse(responseText);
+    } catch (e2) {
+      throw new Error(`Failed to parse response: ${responseText.substring(0, 200)}`);
+    }
+  }
+  
   const content = (data.choices?.[0]?.message?.content || '').trim().toLowerCase();
 
   // Parse plain text decision - just extract the decision word
@@ -113,11 +137,7 @@ export async function* createQuestion(
     'Content-Type': 'application/json',
   };
 
-  if (HUGGINGFACE_API_KEY) {
-    headers['Authorization'] = `Bearer ${HUGGINGFACE_API_KEY}`;
-  }
-
-  const response = await fetch(HUGGINGFACE_API_URL, {
+  const response = await fetch(LAMBDA_API_URL, {
     method: 'POST',
     headers,
     body: JSON.stringify({
@@ -160,11 +180,7 @@ export async function createFeedback(
     'Content-Type': 'application/json',
   };
 
-  if (HUGGINGFACE_API_KEY) {
-    headers['Authorization'] = `Bearer ${HUGGINGFACE_API_KEY}`;
-  }
-
-  const response = await fetch(HUGGINGFACE_API_URL, {
+  const response = await fetch(LAMBDA_API_URL, {
     method: 'POST',
     headers,
     body: JSON.stringify({
@@ -197,7 +213,23 @@ export async function createFeedback(
     throw new Error(errorMessage);
   }
 
-  const data = await response.json();
+  const responseText = await response.text();
+  let data;
+  try {
+    const lines = responseText.split('\n');
+    const jsonLine = lines.find(line => {
+      const trimmed = line.trim();
+      return trimmed.startsWith('{') && !trimmed.includes('statusCode');
+    }) || responseText;
+    data = JSON.parse(jsonLine.trim());
+  } catch (e) {
+    try {
+      data = JSON.parse(responseText);
+    } catch (e2) {
+      throw new Error(`Failed to parse response: ${responseText.substring(0, 200)}`);
+    }
+  }
+  
   const content = data.choices?.[0]?.message?.content || '{}';
 
   // Safe JSON parse with error handling
@@ -233,11 +265,7 @@ export async function summarizeInterview(
     'Content-Type': 'application/json',
   };
 
-  if (HUGGINGFACE_API_KEY) {
-    headers['Authorization'] = `Bearer ${HUGGINGFACE_API_KEY}`;
-  }
-
-  const response = await fetch(HUGGINGFACE_API_URL, {
+  const response = await fetch(LAMBDA_API_URL, {
     method: 'POST',
     headers,
     body: JSON.stringify({
@@ -270,7 +298,23 @@ export async function summarizeInterview(
     throw new Error(errorMessage);
   }
 
-  const data = await response.json();
+  const responseText = await response.text();
+  let data;
+  try {
+    const lines = responseText.split('\n');
+    const jsonLine = lines.find(line => {
+      const trimmed = line.trim();
+      return trimmed.startsWith('{') && !trimmed.includes('statusCode');
+    }) || responseText;
+    data = JSON.parse(jsonLine.trim());
+  } catch (e) {
+    try {
+      data = JSON.parse(responseText);
+    } catch (e2) {
+      throw new Error(`Failed to parse response: ${responseText.substring(0, 200)}`);
+    }
+  }
+  
   let content = data.choices?.[0]?.message?.content || '{}';
 
   // Clean content - remove markdown code blocks if present

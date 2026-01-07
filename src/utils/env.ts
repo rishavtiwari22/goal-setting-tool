@@ -13,7 +13,7 @@ export function validateEnvironment(): void {
   const requiredVars = [
     'VITE_API_BASE_URL',
     'VITE_API_TOKEN',
-    'VITE_HUGGINGFACE_API_URL',
+    'VITE_LAMBDA_API_URL',
   ];
 
   const missing: string[] = [];
@@ -38,7 +38,11 @@ export function validateEnvironment(): void {
 export const ENV = {
   API_BASE_URL: () => getEnvVar('VITE_API_BASE_URL'),
   API_TOKEN: () => getEnvVar('VITE_API_TOKEN'),
-  HUGGINGFACE_API_URL: () => getEnvVar('VITE_HUGGINGFACE_API_URL'),
+  LAMBDA_API_URL: () => getEnvVar('VITE_LAMBDA_API_URL'),
+  HUGGINGFACE_API_URL: () => {
+    const url = import.meta.env['VITE_HUGGINGFACE_API_URL'];
+    return url && url.trim() !== '' ? url : '';
+  },
   HUGGINGFACE_API_KEY: () => {
     const key = import.meta.env['VITE_HUGGINGFACE_API_KEY'];
     return key && key.trim() !== '' ? key : '';
