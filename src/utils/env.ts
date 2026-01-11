@@ -79,4 +79,8 @@ export const ENV = {
     const id = import.meta.env['VITE_FIREBASE_APP_ID'];
     return id && id.trim() !== '' ? id : '';
   },
+  ADMIN_API_BASE_URL: () => {
+    const url = import.meta.env['VITE_ADMIN_API_BASE_URL'];
+    return url && url.trim() !== '' ? url : '';
+  },
 };

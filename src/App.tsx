@@ -5,6 +5,12 @@ import SelfApply from "./pages/SelfApply";
 import Interview from "./pages/Interview";
 import Results from "./pages/Results";
 import DataPolicy from "./pages/DataPolicy";
+import InvitedInterview from "./pages/InvitedInterview";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminUserList from "./pages/AdminUserList";
+import AdminRecruitment from "./pages/AdminRecruitment";
+import AdminJobs from "./pages/AdminJobs";
+import { AdminAuthGuard } from "./components/AdminAuthGuard";
 import {
   DEFAULT_PIPER_BACKEND,
   preparePiperVoice,
@@ -104,6 +110,42 @@ function AppContent() {
       <Route
         path="/data-policy"
         element={<DataPolicy />}
+      />
+      <Route
+        path="/interview/invited"
+        element={<InvitedInterview />}
+      />
+      <Route
+        path="/admin"
+        element={
+          <AdminAuthGuard>
+            <AdminDashboard />
+          </AdminAuthGuard>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <AdminAuthGuard>
+            <AdminUserList />
+          </AdminAuthGuard>
+        }
+      />
+      <Route
+        path="/admin/recruitment"
+        element={
+          <AdminAuthGuard>
+            <AdminRecruitment />
+          </AdminAuthGuard>
+        }
+      />
+      <Route
+        path="/admin/jobs"
+        element={
+          <AdminAuthGuard>
+            <AdminJobs />
+          </AdminAuthGuard>
+        }
       />
     </Routes>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
     Dialog,
     DialogContent,
@@ -71,20 +71,27 @@ interface CreateJobModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (jobData: CustomJobData) => void;
+    initialData?: {
+        job_title: string;
+        job_description: string;
+        technical_skills: string[];
+        soft_skills: string[];
+    };
 }
 
 export default function CreateJobModal({
     isOpen,
     onClose,
     onSubmit,
+    initialData,
 }: CreateJobModalProps) {
     // Revert to string for job title as per user request
-    const [jobTitle, setJobTitle] = useState("");
+    const [jobTitle, setJobTitle] = useState(initialData?.job_title || "");
     const [jobTitleFocused, setJobTitleFocused] = useState(false);
-    const [jobDescription, setJobDescription] = useState("");
+    const [jobDescription, setJobDescription] = useState(initialData?.job_description || "");
     // Store skills as arrays directly for TagInput
-    const [technicalSkills, setTechnicalSkills] = useState<string[]>([]);
-    const [softSkills, setSoftSkills] = useState<string[]>([]);
+    const [technicalSkills, setTechnicalSkills] = useState<string[]>(initialData?.technical_skills || []);
+    const [softSkills, setSoftSkills] = useState<string[]>(initialData?.soft_skills || []);
 
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -125,11 +132,20 @@ export default function CreateJobModal({
         resetForm();
     };
 
+    useEffect(() => {
+        if (initialData) {
+            setJobTitle(initialData.job_title);
+            setJobDescription(initialData.job_description);
+            setTechnicalSkills(initialData.technical_skills);
+            setSoftSkills(initialData.soft_skills);
+        }
+    }, [initialData]);
+
     const resetForm = () => {
-        setJobTitle("");
-        setJobDescription("");
-        setTechnicalSkills([]);
-        setSoftSkills([]);
+        setJobTitle(initialData?.job_title || "");
+        setJobDescription(initialData?.job_description || "");
+        setTechnicalSkills(initialData?.technical_skills || []);
+        setSoftSkills(initialData?.soft_skills || []);
         setErrors({});
     };
 
@@ -189,7 +205,9 @@ export default function CreateJobModal({
                     Form to create a new job role including title, description, and required skills.
                 </DialogDescription>
                 <DialogHeader className="p-6 pb-2 border-b flex justify-between items-center bg-white sticky top-0 z-10">
-                    <DialogTitle className="text-xl font-bold">Create Custom Interview</DialogTitle>
+                    <DialogTitle className="text-xl font-bold">
+                        {initialData ? "Edit Job Description" : "Create Custom Interview"}
+                    </DialogTitle>
                     <DialogClose className="absolute right-4 top-4 opacity-70 hover:opacity-100 transition-opacity" onClick={handleClose}>
                         <X className="w-5 h-5" />
                     </DialogClose>
@@ -323,7 +341,7 @@ export default function CreateJobModal({
                             type="submit"
                             className="bg-[#386641] hover:bg-[#2C5233] text-white font-semibold px-4 py-2 rounded-md"
                         >
-                            Create Custom Interview
+                            {initialData ? "Update Job" : "Create Custom Interview"}
                         </Button>
                     </DialogFooter>
                 </form>

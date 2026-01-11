@@ -184,8 +184,55 @@ export default function Results() {
     );
   }
 
-  if (!session.userFeedback) {
+  const isInvited = sessionStorage.getItem("isInvited") === "true";
+  const invitationId = sessionStorage.getItem("invitationId");
+
+  useEffect(() => {
+    if (isInvited && invitationId && session?.result) {
+      const updateInvitationStatus = async () => {
+        try {
+          const { updateInvitationStatus: updateStatus } = await import("../services/api/invitationApi");
+          await updateStatus(invitationId, "completed");
+          sessionStorage.removeItem("isInvited");
+          sessionStorage.removeItem("invitationId");
+        } catch (error) {
+          console.error("Failed to update invitation status:", error);
+        }
+      };
+      updateInvitationStatus();
+    }
+  }, [isInvited, invitationId, session?.result]);
+
+  if (!session.userFeedback && !isInvited) {
     return <InterviewFeedback onSubmit={handleFeedbackSubmit} />;
+  }
+
+  if (isInvited && !session.result) {
+    if (isGeneratingResult) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div>Generating results...</div>
+        </div>
+      );
+    }
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Waiting for results...</div>
+      </div>
+    );
+  }
+
+  if (isInvited && session.result) {
+    return (
+      <div className="flex items-center justify-center min-h-screen p-6">
+        <div className="max-w-2xl w-full text-center">
+          <h1 className="text-3xl font-bold mb-4">Thank You!</h1>
+          <p className="text-lg mb-8">
+            Thanks for the interview our team you will be updated on the next steps.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (!session.result && isGeneratingResult) {

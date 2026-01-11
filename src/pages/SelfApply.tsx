@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ type Step = "job_selection" | "speakerandmiccheck";
 
 export default function SelfApply() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<string>("idle");
   const voiceReadyRef = useRef(false);
   const [step, setStep] = useState<Step>("job_selection");
@@ -56,6 +57,11 @@ export default function SelfApply() {
   });
 
   useEffect(() => {
+    const invitationToken = searchParams.get("token");
+    if (invitationToken) {
+      navigate(`/interview/invited?token=${invitationToken}`);
+      return;
+    }
     fetchJobs();
     
     // Track page entry and cross-platform journey

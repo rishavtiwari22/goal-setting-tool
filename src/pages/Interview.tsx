@@ -61,6 +61,8 @@ export default function Interview() {
   useEffect(() => {
     const initializeInterview = async () => {
       const configStr = sessionStorage.getItem("interviewConfig");
+      const isInvited = sessionStorage.getItem("isInvited") === "true";
+      
       if (!configStr && !sessionId) {
         const storedEmail = localStorage.getItem("studentEmail");
         if (storedEmail) {
@@ -84,7 +86,11 @@ export default function Interview() {
           }
         }
         toast.error("No interview configuration found");
-        navigate("/selfapply");
+        if (isInvited) {
+          navigate("/");
+        } else {
+          navigate("/selfapply");
+        }
         return;
       }
 
@@ -94,6 +100,18 @@ export default function Interview() {
           setConfig(interviewConfig);
           setIsInitializing(false);
           forceEndRef.current = false;
+          
+          if (isInvited) {
+            const invitationId = sessionStorage.getItem("invitationId");
+            if (invitationId) {
+              try {
+                const { updateInvitationStatus } = await import("../services/api/invitationApi");
+                await updateInvitationStatus(invitationId, "in_progress");
+              } catch (error) {
+                console.error("Failed to update invitation status:", error);
+              }
+            }
+          }
         } else if (sessionId) {
         let session = loadInterviewSessionBySessionId(sessionId);
         if (!session) {
@@ -119,13 +137,22 @@ export default function Interview() {
           forceEndRef.current = false;
         } else {
           toast.error("Session not found");
-          navigate("/selfapply");
+          if (isInvited) {
+            navigate("/");
+          } else {
+            navigate("/selfapply");
+          }
         }
       }
     } catch (error) {
       console.error("Error parsing interview config:", error);
       toast.error("Invalid interview configuration");
-      navigate("/selfapply");
+      const isInvited = sessionStorage.getItem("isInvited") === "true";
+      if (isInvited) {
+        navigate("/");
+      } else {
+        navigate("/selfapply");
+      }
     }
     };
 

@@ -40,11 +40,23 @@ export async function getUser(userId: string): Promise<User> {
 }
 
 export async function getJobs(): Promise<Job[]> {
-  const url = `${API_BASE_URL}/job`;
-  return fetchWithAuth(url);
+  try {
+    const { getJobs: getJobsFromAdmin } = await import("./adminApi");
+    return await getJobsFromAdmin();
+  } catch (error) {
+    console.error("Error fetching jobs from admin API, falling back to old API:", error);
+    const url = `${API_BASE_URL}/job`;
+    return fetchWithAuth(url);
+  }
 }
 
 export async function getJob(jobId: string): Promise<Job> {
-  const url = `${API_BASE_URL}/job/${jobId}`;
-  return fetchWithAuth(url);
+  try {
+    const { getJob: getJobFromAdmin } = await import("./adminApi");
+    return await getJobFromAdmin(jobId);
+  } catch (error) {
+    console.error("Error fetching job from admin API, falling back to old API:", error);
+    const url = `${API_BASE_URL}/job/${jobId}`;
+    return fetchWithAuth(url);
+  }
 }

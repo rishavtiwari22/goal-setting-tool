@@ -8,9 +8,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const tokenInQuery = searchParams.get("token") || searchParams.get("jwt");
+    const invitationToken = searchParams.get("token");
     const tokenInStorage = localStorage.getItem("studentToken");
     
-    if (tokenInQuery) {
+    if (tokenInQuery || invitationToken) {
       return;
     }
     
@@ -27,9 +28,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [location, searchParams]);
 
   const tokenInQuery = searchParams.get("token") || searchParams.get("jwt");
+  const invitationToken = searchParams.get("token");
   const tokenInStorage = localStorage.getItem("studentToken");
   
-  if (tokenInQuery) {
+  if (tokenInQuery || invitationToken) {
     return <>{children}</>;
   }
   
