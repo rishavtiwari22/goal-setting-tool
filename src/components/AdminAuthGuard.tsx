@@ -15,7 +15,7 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
       try {
         const token = localStorage.getItem("studentToken");
         
-        if (!isTokenValid(token)) {
+        if (!token || !isTokenValid(token)) {
           navigate("/");
           return;
         }
