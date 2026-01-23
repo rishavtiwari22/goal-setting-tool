@@ -16,6 +16,9 @@ export default function Results() {
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingResult, setIsGeneratingResult] = useState(false);
 
+  const isInvited = typeof window !== 'undefined' ? sessionStorage.getItem("isInvited") === "true" : false;
+  const invitationId = typeof window !== 'undefined' ? sessionStorage.getItem("invitationId") : null;
+
   useEffect(() => {
     const loadSessionAndUserName = async () => {
       setIsLoading(true);
@@ -109,6 +112,22 @@ export default function Results() {
     return unsubscribe;
   }, [sessionId]);
 
+  useEffect(() => {
+    if (isInvited && invitationId && session?.result) {
+      const updateInvitationStatus = async () => {
+        try {
+          const { updateInvitationStatus: updateStatus } = await import("../services/api/invitationApi");
+          await updateStatus(invitationId, "completed");
+          sessionStorage.removeItem("isInvited");
+          sessionStorage.removeItem("invitationId");
+        } catch (error) {
+          console.error("Failed to update invitation status:", error);
+        }
+      };
+      updateInvitationStatus();
+    }
+  }, [isInvited, invitationId, session?.result]);
+
   const handleFeedbackSubmit = async (feedback: {
     questionRelevance: number;
     referralLikelihood: number;
@@ -188,25 +207,6 @@ export default function Results() {
       </div>
     );
   }
-
-  const isInvited = sessionStorage.getItem("isInvited") === "true";
-  const invitationId = sessionStorage.getItem("invitationId");
-
-  useEffect(() => {
-    if (isInvited && invitationId && session?.result) {
-      const updateInvitationStatus = async () => {
-        try {
-          const { updateInvitationStatus: updateStatus } = await import("../services/api/invitationApi");
-          await updateStatus(invitationId, "completed");
-          sessionStorage.removeItem("isInvited");
-          sessionStorage.removeItem("invitationId");
-        } catch (error) {
-          console.error("Failed to update invitation status:", error);
-        }
-      };
-      updateInvitationStatus();
-    }
-  }, [isInvited, invitationId, session?.result]);
 
   if (!session.userFeedback && !isInvited) {
     return <InterviewFeedback onSubmit={handleFeedbackSubmit} />;
