@@ -324,7 +324,13 @@ export async function summarizeInterview(
   // Try parsing directly first if it looks like JSON
   if ((content.startsWith('{') || content.startsWith('[')) && !content.startsWith('```')) {
     try {
-      const directParse = JSON.parse(content);
+      const directParse = JSON.parse(content) as {
+        summary?: string;
+        conclusion?: string;
+        score?: number;
+        topStrengths?: Array<{ name: string; description: string }>;
+        improvementAreas?: Array<{ name: string; description: string }>;
+      };
       if (directParse.summary || directParse.conclusion) {
         return {
           summary: directParse.summary || '',
