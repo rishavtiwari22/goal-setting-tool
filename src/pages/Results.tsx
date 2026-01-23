@@ -78,15 +78,20 @@ export default function Results() {
       const generating = resultGenerationStatus.isCurrentlyGenerating(sessionId);
       setIsGeneratingResult(generating);
 
-      if (!generating && !session?.result) {
+      if (!generating) {
         const sessionWithResult = loadInterviewSessionBySessionId(sessionId);
         if (sessionWithResult?.result) {
-          const updatedSession: InterviewSession = {
-            ...session!,
-            result: sessionWithResult.result,
-          };
-          sessionStorage.setItem("interviewSession", JSON.stringify(updatedSession));
-          setSession(updatedSession);
+          setSession((prevSession) => {
+            if (prevSession && !prevSession.result) {
+              const updatedSession: InterviewSession = {
+                ...prevSession,
+                result: sessionWithResult.result,
+              };
+              sessionStorage.setItem("interviewSession", JSON.stringify(updatedSession));
+              return updatedSession;
+            }
+            return prevSession;
+          });
         }
       }
     };
@@ -102,7 +107,7 @@ export default function Results() {
     });
 
     return unsubscribe;
-  }, [session, sessionId]);
+  }, [sessionId]);
 
   const handleFeedbackSubmit = async (feedback: {
     questionRelevance: number;
