@@ -320,6 +320,25 @@ export async function summarizeInterview(
   // Clean content - remove markdown code blocks if present
   content = content.trim();
 
+  // Handle case where content might already be a JSON string (OpenAI format)
+  // Try parsing directly first if it looks like JSON
+  if ((content.startsWith('{') || content.startsWith('[')) && !content.startsWith('```')) {
+    try {
+      const directParse = JSON.parse(content);
+      if (directParse.summary || directParse.conclusion) {
+        return {
+          summary: directParse.summary || '',
+          score: directParse.score || 0,
+          conclusion: directParse.conclusion || '',
+          topStrengths: directParse.topStrengths || [],
+          improvementAreas: directParse.improvementAreas || [],
+        };
+      }
+    } catch {
+      // Not valid JSON, continue with markdown removal
+    }
+  }
+
   // Remove markdown code blocks (handles ```json or ``` with optional newlines)
   // Pattern: matches ```json or ``` at start, optional whitespace/newline, then content, then closing ```
   const codeBlockPattern = /^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```\s*$/i;
