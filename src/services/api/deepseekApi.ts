@@ -299,30 +299,54 @@ export async function summarizeInterview(
   }
 
   const responseText = await response.text();
+  console.log('[summarizeInterview] Raw response text length:', responseText.length);
+  console.log('[summarizeInterview] Raw response preview:', responseText.substring(0, 500));
+  
   let data;
   try {
     const lines = responseText.split('\n');
+    console.log('[summarizeInterview] Response has', lines.length, 'lines');
     const jsonLine = lines.find(line => {
       const trimmed = line.trim();
       return trimmed.startsWith('{') && !trimmed.includes('statusCode');
     }) || responseText;
+    console.log('[summarizeInterview] Found JSON line, length:', jsonLine.length);
     data = JSON.parse(jsonLine.trim());
+    console.log('[summarizeInterview] Parsed data structure:', {
+      hasChoices: !!data.choices,
+      choicesLength: data.choices?.length,
+      hasMessage: !!data.choices?.[0]?.message,
+      hasContent: !!data.choices?.[0]?.message?.content
+    });
   } catch (e) {
+    console.error('[summarizeInterview] Failed to parse response lines:', e);
     try {
       data = JSON.parse(responseText);
+      console.log('[summarizeInterview] Parsed entire response as JSON');
     } catch (e2) {
+      console.error('[summarizeInterview] Failed to parse response completely:', e2);
       throw new Error(`Failed to parse response: ${responseText.substring(0, 200)}`);
     }
   }
   
   let content = data.choices?.[0]?.message?.content || '{}';
+  console.log('[summarizeInterview] Extracted content type:', typeof content);
+  console.log('[summarizeInterview] Content length:', content?.length || 0);
+  console.log('[summarizeInterview] Content preview (first 200 chars):', content?.substring(0, 200));
 
-  // Clean content - remove markdown code blocks if present
+  if (!content || typeof content !== 'string') {
+    console.log('[summarizeInterview] Content is not string, converting:', typeof content);
+    content = String(content || '{}');
+  }
+
   content = content.trim();
+  console.log('[summarizeInterview] After trim, content length:', content.length);
+  console.log('[summarizeInterview] Content starts with:', content.substring(0, 50));
 
   // Handle case where content might already be a JSON string (OpenAI format)
   // Try parsing directly first if it looks like JSON
-  if ((content.startsWith('{') || content.startsWith('[')) && !content.startsWith('```')) {
+  if (content && (content.startsWith('{') || content.startsWith('[')) && !content.startsWith('```')) {
+    console.log('[summarizeInterview] Attempting direct JSON parse (OpenAI format)');
     try {
       const directParse = JSON.parse(content) as {
         summary?: string;
@@ -331,56 +355,123 @@ export async function summarizeInterview(
         topStrengths?: Array<{ name: string; description: string }>;
         improvementAreas?: Array<{ name: string; description: string }>;
       };
-      if (directParse.summary || directParse.conclusion) {
+      console.log('[summarizeInterview] Direct parse successful:', {
+        hasSummary: directParse.summary !== undefined,
+        hasConclusion: directParse.conclusion !== undefined,
+        hasTopStrengths: Array.isArray(directParse.topStrengths),
+        hasImprovementAreas: Array.isArray(directParse.improvementAreas),
+        summaryLength: directParse.summary?.length || 0,
+        conclusionLength: directParse.conclusion?.length || 0
+      });
+      
+      // Check if it has the expected structure (summary or conclusion, or topStrengths/improvementAreas)
+      if (directParse && (
+        directParse.summary !== undefined || 
+        directParse.conclusion !== undefined ||
+        Array.isArray(directParse.topStrengths) ||
+        Array.isArray(directParse.improvementAreas)
+      )) {
+        console.log('[summarizeInterview] Direct parse validation passed, returning result');
         return {
           summary: directParse.summary || '',
-          score: directParse.score || 0,
+          score: typeof directParse.score === 'number' ? directParse.score : 0,
           conclusion: directParse.conclusion || '',
-          topStrengths: directParse.topStrengths || [],
-          improvementAreas: directParse.improvementAreas || [],
+          topStrengths: Array.isArray(directParse.topStrengths) ? directParse.topStrengths : [],
+          improvementAreas: Array.isArray(directParse.improvementAreas) ? directParse.improvementAreas : [],
         };
+      } else {
+        console.log('[summarizeInterview] Direct parse validation failed, trying markdown removal');
       }
-    } catch {
+    } catch (parseError) {
       // Not valid JSON, continue with markdown removal
+      console.log('[summarizeInterview] Direct parse failed, trying markdown removal:', parseError);
     }
+  } else {
+    console.log('[summarizeInterview] Content does not look like direct JSON, trying markdown removal');
   }
 
   // Remove markdown code blocks (handles ```json or ``` with optional newlines)
   // Pattern: matches ```json or ``` at start, optional whitespace/newline, then content, then closing ```
+  console.log('[summarizeInterview] Attempting markdown removal');
   const codeBlockPattern = /^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```\s*$/i;
   const match = content.match(codeBlockPattern);
   if (match) {
+    console.log('[summarizeInterview] Found markdown code block match');
     content = match[1].trim();
   } else {
     // Fallback: try simpler patterns
     if (content.startsWith('```json')) {
+      console.log('[summarizeInterview] Using simple json block removal');
       content = content.replace(/^```json\s*\n?/i, '').replace(/\n?\s*```\s*$/i, '');
     } else if (content.startsWith('```')) {
+      console.log('[summarizeInterview] Using simple code block removal');
       content = content.replace(/^```\s*\n?/i, '').replace(/\n?\s*```\s*$/i, '');
+    } else {
+      console.log('[summarizeInterview] No markdown blocks found, using content as-is');
     }
   }
 
   content = content.trim();
+  console.log('[summarizeInterview] After markdown removal, content length:', content.length);
+  console.log('[summarizeInterview] Content preview (first 200 chars):', content.substring(0, 200));
 
   // Safe JSON parse with error handling
   try {
+    console.log('[summarizeInterview] Attempting final JSON parse');
     const result = JSON.parse(content);
+    console.log('[summarizeInterview] Final parse successful:', {
+      hasSummary: result.summary !== undefined,
+      hasConclusion: result.conclusion !== undefined,
+      hasTopStrengths: Array.isArray(result.topStrengths),
+      hasImprovementAreas: Array.isArray(result.improvementAreas)
+    });
 
-    // Validate required fields
-    if (!result.summary && !result.conclusion) {
+    // Validate that we have a valid result object
+    if (!result || typeof result !== 'object') {
+      console.error('[summarizeInterview] Invalid result object:', result);
+      throw new Error('Invalid result object');
+    }
+
+    // More lenient validation - accept if we have any of the expected fields
+    const hasValidData = result.summary !== undefined || 
+                        result.conclusion !== undefined ||
+                        Array.isArray(result.topStrengths) ||
+                        Array.isArray(result.improvementAreas);
+
+    console.log('[summarizeInterview] Validation check:', {
+      hasValidData,
+      summary: result.summary !== undefined,
+      conclusion: result.conclusion !== undefined,
+      topStrengths: Array.isArray(result.topStrengths),
+      improvementAreas: Array.isArray(result.improvementAreas)
+    });
+
+    if (!hasValidData) {
+      console.error('[summarizeInterview] Missing required fields in response');
       throw new Error('Missing required fields in response');
     }
 
-    return {
+    const finalResult = {
       summary: result.summary || '',
-      score: result.score || 0,
+      score: typeof result.score === 'number' ? result.score : 0,
       conclusion: result.conclusion || '',
-      topStrengths: result.topStrengths || [],
-      improvementAreas: result.improvementAreas || [],
+      topStrengths: Array.isArray(result.topStrengths) ? result.topStrengths : [],
+      improvementAreas: Array.isArray(result.improvementAreas) ? result.improvementAreas : [],
     };
+    
+    console.log('[summarizeInterview] Returning final result:', {
+      summaryLength: finalResult.summary.length,
+      conclusionLength: finalResult.conclusion.length,
+      topStrengthsCount: finalResult.topStrengths.length,
+      improvementAreasCount: finalResult.improvementAreas.length
+    });
+    
+    return finalResult;
   } catch (parseError) {
     console.error('Failed to parse summarize response:', parseError);
     console.error('Raw content:', content);
+    console.error('Content length:', content.length);
+    console.error('Content preview:', content.substring(0, 200));
     console.error('Full response data:', JSON.stringify(data, null, 2));
 
     // Try to extract JSON from text if it's embedded
@@ -388,13 +479,15 @@ export async function summarizeInterview(
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const extractedJson = JSON.parse(jsonMatch[0]);
-        return {
-          summary: extractedJson.summary || '',
-          score: extractedJson.score || 0,
-          conclusion: extractedJson.conclusion || '',
-          topStrengths: extractedJson.topStrengths || [],
-          improvementAreas: extractedJson.improvementAreas || [],
-        };
+        if (extractedJson && typeof extractedJson === 'object') {
+          return {
+            summary: extractedJson.summary || '',
+            score: typeof extractedJson.score === 'number' ? extractedJson.score : 0,
+            conclusion: extractedJson.conclusion || '',
+            topStrengths: Array.isArray(extractedJson.topStrengths) ? extractedJson.topStrengths : [],
+            improvementAreas: Array.isArray(extractedJson.improvementAreas) ? extractedJson.improvementAreas : [],
+          };
+        }
       }
     } catch (extractError) {
       console.error('Failed to extract JSON from content:', extractError);

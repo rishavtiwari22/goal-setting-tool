@@ -463,6 +463,12 @@ export class InterviewStateManager {
 
     try {
       const result = await summarizeInterview(systemMessage, humanMessage);
+      console.log('[InterviewStateManager] summarizeInterview returned:', {
+        hasSummary: !!result.summary,
+        hasConclusion: !!result.conclusion,
+        topStrengthsCount: result.topStrengths?.length || 0,
+        improvementAreasCount: result.improvementAreas?.length || 0
+      });
 
       this.session.result = {
         summary: result.summary,
@@ -475,8 +481,19 @@ export class InterviewStateManager {
         improvementAreas: result.improvementAreas,
       };
 
+      console.log('[InterviewStateManager] Saving session with result:', {
+        sessionId: this.session.sessionId,
+        hasResult: !!this.session.result,
+        resultKeys: this.session.result ? Object.keys(this.session.result) : []
+      });
+      
       this.saveSession();
+      
+      console.log('[InterviewStateManager] Setting generation status to complete');
       resultGenerationStatus.setComplete(this.session.sessionId);
+      
+      console.log('[InterviewStateManager] After setComplete, isGenerating:', 
+        resultGenerationStatus.isCurrentlyGenerating(this.session.sessionId));
 
       return result;
     } catch (error) {

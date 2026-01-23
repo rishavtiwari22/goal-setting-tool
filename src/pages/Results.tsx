@@ -75,17 +75,53 @@ export default function Results() {
   }, [navigate, sessionId]);
 
   useEffect(() => {
-    if (!sessionId) return;
+    let effectiveSessionId = sessionId;
+    
+    if (!effectiveSessionId && session) {
+      effectiveSessionId = session.sessionId;
+      console.log('[Results] No sessionId in URL, using sessionId from session state:', effectiveSessionId);
+    }
+    
+    if (!effectiveSessionId) {
+      const sessionStr = sessionStorage.getItem("interviewSession");
+      if (sessionStr) {
+        try {
+          const parsedSession = JSON.parse(sessionStr) as InterviewSession;
+          effectiveSessionId = parsedSession.sessionId;
+          console.log('[Results] No sessionId in URL, using sessionId from sessionStorage:', effectiveSessionId);
+        } catch (error) {
+          console.error('[Results] Failed to parse session from sessionStorage:', error);
+        }
+      }
+    }
+    
+    if (!effectiveSessionId) {
+      console.log('[Results] No sessionId available, skipping status check');
+      return;
+    }
+
+    console.log('[Results] Setting up status check for sessionId:', effectiveSessionId);
 
     const checkStatus = () => {
-      const generating = resultGenerationStatus.isCurrentlyGenerating(sessionId);
+      console.log('[Results] checkStatus called for sessionId:', effectiveSessionId);
+      const generating = resultGenerationStatus.isCurrentlyGenerating(effectiveSessionId);
+      console.log('[Results] Is generating:', generating);
       setIsGeneratingResult(generating);
 
       if (!generating) {
-        const sessionWithResult = loadInterviewSessionBySessionId(sessionId);
+        console.log('[Results] Not generating, checking localStorage for result');
+        const sessionWithResult = loadInterviewSessionBySessionId(effectiveSessionId);
+        console.log('[Results] Loaded session from localStorage:', {
+          hasSession: !!sessionWithResult,
+          hasResult: !!sessionWithResult?.result,
+          resultKeys: sessionWithResult?.result ? Object.keys(sessionWithResult.result) : []
+        });
+        
         if (sessionWithResult?.result) {
+          console.log('[Results] Found result in localStorage, updating session state');
           setSession((prevSession) => {
             if (prevSession && !prevSession.result) {
+              console.log('[Results] Updating session with result');
               const updatedSession: InterviewSession = {
                 ...prevSession,
                 result: sessionWithResult.result,
@@ -93,24 +129,35 @@ export default function Results() {
               sessionStorage.setItem("interviewSession", JSON.stringify(updatedSession));
               return updatedSession;
             }
+            console.log('[Results] Session already has result or no prevSession');
             return prevSession;
           });
+        } else {
+          console.log('[Results] No result found in localStorage yet');
         }
       }
     };
 
     checkStatus();
+    
+    console.log('[Results] Subscribing to resultGenerationStatus');
     const unsubscribe = resultGenerationStatus.subscribe((isGenerating, currentSessionId) => {
-      if (currentSessionId === sessionId) {
+      console.log('[Results] Subscription callback:', { isGenerating, currentSessionId, effectiveSessionId });
+      if (currentSessionId === effectiveSessionId) {
+        console.log('[Results] Status update matches sessionId, updating state');
         setIsGeneratingResult(isGenerating);
         if (!isGenerating) {
+          console.log('[Results] Generation complete, checking for result');
           checkStatus();
         }
       }
     });
 
-    return unsubscribe;
-  }, [sessionId]);
+    return () => {
+      console.log('[Results] Cleaning up subscription');
+      unsubscribe();
+    };
+  }, [sessionId, session]);
 
   useEffect(() => {
     if (isInvited && invitationId && session?.result) {
