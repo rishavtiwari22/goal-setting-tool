@@ -13,11 +13,9 @@ export function validateEnvironment(): void {
   const requiredVars = [
     'VITE_API_BASE_URL',
     'VITE_API_TOKEN',
-    'VITE_LAMBDA_API_URL',
   ];
 
   const missing: string[] = [];
-  
   for (const varName of requiredVars) {
     const value = import.meta.env[varName];
     if (!value || value.trim() === '') {
@@ -25,11 +23,15 @@ export function validateEnvironment(): void {
     }
   }
 
+  const chatUrl = import.meta.env['VITE_DEEPSEEK_API_URL'] || import.meta.env['VITE_LAMBDA_API_URL'];
+  if (!chatUrl || chatUrl.trim() === '') {
+    missing.push('VITE_DEEPSEEK_API_URL or VITE_LAMBDA_API_URL');
+  }
+
   if (missing.length > 0) {
-    const errorMessage = 
-      `Missing required environment variables:\n${missing.map(v => `  - ${v}`).join('\n')}\n\n` +
+    const errorMessage =
+      `Missing required environment variables:\n${missing.map((v) => `  - ${v}`).join('\n')}\n\n` +
       `Please set these variables in your environment (e.g., Amplify console or .env file).`;
-    
     console.error(errorMessage);
     throw new Error(errorMessage);
   }
@@ -38,7 +40,12 @@ export function validateEnvironment(): void {
 export const ENV = {
   API_BASE_URL: () => getEnvVar('VITE_API_BASE_URL'),
   API_TOKEN: () => getEnvVar('VITE_API_TOKEN'),
-  LAMBDA_API_URL: () => getEnvVar('VITE_LAMBDA_API_URL'),
+  CHAT_API_URL: () => {
+    const url = import.meta.env['VITE_DEEPSEEK_API_URL'];
+    if (url && url.trim() !== '') return url.trim();
+    return getEnvVar('VITE_LAMBDA_API_URL');
+  },
+  LAMBDA_API_URL: () => ENV.CHAT_API_URL(),
   HUGGINGFACE_API_URL: () => {
     const url = import.meta.env['VITE_HUGGINGFACE_API_URL'];
     return url && url.trim() !== '' ? url : '';

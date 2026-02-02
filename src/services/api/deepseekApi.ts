@@ -1,7 +1,7 @@
 import { DecisionResponse, FeedbackResponse } from '../../models/interview';
 import { ENV } from '../../utils/env';
 
-const LAMBDA_API_URL = ENV.LAMBDA_API_URL();
+const CHAT_API_URL = ENV.CHAT_API_URL();
 
 async function* streamResponse(response: Response): AsyncGenerator<string> {
   const reader = response.body?.getReader();
@@ -47,8 +47,7 @@ async function* streamResponse(response: Response): AsyncGenerator<string> {
               metadataSkipped = true;
               yield content;
             }
-          } catch (e) {
-            console.error("Failed to parse SSE data:", e, "Data:", data);
+          } catch {
           }
         }
       }
@@ -66,7 +65,7 @@ export async function makeDecision(
     'Content-Type': 'application/json',
   };
 
-  const response = await fetch(LAMBDA_API_URL, {
+  const response = await fetch(CHAT_API_URL, {
     method: 'POST',
     headers,
     body: JSON.stringify({
@@ -129,15 +128,11 @@ export async function* createQuestion(
   systemMessage: string,
   humanMessage: string
 ): AsyncGenerator<string> {
-  console.log('Creating question...');
-  console.log('System message:', systemMessage);
-  console.log('Human message:', humanMessage);
-
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
 
-  const response = await fetch(LAMBDA_API_URL, {
+  const response = await fetch(CHAT_API_URL, {
     method: 'POST',
     headers,
     body: JSON.stringify({
@@ -180,7 +175,7 @@ export async function createFeedback(
     'Content-Type': 'application/json',
   };
 
-  const response = await fetch(LAMBDA_API_URL, {
+  const response = await fetch(CHAT_API_URL, {
     method: 'POST',
     headers,
     body: JSON.stringify({
@@ -242,9 +237,7 @@ export async function createFeedback(
       currentProjectComplete: result.currentProjectComplete,
       projectsMentioned: result.projectsMentioned,
     };
-  } catch (parseError) {
-    console.error('Failed to parse feedback response:', parseError, 'Content:', content);
-    // Return empty feedback on parse failure
+  } catch {
     return { feedback: '', summary: '' };
   }
 }
@@ -259,13 +252,11 @@ export async function summarizeInterview(
   topStrengths?: Array<{ name: string; description: string }>;
   improvementAreas?: Array<{ name: string; description: string }>;
 }> {
-  console.log('Summarizing interview...');
-
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
 
-  const response = await fetch(LAMBDA_API_URL, {
+  const response = await fetch(CHAT_API_URL, {
     method: 'POST',
     headers,
     body: JSON.stringify({
@@ -299,49 +290,30 @@ export async function summarizeInterview(
   }
 
   const responseText = await response.text();
-  console.log('[summarizeInterview] Raw response text length:', responseText.length);
-  console.log('[summarizeInterview] Raw response preview:', responseText.substring(0, 500));
-  
+
   let data;
   try {
     const lines = responseText.split('\n');
-    console.log('[summarizeInterview] Response has', lines.length, 'lines');
     const jsonLine = lines.find(line => {
       const trimmed = line.trim();
       return trimmed.startsWith('{') && !trimmed.includes('statusCode');
     }) || responseText;
-    console.log('[summarizeInterview] Found JSON line, length:', jsonLine.length);
     data = JSON.parse(jsonLine.trim());
-    console.log('[summarizeInterview] Parsed data structure:', {
-      hasChoices: !!data.choices,
-      choicesLength: data.choices?.length,
-      hasMessage: !!data.choices?.[0]?.message,
-      hasContent: !!data.choices?.[0]?.message?.content
-    });
   } catch (e) {
-    console.error('[summarizeInterview] Failed to parse response lines:', e);
     try {
       data = JSON.parse(responseText);
-      console.log('[summarizeInterview] Parsed entire response as JSON');
     } catch (e2) {
-      console.error('[summarizeInterview] Failed to parse response completely:', e2);
       throw new Error(`Failed to parse response: ${responseText.substring(0, 200)}`);
     }
   }
-  
+
   let content = data.choices?.[0]?.message?.content || '{}';
-  console.log('[summarizeInterview] Extracted content type:', typeof content);
-  console.log('[summarizeInterview] Content length:', content?.length || 0);
-  console.log('[summarizeInterview] Content preview (first 200 chars):', content?.substring(0, 200));
 
   if (!content || typeof content !== 'string') {
-    console.log('[summarizeInterview] Content is not string, converting:', typeof content);
     content = String(content || '{}');
   }
 
   content = content.trim();
-  console.log('[summarizeInterview] After trim, content length:', content.length);
-  console.log('[summarizeInterview] Content starts with:', content.substring(0, 50));
 
   // Handle case where content might already be a JSON string (OpenAI format)
   // Try parsing directly first if it looks like JSON

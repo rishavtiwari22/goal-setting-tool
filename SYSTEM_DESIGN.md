@@ -192,3 +192,65 @@
 **Interview (STS)**: Question: AI stream → onStreamChunk → useStreamingTTS.addChunk → sentence queue → Piper → playback; Interview page pauseListening on TTS start, resumeListening on TTS stop. Answer: user speech → Web Speech (ResetSTTLogic) → 1.5s silence → onSpeechResult → submitAnswer → decision → createQuestion (stream) + createFeedback (background) or end → endAndGenerateSummary.
 
 **Storage**: On session change → localStorage save → SyncManager.syncSession (classify → Firestore or enqueue) → SyncWorker processBatch (critical then normal, 5s debounce); visibility/beforeunload flushSync.
+
+---
+
+## 14. Interview flow (user perspective)
+
+Step-by-step from the moment the user runs the interviewer: APIs, prompts, Piper, STT, and storage. Component details are in the sections referenced below.
+
+### 14.1 Page load and session setup
+
+1. **User navigates to `/interview` or `/interview/:sessionId`** (e.g. from Self Apply or resume).
+2. **Interview page** reads config: from `sessionStorage.interviewConfig` (Self Apply) or, if only `sessionId` in URL, loads session via `loadInterviewSessionBySessionId(sessionId)` or `recoverSessionFromFirebase(email, sessionId)`; builds `InterviewConfig` from session.
+3. **useInterview** (see §11): When `config` is set, creates `InterviewStateManager(config, sessionId)` once. If `sessionId` given, loads session from interviewStorage; if found and ongoing, restores and migrates fields; else or no sessionId, new session (`session_${Date.now()}_${random}`). If existing session has qaHistory, restores `messages` and `currentQuestion` from it. If no existing session or qaHistory empty, calls `startInterview()`.
+4. **Storage**: New session → `saveSession()` → `saveInterviewSessionBySessionId(session, true)` → localStorage `interview_session_${sessionId}`, `addToHistory(session)`; if userId, `syncManager.syncSession(userId, session, true)` (classify → critical: createUserDocument, createSessionDocument; see §9).
+
+### 14.2 First question (kickoff)
+
+5. **startInterview()** calls `manageInterviewState('kickoff', { onChunk })`. `onChunk` in Interview page: updates `currentQuestion` and `messages` in useInterview state, and calls `onStreamChunk(chunk)` which is `addTtsChunk(chunk)` when speech output is enabled.
+6. **InterviewStateManager.kickoff(onChunk)**:
+   - **Input**: Session state (jobTitle, jobDescription, examinationPoints, difficulty, language, remainingTime, currentPhase `'introduction'`, qaHistory `[]`, summary, discussedProjects, introductionQuestionCount `0`, currentProjectQuestionCount `0`).
+   - **Prompt**: `buildCreateQuestionPrompt({ …, decision: 'movenext', qaHistory: [], currentPhase: 'introduction', … })`. System: `CREATE_QUESTION_MOVENEXT_INTRO_SYSTEM` (job_title, job_description, knowledge_points, difficulty, language, remaining_time, intro_question_count 0) — “senior technical interviewer”, 2–3 intro questions, build rapport, generate next introduction question. Human: `formatQASummary([], …)` → `"No previous questions and answers."`.
+   - **API**: `createQuestion(systemMessage, humanMessage)` (see §7.1). POST to `LAMBDA_API_URL`, body `{ model, messages: [{ role: 'system', content }, { role: 'user', content }], stream: true, temperature: 0.5 }`. Response: SSE stream; `streamResponse(response)` skips Lambda metadata line, for each `data: ` line yields `choices[0].delta.content`.
+   - **Output**: Each chunk yielded → `onChunk(chunk)` → Interview page: (a) useInterview accumulates in `currentQuestion` and updates messages list, (b) `addTtsChunk(chunk)`.
+7. **Piper (TTS)** — see §10.2:
+   - **addTtsChunk(chunk)**: Append to `textBuffer`. While buffer has sentence end (`.!?`) or length ≥500: extract sentence/chunk, push to `ttsQueue`, call `processQueue()`.
+   - **processQueue()** → **synthAndPlayChunk(text)**: `ensureReady()` (load Piper voice if needed); split text into tokens (whitespace); `streamTokensToSpeech(tokens, { … })` → Piper synthesizes, Web Audio plays. Callbacks: `onAudioChunkStart` / `onAudioChunkEnd` / `onPlayFinished`.
+   - **Interview page**: `onStartSpeaking` → `pauseListening()` (STT stopped so user does not hear themselves in the mic). `onStopSpeaking` → if not pendingSessionRef and not completed, `resumeListening()` (100ms delay in useSpeechRecognition).
+8. **After kickoff stream ends**: useInterview’s startInterview() awaits the kickoff promise, then calls `onStreamComplete()` → Interview page calls `finishTtsStreaming()`. **finishStreaming**: Flush remaining `textBuffer` into `ttsQueue`, processQueue; poll until queue empty and not processing → set isStreamComplete, `onStopSpeaking()` → `resumeListening()` so user can answer.
+9. **Persistence**: kickoff ends with `saveSession()` → localStorage update, syncManager.syncSession (session doc; usually normal priority after first save).
+
+### 14.3 One answer cycle (after user speaks)
+
+10. **User speaks**. ResetSTTLogic (see §10.1) produces interim then final transcript; useSpeechRecognition sets 1.5s silence timer; on timeout calls `getFullTranscript()`, stops recognition, invokes `onSpeechResult(fullTranscript)`.
+11. **Interview page** `onSpeechResult(text)`: `clearCaption()`, `submitAnswer(text)`.
+12. **submitAnswer(answer)** (useInterview): Appends user message to `messages`. Calls `manageInterviewState('processAnswer', { answer, question: currentQuestion, onChunk })`.
+13. **InterviewStateManager.processAnswer**:
+    - **Append QA**: Push `{ question, answer, score: 0, isCorrect: false, timestamp, questionId }` to `session.qaHistory`. `saveSession()` (localStorage + syncManager.syncSession). If userId, `syncManager.syncQAItem(userId, sessionId, qaItem, currentPhase)` (Firestore subcollection or enqueue; see §9).
+    - **Decision**:
+      - **Input**: question, answer, recentHistory = last 3 from qaHistory, consecutiveIrrelevantCount, currentTopicFollowupCount, remainingTime.
+      - **Prompt**: `buildDecisionPrompt({ question, answer, recentQAHistory, consecutiveIrrelevantCount, currentTopicFollowupCount, remainingTime })`. System: decision rules (movenext / followup / end), counters, “Respond with ONLY ONE WORD: followup OR movenext OR end”. Human: “Context: Remaining Time: N minutes”, recent Q/A, then “Question: … Answer: …”.
+      - **API**: `makeDecision(systemMessage, humanMessage)`. POST same Lambda URL, non-stream, `temperature: 0.1`, `max_tokens: 10`. Parse first JSON line, read `choices[0].message.content`, normalize to lowercase; first of `followup`|`movenext`|`end` wins; default `movenext`. **applyCounterLogic**: e.g. end → increment irrelevant count, return `retry` until >2 then end with goodbye; followup → increment topic followup, force movenext if ≥3; movenext → reset both counters. **Output**: `DecisionResponse { decision, feedback? }`.
+    - If `decision === 'end'`: return `{ decision }`; caller (useInterview) will then run end flow (step 18).
+14. **Next question** (when decision is followup/movenext/retry):
+    - **Input**: decision, currentQuestion, currentAnswer, session (currentPhase, qaHistory including this QA, summary, discussedProjects, phase counts, consecutiveIrrelevantCount for retry).
+    - **Prompt**: `buildCreateQuestionPrompt({ decision, question, answer, qaHistory, currentPhase, introductionQuestionCount, currentProjectQuestionCount, discussedProjects, consecutiveIrrelevantCount, … })`. System template: by phase + decision (e.g. followup intro/project/technical, movenext intro/project/technical, retry with warning_message/warning_instruction, bad_answer_count). Human: `formatQASummary(qaHistory, useSummary, summary)` or for followup “Current Question: … Candidate's Answer: …” + context.
+    - **API**: `createQuestion(systemMessage, humanMessage)` — same streaming POST as kickoff. Chunks → `onChunk(chunk)` → same path as step 6–7: useInterview state + `addTtsChunk(chunk)` → Piper sentence queue → synthesis → playback; pauseListening on TTS start, resumeListening on TTS stop.
+    - **Output**: Full question text returned; session saved.
+15. **Feedback (background)** — not awaited: `createFeedback()`:
+    - **Increment**: introductionQuestionCount or projectQuestionCount or technicalQuestionCount + currentProjectQuestionCount (by currentPhase).
+    - **Prompt**: `buildCreateFeedbackPrompt({ jobTitle, knowledgePoints, qaHistory, summary, currentPhase, discussedProjects, introductionQuestionCount, currentProjectQuestionCount })`. System: per-phase (intro: stay intro if <2 questions, else project; project: feedback + summary + nextPhase project|technical; technical: feedback, summary, nextPhase, currentProjectComplete, projectsMentioned). Human: `formatQASummary(qaHistory, useSummary, summary)`.
+    - **API**: `createFeedback(systemMessage, humanMessage)`. POST same Lambda, non-stream, `response_format: { type: 'json_object' }`, `temperature: 0.3`. Parse JSON from content → `{ feedback, summary, nextPhase?, currentProjectComplete?, projectsMentioned? }`.
+    - **Session update**: Append feedback to feedbackHistory; set session.summary; set currentPhase from nextPhase; if currentProjectComplete, advance currentProjectIndex, reset currentProjectQuestionCount; if projectsMentioned, update discussedProjects; optional syncManager.syncFeedbackItem; saveSession().
+16. **useInterview after processAnswer**: If `result.decision.feedback` is set (e.g. goodbye on end), calls `onFeedback(result.decision.feedback)` → Interview page: `addTtsChunk(feedback)`, `finishTtsStreaming()` so user hears the message. If `result.decision === 'end'`: set completed, append feedback message to messages, then `manageInterviewState('end')` (step 18). If `result.nextQuestion` contains "【Interview ended", handleTimeUp() (same end path).
+
+### 14.4 End of interview
+
+17. **Decision 'end'** (or time up / explicit “end the call”): User may hear goodbye via onFeedback → addTtsChunk + finishTtsStreaming; onStopSpeaking can set pendingSessionRef and navigate to results after TTS (Interview page).
+18. **manageInterviewState('end')** → **endAndGenerateSummary()**:
+    - **Session**: status `'completed'`, endTime set.
+    - **Prompt**: `buildSummarizePrompt({ jobTitle, jobDescription, knowledgePoints, qaHistory, interviewTime, language })`. System: “world-class software technology expert”, job description, knowledge points, duration, language; output JSON only (summary, conclusion, topStrengths, improvementAreas; exact structure in prompt). Human: full `formatQAHistory(qaHistory)`.
+    - **API**: `summarizeInterview(systemMessage, humanMessage)`. POST same Lambda, non-stream, `response_format: { type: 'json_object' }`, `temperature: 0.5`. Parse JSON (strip metadata/code blocks if needed); return summary, score, conclusion, topStrengths, improvementAreas; on parse error return safe defaults.
+    - **Session**: Set session.result (summary, score, conclusion, totalQuestions, correctAnswers, elapsedTime, topStrengths, improvementAreas). resultGenerationStatus.setGenerating(sessionId); then setComplete(sessionId). saveSession() → localStorage + syncManager.syncSession (critical: status completed, result set).
+19. **useInterview**: saveInterviewResult(sessionId, result) (update session in storage, sync, cleanupSyncedSessions). onComplete(session) → Interview page: store session in sessionStorage, set pendingSessionRef if TTS enabled; when TTS finishes goodbye, onStopSpeaking navigates to `/results` (or timeout 5s). Results page loads by sessionId and shows session.result.
