@@ -79,11 +79,13 @@ Decision Rules (in priority order):
    - This is the FIRST vague answer on this topic
 
 3. END THE INTERVIEW IMMEDIATELY if:
-   - User explicitly requests to end: "end the call", "end call", "stop", "end", "quit", "exit", "done", "end interview", "stop interview", etc.
    - Candidate has given ${consecutiveCount >= 2 ? 'MULTIPLE' : 'some'} garbage answers AND this answer shows:
      * Refusal to engage (e.g., "I don't know", "never", "I won't")
    - After 3+ completely garbage answers, the candidate is clearly not a fit → END
    - Remaining Time is 0 or less → END
+
+4. STOP THE INTERVIEW IMMEDIATELY if:
+   - User explicitly requests to end: "end the call", "end call", "stop", "end", "quit", "exit", "done", "end interview", "stop interview", "bye", "goodbye", "i am done", "finish", "thank you bye", etc.
 
 ${irrelevantInfo}${followupInfo}
 
@@ -91,7 +93,7 @@ IMPORTANT: Do NOT keep asking follow-ups to an unqualified or disengaged candida
 ${consecutiveCount >= 2 ? ' WARNING: Multiple non-substantive answers detected. Strongly consider "end" if this answer also lacks substance.' : ''}
 
 Respond with ONLY ONE WORD - your decision:
-followup OR movenext OR end`;
+followup OR movenext OR end OR stop`;
 
   let humanMessage = `Question: ${params.question}\nAnswer: ${params.answer}`;
 
@@ -227,7 +229,7 @@ export interface BuildCreateQuestionPromptParams {
   language: string;
   remainingTime: number;
   currentPhase: InterviewPhase;
-  decision: 'followup' | 'movenext' | 'retry';
+  decision: 'followup' | 'movenext' | 'retry' | 'stop';
   question?: string;
   answer?: string;
   qaHistory: QAHistoryItem[];

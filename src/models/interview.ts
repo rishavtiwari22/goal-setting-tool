@@ -82,7 +82,7 @@ export interface InterviewResult {
 // }
 
 export interface DecisionResponse {
-  decision: 'followup' | 'movenext' | 'end' | 'retry';
+  decision: 'followup' | 'movenext' | 'end' | 'retry' | 'stop';
   feedback?: string;  // Optional feedback message (e.g., thank you when user ends call)
 }
 

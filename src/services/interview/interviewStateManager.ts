@@ -176,12 +176,20 @@ export class InterviewStateManager {
 
     // Check if user explicitly wants to end the call - bypass all retry logic
     const lowerAnswer = answer.toLowerCase().trim();
-    const endCallPhrases = ['end the call', 'end call', 'end interview', 'stop interview', 'quit interview', 'exit interview', 'i want to end', 'please end'];
+    const endCallPhrases = [
+      'end the call', 'end call', 'end interview', 'stop interview',
+      'quit interview', 'exit interview', 'i want to end', 'please end',
+      'bye', 'goodbye', 'i am done', 'finish', 'thank you bye', 'i\'m done',
+      'stop now', 'end now', 'close interview', 'wrap up'
+    ];
     const isExplicitEndRequest = endCallPhrases.some(phrase => lowerAnswer.includes(phrase));
 
     if (isExplicitEndRequest) {
-      console.log('User explicitly requested to end the call. Ending interview immediately.');
-      return { decision: 'end', feedback: 'Thank you for participating in this interview! It was great speaking with you. We will now generate your interview summary.' };
+      console.log('User explicitly requested to end the call. Returning STOP decision.');
+      return {
+        decision: 'end',
+        feedback: 'Thank you for participating in this interview! It was great speaking with you. We will now generate your interview summary.'
+      };
     }
 
     // Phase 2: Include recent history and counters in decision prompt
@@ -200,14 +208,14 @@ export class InterviewStateManager {
       let decisionResult = await makeDecision(systemMessage, humanMessage);
 
       // Phase 2: Apply counter logic for irrelevant answer handling
-      decisionResult = this.applyCounterLogic(decisionResult);
+      decisionResult = this.applyCounterLogic(decisionResult, isExplicitEndRequest);
 
       return decisionResult;
     } catch (error) {
       console.error('Error making decision, retrying once:', error);
       try {
         let decisionResult = await makeDecision(systemMessage, humanMessage);
-        decisionResult = this.applyCounterLogic(decisionResult);
+        decisionResult = this.applyCounterLogic(decisionResult, isExplicitEndRequest);
         return decisionResult;
       } catch (retryError) {
         console.error('Error making decision after retry:', retryError);
@@ -217,10 +225,19 @@ export class InterviewStateManager {
   }
 
   // Phase 2: Apply counter logic and determine if we should force transition or end
-  private applyCounterLogic(decisionResult: DecisionResponse): DecisionResponse {
-    // If AI decided to end, check if we can retry instead
+  private applyCounterLogic(decisionResult: DecisionResponse, isExplicitEndRequest: boolean = false): DecisionResponse {
+    // Priority 1: If user explicitly requested to stop or LLM decided to stop, end immediately
+    if (decisionResult.decision === 'stop' || (decisionResult.decision === 'end' && isExplicitEndRequest)) {
+      console.log('End decision confirmed (STOP/Explicit End). Ending interview.');
+      return {
+        decision: 'end',
+        feedback: decisionResult.feedback || 'Thank you for your time today. I appreciate the insights you shared. We will now wrap up and generate your interview summary. Goodbye!'
+      };
+    }
+
+    // If AI decided to end (performance based), check if we can retry instead
     if (decisionResult.decision === 'end') {
-      // Allow up to 2 retries (so 3 bad answers total) before actually ending
+      // Otherwise, assume it's a performance-based "end" and allow up to 2 retries
       this.session.consecutiveIrrelevantCount++;
 
       console.log(`Bad answer detected. Count: ${this.session.consecutiveIrrelevantCount}/${MAX_CONSECUTIVE_IRRELEVANT}`);
@@ -278,7 +295,7 @@ export class InterviewStateManager {
   }
 
   async createQuestion(
-    decision: 'followup' | 'movenext' | 'retry',
+    decision: 'followup' | 'movenext' | 'retry' | 'stop',
     currentQuestion: string,
     currentAnswer: string,
     onChunk: (content: string) => void
@@ -486,13 +503,13 @@ export class InterviewStateManager {
         hasResult: !!this.session.result,
         resultKeys: this.session.result ? Object.keys(this.session.result) : []
       });
-      
+
       this.saveSession();
-      
+
       console.log('[InterviewStateManager] Setting generation status to complete');
       resultGenerationStatus.setComplete(this.session.sessionId);
-      
-      console.log('[InterviewStateManager] After setComplete, isGenerating:', 
+
+      console.log('[InterviewStateManager] After setComplete, isGenerating:',
         resultGenerationStatus.isCurrentlyGenerating(this.session.sessionId));
 
       return result;
@@ -547,7 +564,7 @@ export class InterviewStateManager {
 
         const decision = await this.decision(params.question, params.answer);
 
-        if (decision.decision === 'end') {
+        if (decision.decision === 'end' || decision.decision === 'stop') {
           return { decision };
         }
 

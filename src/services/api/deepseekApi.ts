@@ -114,11 +114,11 @@ export async function makeDecision(
       throw new Error(`Failed to parse response: ${responseText.substring(0, 200)}`);
     }
   }
-  
+
   const content = (data.choices?.[0]?.message?.content || '').trim().toLowerCase();
 
   // Parse plain text decision - just extract the decision word
-  const validDecisions = ['followup', 'movenext', 'end'];
+  const validDecisions = ['followup', 'movenext', 'end', 'stop'];
   const decision = validDecisions.find(d => content.includes(d)) || 'movenext';
 
   return { decision: decision as 'followup' | 'movenext' | 'end' };
@@ -224,7 +224,7 @@ export async function createFeedback(
       throw new Error(`Failed to parse response: ${responseText.substring(0, 200)}`);
     }
   }
-  
+
   const content = data.choices?.[0]?.message?.content || '{}';
 
   // Safe JSON parse with error handling
@@ -335,10 +335,10 @@ export async function summarizeInterview(
         summaryLength: directParse.summary?.length || 0,
         conclusionLength: directParse.conclusion?.length || 0
       });
-      
+
       // Check if it has the expected structure (summary or conclusion, or topStrengths/improvementAreas)
       if (directParse && (
-        directParse.summary !== undefined || 
+        directParse.summary !== undefined ||
         directParse.conclusion !== undefined ||
         Array.isArray(directParse.topStrengths) ||
         Array.isArray(directParse.improvementAreas)
@@ -405,10 +405,10 @@ export async function summarizeInterview(
     }
 
     // More lenient validation - accept if we have any of the expected fields
-    const hasValidData = result.summary !== undefined || 
-                        result.conclusion !== undefined ||
-                        Array.isArray(result.topStrengths) ||
-                        Array.isArray(result.improvementAreas);
+    const hasValidData = result.summary !== undefined ||
+      result.conclusion !== undefined ||
+      Array.isArray(result.topStrengths) ||
+      Array.isArray(result.improvementAreas);
 
     console.log('[summarizeInterview] Validation check:', {
       hasValidData,
@@ -430,14 +430,14 @@ export async function summarizeInterview(
       topStrengths: Array.isArray(result.topStrengths) ? result.topStrengths : [],
       improvementAreas: Array.isArray(result.improvementAreas) ? result.improvementAreas : [],
     };
-    
+
     console.log('[summarizeInterview] Returning final result:', {
       summaryLength: finalResult.summary.length,
       conclusionLength: finalResult.conclusion.length,
       topStrengthsCount: finalResult.topStrengths.length,
       improvementAreasCount: finalResult.improvementAreas.length
     });
-    
+
     return finalResult;
   } catch (parseError) {
     console.error('Failed to parse summarize response:', parseError);
