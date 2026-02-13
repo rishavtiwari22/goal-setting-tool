@@ -786,11 +786,48 @@ export default function SelfApply() {
   };
 
   const handleStartInterview = async () => {
-    if (!userId) return toast.error("User ID not found");
-    
-    // Don't block navigation - voice will be prepared in Interview component if needed
-    // This prevents UI freezing on button click
-    navigate("/interview");
+    if (!userId) {
+      toast.error("User ID not found");
+      return;
+    }
+
+    if (!selectedJobId) {
+      toast.error("Please select a job role first");
+      return;
+    }
+
+    try {
+      const selectedJob = jobs.find((j) => j.job_id === selectedJobId);
+      if (!selectedJob) {
+        throw new Error("Selected job not found");
+      }
+
+      const interviewConfig = {
+        userId,
+        jobId: selectedJob.job_id,
+        jobTitle: selectedJob.job_title,
+        jobDescription: selectedJob.job_description,
+        interviewTime: 10, // Default 10 minutes
+        language: "English",
+        difficulty: "medium",
+        examinationPoints: [
+          ...(selectedJob.technical_skills || []),
+          ...(selectedJob.soft_skills || [])
+        ],
+      };
+
+      sessionStorage.setItem(
+        "interviewConfig",
+        JSON.stringify(interviewConfig)
+      );
+
+      // Don't block navigation - voice will be prepared in Interview component if needed
+      // This prevents UI freezing on button click
+      navigate("/interview");
+    } catch (error) {
+      console.error("Error starting interview:", error);
+      toast.error((error as Error).message || "Failed to start interview");
+    }
   };
 
   return (
