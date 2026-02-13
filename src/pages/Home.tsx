@@ -204,11 +204,8 @@ import { toast } from "sonner";
 import { getEmailFromJWT, isValidJWTFormat } from "../utils/jwt";
 import { motion } from "framer-motion"; 
 import { Briefcase, BrainCircuit, Code2 } from "lucide-react";
-<<<<<<< HEAD
 import Header from "@/components/Header";
-=======
 import InterviewCard from "@/components/InterviewCard";
->>>>>>> 3007f2a914f42dfaab995f388578a159361d497e
 
 export default function Home() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -302,36 +299,6 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               whileHover={!type.comingSoon ? { y: -8 } : {}}
-<<<<<<< HEAD
-              onClick={() => handleCardClick(type.id, type.comingSoon)}
-              className={`
-                group relative p-8 rounded-[2rem] border-2 transition-all cursor-pointer flex flex-col min-h-[240px] md:h-[260px] bg-white
-                ${selectedType === type.id ? "border-[#2B5E2B] ring-4 ring-[#E6F6EF]" : "border-slate-100 hover:border-slate-300 shadow-sm"}
-                ${type.comingSoon && "opacity-80"}
-              `}
-            >
-              <div className="flex items-center gap-4 mb-5">
-                <div className={`p-4 rounded-2xl shrink-0 ${type.color}`}>
-                  {type.icon}
-                </div>
-                <div className="flex flex-col">
-                  <h4 className={`text-lg md:text-xl font-bold leading-tight ${type.comingSoon ? 'text-slate-700' : 'text-[#2B5E2B]'}`}>
-                    {type.title}
-                  </h4>
-                  {type.comingSoon && (
-                    <div className="mt-2">
-                      <span className="px-3 py-1 bg-[#FF9900] text-white text-[9px] font-black uppercase tracking-wider rounded-full shadow-sm inline-block">
-                        Coming Soon
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <p className="text-slate-500 text-sm leading-relaxed font-medium">
-                {type.description}
-              </p>
-=======
             >
               <InterviewCard
                 icon={type.icon}
@@ -341,7 +308,6 @@ export default function Home() {
                 isSelected={selectedType === type.id}
                 comingSoon={type.comingSoon}
               />
->>>>>>> 3007f2a914f42dfaab995f388578a159361d497e
             </motion.div>
           ))}
         </div>
