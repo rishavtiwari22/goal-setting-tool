@@ -714,7 +714,9 @@ import {
   Terminal,
   Globe,
   Layout,
-  Info
+  Info,
+  Clock,
+  ArrowRight
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
@@ -735,6 +737,7 @@ export default function SelfApply() {
   const voiceReadyRef = useRef(false);
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchJobs();
@@ -845,26 +848,17 @@ export default function SelfApply() {
                         className="opacity-0 custom-slide-up"
                         style={{ animationDelay: `${index * 150}ms`, animationFillMode: 'forwards' }}
                       >
-                        <div className="flex items-center gap-4 mb-6">
-                          <div className="p-4 bg-[#E6F6EF] rounded-2xl">
-                            {getJobIcon(job.job_title)}
-                          </div>
-                          <h3 className="text-[#2B5E2B] font-black text-xl leading-tight group-hover:text-black transition-colors">{job.job_title}</h3>
-                        </div>
-
-                        <p className="text-gray-500 text-sm leading-relaxed mb-8 line-clamp-3 flex-1 font-medium">
-                          {job.job_description || "Sharpen your skills for this specific role with a simulated high-pressure technical interview."}
-                        </p>
-                        
-                        <div className="pt-6 border-t border-gray-50 flex items-center justify-between text-gray-400 font-bold">
-                          <div className="flex items-center gap-2">
-                            <Clock size={16} />
-                            <span className="text-[10px] uppercase tracking-widest">5-10 mins</span>
-                          </div>
-                          <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-[#2B5E2B] group-hover:scale-110 transition-all duration-300">
-                            <ArrowRight size={20} className="text-gray-400 group-hover:text-white transition-colors" />
-                          </div>
-                        </div>
+                        <InterviewCard
+                          icon={getJobIcon(job.job_title)}
+                          title={job.job_title}
+                          description={job.job_description || "Sharpen your skills for this specific role with a simulated high-pressure technical interview."}
+                          estimatedTime="5-10 mins"
+                          onClick={() => {
+                            setSelectedJobId(job.job_id);
+                            setTimeout(() => setStep("speakerandmiccheck"), 300);
+                          }}
+                          isSelected={selectedJobId === job.job_id}
+                        />
                       </div>
                     ))}
                   </div>
