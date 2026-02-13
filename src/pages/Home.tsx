@@ -204,6 +204,7 @@ import { toast } from "sonner";
 import { getEmailFromJWT, isValidJWTFormat } from "../utils/jwt";
 import { motion } from "framer-motion"; 
 import { Briefcase, BrainCircuit, Code2 } from "lucide-react";
+import Header from "@/components/Header";
 
 export default function Home() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -213,7 +214,7 @@ export default function Home() {
   const interviewTypes = [
     {
       id: "1-1-interview",
-      icon: <Briefcase className="w-6 h-6 text-[#00A35C]" />,
+      icon: <Briefcase className="w-6 h-6 text-[#2B5E2B]" />,
       title: "1:1 Interview",
       description: "Test your knowledge, and practice your communication skills with an AI assistant.",
       comingSoon: false,
@@ -221,7 +222,7 @@ export default function Home() {
     },
     {
       id: "flowchart",
-      icon: <BrainCircuit className="w-6 h-6 text-[#00A35C]" />,
+      icon: <BrainCircuit className="w-6 h-6 text-[#2B5E2B]" />,
       title: "Critical Thinking with Flowchart",
       description: "Design flowcharts to test your problem-solving, algorithm, and process-thinking skills",
       comingSoon: true,
@@ -229,7 +230,7 @@ export default function Home() {
     },
     {
       id: "competitive-coding",
-      icon: <Code2 className="w-6 h-6 text-[#00A35C]" />,
+      icon: <Code2 className="w-6 h-6 text-[#2B5E2B]" />,
       title: "Competitive coding",
       description: "Technical interview to solve algorithmic and data-structure problems under time pressure.",
       comingSoon: true,
@@ -264,32 +265,9 @@ export default function Home() {
 
   return (
     // min-h-screen allows the page to grow, overflow-y-auto enables scrolling
-    <div className="min-h-screen w-full bg-[#F8FAFC] flex flex-col font-sans overflow-y-auto">
+    <div className="min-h-screen w-full bg-[#FBFAF8] flex flex-col font-sans overflow-y-auto">
       
-      {/* Header with Centered Text */}
-      <header className="sticky top-0 z-50 shrink-0 w-full border-b border-slate-200 bg-white/90 backdrop-blur-sm shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 grid grid-cols-3 items-center">
-          {/* Logo Left */}
-          <div className="flex justify-start">
-            <img 
-              src="/assets/image 1.svg" 
-              alt="Logo" 
-              className="h-8 w-auto object-contain cursor-pointer"
-              onClick={() => (window.location.href = "https://app.zuvy.org")}
-            />
-          </div>
-
-          {/* Centered Text */}
-          <div className="flex justify-center text-center">
-            <h1 className="text-[10px] md:text-sm font-bold text-slate-800 tracking-tight leading-tight">
-              Zoe: Your Learning Assistant
-            </h1>
-          </div>
-
-          {/* Right Spacer */}
-          <div className="flex justify-end" />
-        </div>
-      </header>
+      <Header />
 
       {/* Main UI - py-10 added for breathing room on mobile */}
       <main className="flex-1 flex flex-col items-center justify-center max-w-6xl mx-auto px-6 py-10 w-full text-center">
@@ -320,7 +298,7 @@ export default function Home() {
               onClick={() => handleCardClick(type.id, type.comingSoon)}
               className={`
                 group relative p-8 rounded-[2rem] border-2 transition-all cursor-pointer flex flex-col min-h-[240px] md:h-[260px] bg-white
-                ${selectedType === type.id ? "border-[#00A35C] ring-4 ring-[#E6F6EF]" : "border-slate-100 hover:border-slate-300 shadow-sm"}
+                ${selectedType === type.id ? "border-[#2B5E2B] ring-4 ring-[#E6F6EF]" : "border-slate-100 hover:border-slate-300 shadow-sm"}
                 ${type.comingSoon && "opacity-80"}
               `}
             >
@@ -329,7 +307,7 @@ export default function Home() {
                   {type.icon}
                 </div>
                 <div className="flex flex-col">
-                  <h4 className={`text-lg md:text-xl font-bold leading-tight ${type.comingSoon ? 'text-slate-700' : 'text-[#00A35C]'}`}>
+                  <h4 className={`text-lg md:text-xl font-bold leading-tight ${type.comingSoon ? 'text-slate-700' : 'text-[#2B5E2B]'}`}>
                     {type.title}
                   </h4>
                   {type.comingSoon && (

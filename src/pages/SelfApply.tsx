@@ -715,17 +715,17 @@ import {
   Terminal,
   Globe,
   Layout,
-  Stars,
   Info
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import Header from "@/components/Header";
 
 const getJobIcon = (title: string) => {
   const t = title.toLowerCase();
-  if (t.includes('javascript') || t.includes('react')) return <Layout className="text-yellow-500" size={26} />;
-  if (t.includes('frontend')) return <Globe className="text-blue-500" size={26} />;
-  if (t.includes('python')) return <Terminal className="text-green-600" size={26} />;
-  return <Code2 className="text-[#2C5F2D]" size={26} />;
+  if (t.includes('javascript') || t.includes('react')) return <Layout className="text-[#2B5E2B]" size={26} />;
+  if (t.includes('frontend')) return <Globe className="text-[#2B5E2B]" size={26} />;
+  if (t.includes('python')) return <Terminal className="text-[#2B5E2B]" size={26} />;
+  return <Code2 className="text-[#2B5E2B]" size={26} />;
 };
 
 export default function SelfApply() {
@@ -792,7 +792,7 @@ export default function SelfApply() {
   };
 
   return (
-    <div className="h-screen bg-white flex flex-col font-sans overflow-hidden relative">
+    <div className="h-screen bg-[#FBFAF8] flex flex-col font-sans overflow-hidden relative">
       
       {/* --- FLOATING NOTE (Top Right) --- */}
       <div className="absolute top-20 right-8 z-20 hidden md:block opacity-0 custom-fade-in" style={{ animationDelay: '800ms', animationFillMode: 'forwards' }}>
@@ -802,16 +802,7 @@ export default function SelfApply() {
         </Badge>
       </div>
 
-      {/* --- HEADER --- */}
-      <header className="shrink-0 border-b border-gray-100 py-6 bg-white z-10">
-        <div className="flex items-center justify-center gap-3">
-          <Stars className="text-yellow-400 fill-yellow-400 animate-pulse" size={22} />
-          <h1 className="text-xl font-black text-gray-900 tracking-tighter uppercase">
-            Zoe: Your Learning Assistant
-          </h1>
-          <Sparkles className="text-blue-400" size={20} />
-        </div>
-      </header>
+      <Header />
 
       {/* --- MAIN AREA --- */}
       <main className="flex-1 flex flex-col px-12 py-4 relative overflow-y-auto md:overflow-hidden">
@@ -844,7 +835,7 @@ export default function SelfApply() {
               </h2>
 
               {loadingJobs ? (
-                <Spinner className="text-[#2C5F2D]" />
+                <Spinner className="text-[#2B5E2B]" />
               ) : (
                 <div className="w-full flex flex-col">
                   {/* Job Cards */}
@@ -857,10 +848,10 @@ export default function SelfApply() {
                         style={{ animationDelay: `${index * 150}ms`, animationFillMode: 'forwards' }}
                       >
                         <div className="flex items-center gap-4 mb-6">
-                          <div className="p-3 bg-gray-50 rounded-2xl group-hover:bg-green-50">
-                              {getJobIcon(job.job_title)}
+                          <div className="p-4 bg-[#E6F6EF] rounded-2xl">
+                            {getJobIcon(job.job_title)}
                           </div>
-                          <h3 className="text-[#2C5F2D] font-black text-xl leading-tight group-hover:text-black transition-colors">{job.job_title}</h3>
+                          <h3 className="text-[#2B5E2B] font-black text-xl leading-tight group-hover:text-black transition-colors">{job.job_title}</h3>
                         </div>
 
                         <p className="text-gray-500 text-sm leading-relaxed mb-8 line-clamp-3 flex-1 font-medium">
@@ -872,7 +863,7 @@ export default function SelfApply() {
                             <Clock size={16} />
                             <span className="text-[10px] uppercase tracking-widest">5-10 mins</span>
                           </div>
-                          <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-[#2C5F2D] group-hover:scale-110 transition-all duration-300">
+                          <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-[#2B5E2B] group-hover:scale-110 transition-all duration-300">
                             <ArrowRight size={20} className="text-gray-400 group-hover:text-white transition-colors" />
                           </div>
                         </div>
@@ -888,7 +879,7 @@ export default function SelfApply() {
                     <div className="flex justify-center">
                       <Button
                         onClick={() => setIsCreateJobModalOpen(true)}
-                        className="bg-[#2C5F2D] hover:bg-[#1a3a1b] text-white font-black px-8 py-4 h-auto rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2 border-b-4 border-[#1a3a1b]"
+                        className="bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-black px-8 py-4 h-auto rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2 border-b-4 border-[#1a3a1b]"
                       >
                         <Plus size={18} />
                         <span className="text-sm uppercase tracking-wider">Create Custom Interview</span>
@@ -902,7 +893,7 @@ export default function SelfApply() {
             /* --- SYSTEM CHECK UI (SCREENSHOT STYLE) --- */
             <div className="w-full max-w-3xl custom-zoom-in mt-6 zoe-hardware-wrapper">
                <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-[0_20px_60px_rgba(0,0,0,0.1)] overflow-hidden">
-                  <div className="bg-[#2C5F2D] p-8 text-white flex items-center px-10">
+                  <div className="bg-[#2B5E2B] p-8 text-white flex items-center px-10">
                     <h3 className="text-xl font-black flex items-center gap-3">
                       <Laptop size={24} className="text-green-300" /> System Check
                     </h3>
@@ -969,7 +960,7 @@ export default function SelfApply() {
         }
 
         .zoe-hardware-wrapper .p-4.border:hover, .zoe-hardware-wrapper .p-6.border:hover {
-            border-color: #2C5F2D !important;
+            border-color: #2B5E2B !important;
             box-shadow: 0 12px 30px rgba(44,95,45,0.12) !important;
             animation: none;
         }
