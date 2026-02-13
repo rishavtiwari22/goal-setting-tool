@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import Header from "@/components/Header";
 
 interface InterviewFeedbackProps {
   onSubmit: (feedback: {
@@ -56,28 +57,31 @@ export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#FBFAF8] flex flex-col items-center justify-center p-4 md:p-6">
-      <div className="w-full max-w-4xl space-y-6 md:space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-3 md:space-y-4">
-          <div className="relative inline-block mb-3 md:mb-4">
-            <div className="absolute inset-0 bg-green-100 blur-3xl rounded-full opacity-40"></div>
-            <video
-              src="/assets/thoughtbubble.mp4"
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="relative w-20 h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 object-contain"
-            />
+    <div className="min-h-screen bg-[#FBFAF8] flex flex-col">
+      <Header />
+      
+      <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-6">
+        <div className="w-full max-w-4xl space-y-6 md:space-y-8">
+          {/* Header */}
+          <div className="text-center space-y-3 md:space-y-4">
+            <div className="relative inline-block mb-3 md:mb-4">
+              <div className="absolute inset-0 bg-green-100 blur-3xl rounded-full opacity-40"></div>
+              <video
+                src="/assets/thoughtbubble.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="relative w-20 h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 object-contain"
+              />
+            </div>
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-gray-900 tracking-tight px-2">
+              Your Feedback Matters!
+            </h1>
+            <p className="text-sm md:text-base text-slate-600 font-medium max-w-2xl mx-auto px-4">
+              Help us improve Zoe by sharing your experience
+            </p>
           </div>
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-gray-900 tracking-tight px-2">
-            Your Feedback Matters!
-          </h1>
-          <p className="text-sm md:text-base text-slate-600 font-medium max-w-2xl mx-auto px-4">
-            Help us improve Zoe by sharing your experience
-          </p>
-        </div>
 
         {/* Feedback Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -187,6 +191,7 @@ export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
         <p className="text-center text-xs text-slate-400 font-medium px-4">
           Your feedback helps us create better interview experiences
         </p>
+      </div>
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/accordion";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { useNavigate } from "react-router-dom";
+import Header from "@/components/Header";
 
 interface TestResult {
   id: string;
@@ -416,37 +417,24 @@ export const TestResults: React.FC<TestResultsProps> = ({
   };
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-[#FBFAF8]">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="relative w-full px-4 md:px-6 py-3 flex items-center justify-center">
-          <button
-            onClick={() => navigate("/")}
-            className="absolute left-4 md:left-6 p-2 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-slate-100 transition-all"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          <h1 className="text-base md:text-lg font-bold text-gray-900">
-            Zoe: Your Learning Assistant
-          </h1>
-        </div>
-      </header>
+    <div className="min-h-screen w-full overflow-x-hidden bg-[#FBFAF8] flex flex-col">
+      <Header />
 
-      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-12 py-4 md:py-6">
+      <div className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-12 py-4 md:py-6">
         {/* Top Action Bar */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             <img 
               src="/assets/zoe-talking 1.svg" 
               alt="Zoe" 
               className="w-8 h-8 md:w-10 md:h-10 shrink-0 object-contain"
             />
-            <h1 className="text-base md:text-lg lg:text-xl font-bold text-gray-900">
+            <h1 className="text-base md:text-lg lg:text-xl font-bold text-gray-900 break-words">
               {userName ? `Great start, ${userName}!` : "Interview Complete!"}
             </h1>
           </div>
           <Button
-            className="bg-[#2B5E2B] text-white font-semibold hover:bg-[#1a3a1b] hover:scale-[1.02] transition-all rounded-xl px-5 py-2 shadow-lg text-sm whitespace-nowrap"
+            className="bg-[#2B5E2B] text-white font-semibold hover:bg-[#1a3a1b] hover:scale-[1.02] transition-all rounded-xl px-5 py-2 shadow-lg text-sm whitespace-nowrap shrink-0"
             onClick={() => (window.location.href = "/")}
           >
             <img
@@ -459,11 +447,11 @@ export const TestResults: React.FC<TestResultsProps> = ({
         </div>
 
         {/* Interview Summary Card */}
-        <div className="bg-white shadow-sm rounded-2xl border-2 border-slate-200 p-4 md:p-5 mb-4 md:mb-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-3">
+        <div className="bg-white shadow-sm rounded-2xl border-2 border-slate-200 p-4 md:p-5 mb-4 md:mb-6 min-w-0">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-3 min-w-0">
             <div className="flex items-center gap-3 min-w-0">
               <img src="/assets/summary.png" alt="" className="w-10 h-10 md:w-12 md:h-12 shrink-0 object-contain" />
-              <h2 className="text-base md:text-lg font-bold text-gray-900">
+              <h2 className="text-base md:text-lg font-bold text-gray-900 break-words">
                 Interview Summary
               </h2>
             </div>
@@ -481,16 +469,16 @@ export const TestResults: React.FC<TestResultsProps> = ({
         </div>
 
         {/* Top Strengths and Improvement Areas - Side by Side */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 min-w-0">
           {/* Top Strengths Card */}
           <div className="bg-white shadow-sm rounded-2xl border-2 border-slate-200 p-4 md:p-5 hover:shadow-lg transition-all duration-300 min-w-0">
             <div className="flex items-center gap-3 mb-4 min-w-0">
               <img src="/assets/assessment.png" alt="" className="w-10 h-10 md:w-12 md:h-12 shrink-0 object-contain" />
-              <h2 className="text-base md:text-lg font-bold text-gray-900">
+              <h2 className="text-base md:text-lg font-bold text-gray-900 break-words">
                 Top Strengths
               </h2>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-3 min-w-0">
               {displayData.topStrengths.length > 0 ? (
                 displayData.topStrengths.map((item, i) => (
                   <div key={i} className="bg-[#E6F6EF] rounded-xl p-3 border-2 border-[#2B5E2B]/20 min-w-0">
@@ -512,11 +500,11 @@ export const TestResults: React.FC<TestResultsProps> = ({
           <div className="bg-white shadow-sm rounded-2xl border-2 border-slate-200 p-4 md:p-5 hover:shadow-lg transition-all duration-300 min-w-0">
             <div className="flex items-center gap-3 mb-4 min-w-0">
               <img src="/assets/conclusion.png" alt="" className="w-10 h-10 md:w-12 md:h-12 shrink-0 object-contain" />
-              <h2 className="text-base md:text-lg font-bold text-gray-900">
+              <h2 className="text-base md:text-lg font-bold text-gray-900 break-words">
                 Improvement Areas
               </h2>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-3 min-w-0">
               {displayData.improvementAreas.length > 0 ? (
                 displayData.improvementAreas.map((item, i) => (
                   <div key={i} className="bg-amber-50 rounded-xl p-3 border-2 border-amber-200 min-w-0">
@@ -547,17 +535,22 @@ export const TestResults: React.FC<TestResultsProps> = ({
           <AccordionItem value="item-0" className="border-none">
             <div className="flex justify-center mb-4">
               <AccordionTrigger className="cursor-pointer gap-3 w-auto hover:bg-slate-50 rounded-xl px-5 py-2.5 border-2 border-slate-200 bg-white shadow-sm hover:shadow-md transition-all hover:no-underline">
+                <img 
+                  src="/assets/zoe-talking 1.svg" 
+                  alt="Zoe" 
+                  className="w-5 h-5 md:w-6 md:h-6 shrink-0 object-contain"
+                />
                 <span className="font-bold text-sm md:text-base text-gray-900">
-                  📝 View Session Transcript
+                  View Session Transcript
                 </span>
               </AccordionTrigger>
             </div>
             <AccordionContent className="pb-4 pt-4">
-              <div className="flex flex-col items-stretch gap-5 max-w-full mx-auto">
+              <div className="flex flex-col items-stretch gap-5 w-full mx-auto min-w-0">
                 {testResult.qa_history.map((qa, index) => (
                   <div
                     key={index}
-                    className="flex flex-col items-stretch gap-4 w-full"
+                    className="flex flex-col items-stretch gap-4 w-full min-w-0"
                   >
                     {/* Zoe's Question */}
                     <div className="flex gap-3 w-full min-w-0">
@@ -565,7 +558,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
                         <img
                           src="/assets/zoe-talking 1 (2).svg"
                           alt=""
-                          className="w-9 h-9 md:w-10 md:h-10"
+                          className="w-10 h-10 md:w-12 md:h-12"
                         />
                       </div>
                       <div className="flex-1 bg-[#E6F6EF] border-2 border-[#2B5E2B]/20 p-3 rounded-2xl shadow-sm min-w-0">
@@ -585,11 +578,11 @@ export const TestResults: React.FC<TestResultsProps> = ({
                           You
                         </p>
                         <p className="text-gray-700 text-sm leading-relaxed break-words">
-                          "{qa.answer}"
+                          {qa.answer}
                         </p>
                       </div>
-                      <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
-                        <img src="/assets/Frame 56.svg" alt="" className="w-5 h-5" />
+                      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center shrink-0 overflow-hidden">
+                        <img src="/assets/avatar.png" alt="User avatar" className="w-full h-full object-cover" />
                       </div>
                     </div>
 
