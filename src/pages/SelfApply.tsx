@@ -744,28 +744,50 @@ export default function SelfApply() {
       const email = getEmailFromJWT(storedToken);
       if (email) setUserId(email);
     }
+
+    // Prepare Piper voice during idle time to avoid blocking UI
+    const prepareVoiceWhenIdle = () => {
+      if (!voiceReadyRef.current) {
+        preparePiperVoice(() => {}, DEFAULT_PIPER_BACKEND)
+          .then(() => {
+            voiceReadyRef.current = true;
+          })
+          .catch((e) => {
+            console.log("Background voice preparation failed:", e);
+          });
+      }
+    };
+
+    // Use requestIdleCallback if available, otherwise setTimeout
+    if ('requestIdleCallback' in window) {
+      const idleCallbackId = requestIdleCallback(prepareVoiceWhenIdle, { timeout: 5000 });
+      return () => cancelIdleCallback(idleCallbackId);
+    } else {
+      const timeoutId = setTimeout(prepareVoiceWhenIdle, 2000);
+      return () => clearTimeout(timeoutId);
+    }
   }, []);
 
   const fetchJobs = async () => {
     setLoadingJobs(true);
     try {
       const jobsList = await getJobs();
-      setJobs(jobsList);
+      // Use setTimeout to yield to main thread and prevent blocking
+      setTimeout(() => {
+        setJobs(jobsList);
+        setLoadingJobs(false);
+      }, 0);
     } catch (error) {
       toast.error("Failed to fetch jobs");
-    } finally {
       setLoadingJobs(false);
     }
   };
 
   const handleStartInterview = async () => {
     if (!userId) return toast.error("User ID not found");
-    if (!voiceReadyRef.current) {
-      try {
-        await preparePiperVoice(() => {}, DEFAULT_PIPER_BACKEND);
-        voiceReadyRef.current = true;
-      } catch (e) {}
-    }
+    
+    // Don't block navigation - voice will be prepared in Interview component if needed
+    // This prevents UI freezing on button click
     navigate("/interview");
   };
 
@@ -908,10 +930,30 @@ export default function SelfApply() {
           50% { transform: scale(1.01); box-shadow: 0 8px 24px rgba(44,95,45,0.08); }
         }
 
-        .custom-float { animation: float 4s ease-in-out infinite; }
-        .custom-fade-in { animation: fadeIn 0.8s ease-out forwards; }
-        .custom-slide-up { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .custom-zoom-in { animation: fadeIn 0.5s ease-out; }
+        .custom-float { 
+          animation: float 4s ease-in-out infinite; 
+        }
+        .custom-fade-in { 
+          animation: fadeIn 0.8s ease-out forwards; 
+        }
+        .custom-slide-up { 
+          animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+        }
+        .custom-zoom-in { 
+          animation: fadeIn 0.5s ease-out; 
+        }
+        
+        /* Only add will-change during animation */
+        .custom-float:hover,
+        .custom-fade-in,
+        .custom-slide-up,
+        .custom-zoom-in {
+          will-change: transform, opacity;
+        }
+        
+        .custom-float:not(:hover) {
+          will-change: auto;
+        }
 
         /* REFINING MIC/SPEAKER BOXES WITHOUT BREAKING DEVICE TESTER */
         .zoe-hardware-wrapper div[class*="border"] {
