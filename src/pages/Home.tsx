@@ -200,12 +200,10 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import SelectionCard from "@/components/SelectionCard";
 import { toast } from "sonner";
 import { getEmailFromJWT, isValidJWTFormat } from "../utils/jwt";
-import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion"; // Install using: npm install framer-motion
-import { Briefcase, BrainCircuit, Code2, Chrome, ArrowLeft } from "lucide-react";
+import { motion } from "framer-motion"; 
+import { Briefcase, BrainCircuit, Code2 } from "lucide-react";
 
 export default function Home() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -215,43 +213,39 @@ export default function Home() {
   const interviewTypes = [
     {
       id: "1-1-interview",
-      icon: <Briefcase className="w-6 h-6 text-green-600" />,
+      icon: <Briefcase className="w-6 h-6 text-[#00A35C]" />,
       title: "1:1 Interview",
-      description: "Test your knowledge and practice communication skills with our advanced AI assistant.",
-      estimatedTime: "5-10 mins",
+      description: "Test your knowledge, and practice your communication skills with an AI assistant.",
       comingSoon: false,
-      color: "border-green-100 bg-green-50/50"
+      color: "bg-[#E6F6EF]"
     },
     {
       id: "flowchart",
-      icon: <BrainCircuit className="w-6 h-6 text-blue-600" />,
-      title: "Critical Thinking",
-      description: "Design flowcharts to test your problem-solving, algorithm, and process-thinking skills.",
-      estimatedTime: "15-20 mins",
+      icon: <BrainCircuit className="w-6 h-6 text-[#00A35C]" />,
+      title: "Critical Thinking with Flowchart",
+      description: "Design flowcharts to test your problem-solving, algorithm, and process-thinking skills",
       comingSoon: true,
-      color: "border-blue-100 bg-blue-50/50"
+      color: "bg-[#E6F6EF]"
     },
     {
       id: "competitive-coding",
-      icon: <Code2 className="w-6 h-6 text-purple-600" />,
-      title: "Competitive Coding",
-      description: "Technical interview to solve algorithmic and data-structure problems under pressure.",
-      estimatedTime: "30-45 mins",
+      icon: <Code2 className="w-6 h-6 text-[#00A35C]" />,
+      title: "Competitive coding",
+      description: "Technical interview to solve algorithmic and data-structure problems under time pressure.",
       comingSoon: true,
-      color: "border-purple-100 bg-purple-50/50"
+      color: "bg-[#E6F6EF]"
     },
   ];
 
   const handleCardClick = (id: string, isComingSoon: boolean) => {
     if (isComingSoon) {
-      toast.info("This module is coming soon! Stay tuned.");
+      toast.info("This module is coming soon!");
       return;
     }
     setSelectedType(id);
-    toast.loading("Preparing your session...");
     setTimeout(() => {
       navigate("/selfapply");
-    }, 800);
+    }, 300);
   };
 
   useEffect(() => {
@@ -262,7 +256,6 @@ export default function Home() {
         if (email) {
           localStorage.setItem("studentToken", token);
           localStorage.setItem("studentEmail", email);
-          toast.success("Welcome back!");
         }
       }
     };
@@ -270,147 +263,109 @@ export default function Home() {
   }, [searchParams]);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans selection:bg-green-100">
-      {/* Navbar */}
-      <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <button
-            onClick={() => (window.location.href = "https://app.zuvy.org")}
-            className="group flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-all font-medium text-sm"
-          >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            Back to Dashboard
-          </button>
-          
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-            <h1 className="text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600">
-              Zoe Assistant
+    // min-h-screen allows the page to grow, overflow-y-auto enables scrolling
+    <div className="min-h-screen w-full bg-[#F8FAFC] flex flex-col font-sans overflow-y-auto">
+      
+      {/* Header with Centered Text */}
+      <header className="sticky top-0 z-50 shrink-0 w-full border-b border-slate-200 bg-white/90 backdrop-blur-sm shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 grid grid-cols-3 items-center">
+          {/* Logo Left */}
+          <div className="flex justify-start">
+            <img 
+              src="/assets/image 1.svg" 
+              alt="Logo" 
+              className="h-8 w-auto object-contain cursor-pointer"
+              onClick={() => (window.location.href = "https://app.zuvy.org")}
+            />
+          </div>
+
+          {/* Centered Text */}
+          <div className="flex justify-center text-center">
+            <h1 className="text-[10px] md:text-sm font-bold text-slate-800 tracking-tight leading-tight">
+              Zoe: Your Learning Assistant
             </h1>
           </div>
 
-          <div className="w-[120px]" /> {/* Spacer for symmetry */}
+          {/* Right Spacer */}
+          <div className="flex justify-end" />
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-12 flex-1 flex flex-col items-center">
-        {/* Zoe Character Animation */}
-        <motion.div 
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="relative mb-10"
-        >
-          <div className="absolute inset-0 bg-green-200 blur-3xl opacity-20 rounded-full" />
+      {/* Main UI - py-10 added for breathing room on mobile */}
+      <main className="flex-1 flex flex-col items-center justify-center max-w-6xl mx-auto px-6 py-10 w-full text-center">
+        
+        <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mb-4">
           <img
             src="/assets/zoe-talking 1.svg"
             alt="Zoe"
-            className="w-32 h-32 md:w-44 md:h-44 relative z-10 drop-shadow-2xl animate-bounce-slow"
+            className="w-20 h-20 md:w-28 md:h-28 drop-shadow-2xl animate-bounce-slow mx-auto"
           />
         </motion.div>
 
-        {/* Hero Section */}
-        <div className="text-center mb-12 space-y-3">
-          <motion.h2 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight"
-          >
-            What would you like to <span className="text-green-600">practice</span> today?
-          </motion.h2>
-          <p className="text-slate-500 max-w-lg mx-auto text-sm md:text-base font-medium">
-            Join 1000+ students practicing with Zoe AI to clear their dream technical interviews.
+        <div className="mb-8 space-y-2">
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight px-2">
+            What would you like to practice today?
+          </h2>
+          <p className="text-slate-500 text-sm font-medium max-w-xl mx-auto px-4">
+            By continuing, you agree to let us use this data to enhance learning experience.
           </p>
-          <div className="pt-4">
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-widest border border-slate-200">
-               Data usage policy: Enhanced Learning Experience
-            </span>
-          </div>
         </div>
 
-        {/* Selection Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-          {interviewTypes.map((type, index) => (
+        {/* Responsive Grid: 1 column on mobile, 3 on desktop */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full text-left">
+          {interviewTypes.map((type) => (
             <motion.div
               key={type.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={!type.comingSoon ? { y: -10 } : {}}
+              whileHover={!type.comingSoon ? { y: -8 } : {}}
               onClick={() => handleCardClick(type.id, type.comingSoon)}
-              className={cn(
-                "group relative p-8 rounded-[2rem] border-2 transition-all cursor-pointer flex flex-col h-full bg-white",
-                selectedType === type.id ? "border-green-500 ring-4 ring-green-50" : "border-slate-100 hover:border-slate-300",
-                type.comingSoon && "opacity-75 grayscale bg-slate-50 cursor-not-allowed"
-              )}
+              className={`
+                group relative p-8 rounded-[2rem] border-2 transition-all cursor-pointer flex flex-col min-h-[240px] md:h-[260px] bg-white
+                ${selectedType === type.id ? "border-[#00A35C] ring-4 ring-[#E6F6EF]" : "border-slate-100 hover:border-slate-300 shadow-sm"}
+                ${type.comingSoon && "opacity-80"}
+              `}
             >
-              <div className={cn("p-4 rounded-2xl w-fit mb-6", type.color)}>
-                {type.icon}
-              </div>
-
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-3">
-                  <h4 className="text-xl font-bold text-slate-900">{type.title}</h4>
+              <div className="flex items-center gap-4 mb-5">
+                <div className={`p-4 rounded-2xl shrink-0 ${type.color}`}>
+                  {type.icon}
+                </div>
+                <div className="flex flex-col">
+                  <h4 className={`text-lg md:text-xl font-bold leading-tight ${type.comingSoon ? 'text-slate-700' : 'text-[#00A35C]'}`}>
+                    {type.title}
+                  </h4>
                   {type.comingSoon && (
-                    <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none text-[10px] uppercase font-black tracking-tighter">
-                      Coming Soon
-                    </Badge>
+                    <div className="mt-2">
+                      <span className="px-3 py-1 bg-[#FF9900] text-white text-[9px] font-black uppercase tracking-wider rounded-full shadow-sm inline-block">
+                        Coming Soon
+                      </span>
+                    </div>
                   )}
                 </div>
-                <p className="text-slate-500 text-sm leading-relaxed font-medium">
-                  {type.description}
-                </p>
               </div>
 
-              <div className="mt-8 flex items-center justify-between">
-                 <div className="flex flex-col">
-                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Time</span>
-                    <span className="text-xs font-bold text-slate-700">{type.estimatedTime}</span>
-                 </div>
-                 {!type.comingSoon && (
-                   <div className="h-10 w-10 rounded-full bg-slate-900 flex items-center justify-center text-white group-hover:bg-green-600 transition-colors">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
-                   </div>
-                 )}
-              </div>
+              <p className="text-slate-500 text-sm leading-relaxed font-medium">
+                {type.description}
+              </p>
             </motion.div>
           ))}
         </div>
 
-        {/* Footer Hint */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-16 flex items-center gap-3 px-6 py-3 bg-blue-50/50 border border-blue-100 rounded-2xl"
-        >
-          <Chrome className="w-5 h-5 text-blue-600" />
-          <span className="text-xs font-bold text-blue-700 tracking-tight">
-            Zoe works best on Google Chrome Desktop for the best voice experience.
-          </span>
-        </motion.div>
+        {/* System Hint */}
+        <div className="mt-12 mx-auto pb-6">
+          <div className="px-6 py-2 bg-[#E8F3FF] border border-[#D0E7FF] rounded-full shadow-sm inline-block">
+            <span className="text-[10px] md:text-[12px] font-bold text-[#2D7FF9]">
+               Please note that Zoe works best on Google Chrome
+            </span>
+          </div>
+        </div>
       </main>
-
-      {/* Background Decor */}
-      <div className="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
-         <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-green-50 rounded-full blur-[120px] opacity-60" />
-         <div className="absolute bottom-[-5%] left-[-5%] w-[400px] h-[400px] bg-blue-50 rounded-full blur-[100px] opacity-40" />
-      </div>
 
       <style>{`
         @keyframes bounce-slow {
           0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-15px); }
+          50% { transform: translateY(-8px); }
         }
-        .animate-bounce-slow {
-          animation: bounce-slow 4s ease-in-out infinite;
-        }
+        .animate-bounce-slow { animation: bounce-slow 4s ease-in-out infinite; }
       `}</style>
     </div>
   );
-}
-
-// Utility function (if not using shadcn)
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(' ');
 }
