@@ -204,6 +204,7 @@ import { toast } from "sonner";
 import { getEmailFromJWT, isValidJWTFormat } from "../utils/jwt";
 import { motion } from "framer-motion"; 
 import { Briefcase, BrainCircuit, Code2 } from "lucide-react";
+import InterviewCard from "@/components/InterviewCard";
 
 export default function Home() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -216,24 +217,24 @@ export default function Home() {
       icon: <Briefcase className="w-6 h-6 text-[#00A35C]" />,
       title: "1:1 Interview",
       description: "Test your knowledge, and practice your communication skills with an AI assistant.",
+      estimatedTime: "5-10 mins",
       comingSoon: false,
-      color: "bg-[#E6F6EF]"
     },
     {
       id: "flowchart",
       icon: <BrainCircuit className="w-6 h-6 text-[#00A35C]" />,
       title: "Critical Thinking with Flowchart",
       description: "Design flowcharts to test your problem-solving, algorithm, and process-thinking skills",
+      estimatedTime: "15-20 mins",
       comingSoon: true,
-      color: "bg-[#E6F6EF]"
     },
     {
       id: "competitive-coding",
       icon: <Code2 className="w-6 h-6 text-[#00A35C]" />,
       title: "Competitive coding",
       description: "Technical interview to solve algorithmic and data-structure problems under time pressure.",
+      estimatedTime: "30-45 mins",
       comingSoon: true,
-      color: "bg-[#E6F6EF]"
     },
   ];
 
@@ -313,38 +314,22 @@ export default function Home() {
 
         {/* Responsive Grid: 1 column on mobile, 3 on desktop */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full text-left">
-          {interviewTypes.map((type) => (
+          {interviewTypes.map((type, index) => (
             <motion.div
               key={type.id}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
               whileHover={!type.comingSoon ? { y: -8 } : {}}
-              onClick={() => handleCardClick(type.id, type.comingSoon)}
-              className={`
-                group relative p-8 rounded-[2rem] border-2 transition-all cursor-pointer flex flex-col min-h-[240px] md:h-[260px] bg-white
-                ${selectedType === type.id ? "border-[#00A35C] ring-4 ring-[#E6F6EF]" : "border-slate-100 hover:border-slate-300 shadow-sm"}
-                ${type.comingSoon && "opacity-80"}
-              `}
             >
-              <div className="flex items-center gap-4 mb-5">
-                <div className={`p-4 rounded-2xl shrink-0 ${type.color}`}>
-                  {type.icon}
-                </div>
-                <div className="flex flex-col">
-                  <h4 className={`text-lg md:text-xl font-bold leading-tight ${type.comingSoon ? 'text-slate-700' : 'text-[#00A35C]'}`}>
-                    {type.title}
-                  </h4>
-                  {type.comingSoon && (
-                    <div className="mt-2">
-                      <span className="px-3 py-1 bg-[#FF9900] text-white text-[9px] font-black uppercase tracking-wider rounded-full shadow-sm inline-block">
-                        Coming Soon
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <p className="text-slate-500 text-sm leading-relaxed font-medium">
-                {type.description}
-              </p>
+              <InterviewCard
+                icon={type.icon}
+                title={type.title}
+                description={type.description}
+                onClick={() => handleCardClick(type.id, type.comingSoon)}
+                isSelected={selectedType === type.id}
+                comingSoon={type.comingSoon}
+              />
             </motion.div>
           ))}
         </div>

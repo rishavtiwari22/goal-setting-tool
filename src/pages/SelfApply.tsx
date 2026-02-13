@@ -700,6 +700,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import DeviceTester from "@/components/DeviceTester";
 import CreateJobModal from "@/components/CreateJobModal";
+import InterviewCard from "@/components/InterviewCard";
 import { DEFAULT_PIPER_BACKEND, preparePiperVoice } from "../lib/piper";
 import { getJobs } from "../services/api/serverApi";
 import { getEmailFromJWT } from "../utils/jwt";
@@ -707,10 +708,8 @@ import type { Job } from "../models/job";
 import { 
   ChevronLeft, 
   Plus, 
-  Clock, 
   Laptop,
   Sparkles,
-  ArrowRight,
   Code2,
   Terminal,
   Globe,
@@ -722,10 +721,10 @@ import { Badge } from "@/components/ui/badge";
 
 const getJobIcon = (title: string) => {
   const t = title.toLowerCase();
-  if (t.includes('javascript') || t.includes('react')) return <Layout className="text-yellow-500" size={26} />;
-  if (t.includes('frontend')) return <Globe className="text-blue-500" size={26} />;
-  if (t.includes('python')) return <Terminal className="text-green-600" size={26} />;
-  return <Code2 className="text-[#2C5F2D]" size={26} />;
+  if (t.includes('javascript') || t.includes('react')) return <Layout className="text-[#00A35C]" size={24} />;
+  if (t.includes('frontend')) return <Globe className="text-[#00A35C]" size={24} />;
+  if (t.includes('python')) return <Terminal className="text-[#00A35C]" size={24} />;
+  return <Code2 className="text-[#00A35C]" size={24} />;
 };
 
 export default function SelfApply() {
@@ -794,14 +793,6 @@ export default function SelfApply() {
   return (
     <div className="h-screen bg-white flex flex-col font-sans overflow-hidden relative">
       
-      {/* --- FLOATING NOTE (Top Right) --- */}
-      <div className="absolute top-20 right-8 z-20 hidden md:block opacity-0 custom-fade-in" style={{ animationDelay: '800ms', animationFillMode: 'forwards' }}>
-        <Badge className="px-4 py-2 font-black text-[#007AFF] rounded-xl bg-[#EBF5FF] border border-[#D1E9FF] text-[9px] uppercase tracking-widest shadow-sm flex items-center gap-2">
-          <Info size={14} />
-          Works best on Google Chrome
-        </Badge>
-      </div>
-
       {/* --- HEADER --- */}
       <header className="shrink-0 border-b border-gray-100 py-6 bg-white z-10">
         <div className="flex items-center justify-center gap-3">
@@ -848,51 +839,46 @@ export default function SelfApply() {
               ) : (
                 <div className="w-full flex flex-col">
                   {/* Job Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                     {jobs.slice(0, 3).map((job, index) => (
-                      <div 
+                      <div
                         key={job.job_id}
-                        onClick={() => setStep("speakerandmiccheck")}
-                        className="group cursor-pointer bg-white border border-gray-100 rounded-[2rem] p-10 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col h-[300px] opacity-0 custom-slide-up"
+                        className="opacity-0 custom-slide-up"
                         style={{ animationDelay: `${index * 150}ms`, animationFillMode: 'forwards' }}
                       >
-                        <div className="flex items-center gap-4 mb-6">
-                          <div className="p-3 bg-gray-50 rounded-2xl group-hover:bg-green-50">
-                              {getJobIcon(job.job_title)}
-                          </div>
-                          <h3 className="text-[#2C5F2D] font-black text-xl leading-tight group-hover:text-black transition-colors">{job.job_title}</h3>
-                        </div>
-
-                        <p className="text-gray-500 text-sm leading-relaxed mb-8 line-clamp-3 flex-1 font-medium">
-                          {job.job_description || "Sharpen your skills for this specific role with a simulated high-pressure technical interview."}
-                        </p>
-                        
-                        <div className="pt-6 border-t border-gray-50 flex items-center justify-between text-gray-400 font-bold">
-                          <div className="flex items-center gap-2">
-                            <Clock size={16} />
-                            <span className="text-[10px] uppercase tracking-widest">5-10 mins</span>
-                          </div>
-                          <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-[#2C5F2D] group-hover:scale-110 transition-all duration-300">
-                            <ArrowRight size={20} className="text-gray-400 group-hover:text-white transition-colors" />
-                          </div>
-                        </div>
+                        <InterviewCard
+                          icon={getJobIcon(job.job_title)}
+                          title={job.job_title}
+                          description={job.job_description || "Test your knowledge, and practice your communication skills with an AI assistant."}
+                          estimatedTime="5-10 mins"
+                          onClick={() => setStep("speakerandmiccheck")}
+                        />
                       </div>
                     ))}
                   </div>
 
-                  <div className="text-center space-y-4 opacity-0 custom-fade-in pb-12" style={{ animationDelay: '600ms', animationFillMode: 'forwards' }}>
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-[0.2em]">
+                  <div className="text-center space-y-3 opacity-0 custom-fade-in pb-12" style={{ animationDelay: '600ms', animationFillMode: 'forwards' }}>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                       Can't find a role?
                     </h3>
                     
                     <div className="flex justify-center">
                       <Button
                         onClick={() => setIsCreateJobModalOpen(true)}
-                        className="bg-[#2C5F2D] hover:bg-[#1a3a1b] text-white font-black px-8 py-4 h-auto rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2 border-b-4 border-[#1a3a1b]"
+                        className="bg-[#2C5F2D] hover:bg-[#1a3a1b] text-white font-bold px-6 py-2.5 h-auto rounded-lg shadow-md transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
                       >
-                        <Plus size={18} />
-                        <span className="text-sm uppercase tracking-wider">Create Custom Interview</span>
+                        <Plus size={16} />
+                        <span className="text-sm">Create Custom Interview</span>
                       </Button>
+                    </div>
+
+                    {/* Chrome notification below button */}
+                    <div className="flex justify-center pt-4 px-4">
+                      <Badge className="px-3 md:px-4 py-2 font-bold text-[#007AFF] rounded-lg md:rounded-xl bg-[#EBF5FF] border border-[#D1E9FF] text-[9px] md:text-[10px] uppercase tracking-wide shadow-sm flex items-center gap-2">
+                        <Info size={12} className="md:hidden" />
+                        <Info size={14} className="hidden md:block" />
+                        <span className="text-center">Please note that Zoe works best on Google Chrome</span>
+                      </Badge>
                     </div>
                   </div>
                 </div>
@@ -908,7 +894,7 @@ export default function SelfApply() {
                     </h3>
                   </div>
                   <div className="p-10 bg-[#FAFAFA]">
-                    <div className="bg-white rounded-[1.5rem] p-6 shadow-inner border border-gray-50">
+                    <div className="bg-white rounded-3xl p-6 shadow-inner border border-gray-50">
                       <DeviceTester onStartInterview={handleStartInterview} />
                     </div>
                   </div>
@@ -977,6 +963,13 @@ export default function SelfApply() {
         .line-clamp-3 {
           display: -webkit-box;
           -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;  
+          overflow: hidden;
+        }
+        
+        .line-clamp-4 {
+          display: -webkit-box;
+          -webkit-line-clamp: 4;
           -webkit-box-orient: vertical;  
           overflow: hidden;
         }
