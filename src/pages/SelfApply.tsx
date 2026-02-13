@@ -796,13 +796,6 @@ export default function SelfApply() {
   return (
     <div className="h-screen bg-[#FBFAF8] flex flex-col font-sans overflow-hidden relative">
       
-      {/* --- FLOATING NOTE (Top Right) --- */}
-      <div className="absolute top-20 right-8 z-20 hidden md:block opacity-0 custom-fade-in" style={{ animationDelay: '800ms', animationFillMode: 'forwards' }}>
-        <Badge className="px-4 py-2 font-black text-[#007AFF] rounded-xl bg-[#EBF5FF] border border-[#D1E9FF] text-[9px] uppercase tracking-widest shadow-sm flex items-center gap-2">
-          <Info size={14} />
-          Works best on Google Chrome
-        </Badge>
-      </div>
 
       <Header />
 
