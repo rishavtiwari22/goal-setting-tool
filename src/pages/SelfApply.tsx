@@ -884,21 +884,8 @@ export default function SelfApply() {
               )}
             </div>
           ) : (
-            /* --- SYSTEM CHECK UI (SCREENSHOT STYLE) --- */
-            <div className="w-full max-w-3xl custom-zoom-in mt-6 zoe-hardware-wrapper">
-               <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-[0_20px_60px_rgba(0,0,0,0.1)] overflow-hidden">
-                  <div className="bg-[#2B5E2B] p-8 text-white flex items-center px-10">
-                    <h3 className="text-xl font-black flex items-center gap-3">
-                      <Laptop size={24} className="text-green-300" /> System Check
-                    </h3>
-                  </div>
-                  <div className="p-10 bg-[#FAFAFA]">
-                    <div className="bg-white rounded-3xl p-6 shadow-inner border border-gray-50">
-                      <DeviceTester onStartInterview={handleStartInterview} />
-                    </div>
-                  </div>
-               </div>
-            </div>
+            /* --- DEVICE TESTER FULL SCREEN --- */
+            <DeviceTester onStartInterview={handleStartInterview} />
           )}
         </div>
       </main>
