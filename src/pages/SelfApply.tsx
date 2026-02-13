@@ -700,6 +700,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import DeviceTester from "@/components/DeviceTester";
 import CreateJobModal from "@/components/CreateJobModal";
+import InterviewCard from "@/components/InterviewCard";
 import { DEFAULT_PIPER_BACKEND, preparePiperVoice } from "../lib/piper";
 import { getJobs } from "../services/api/serverApi";
 import { getEmailFromJWT } from "../utils/jwt";
@@ -707,10 +708,8 @@ import type { Job } from "../models/job";
 import { 
   ChevronLeft, 
   Plus, 
-  Clock, 
   Laptop,
   Sparkles,
-  ArrowRight,
   Code2,
   Terminal,
   Globe,
@@ -839,12 +838,11 @@ export default function SelfApply() {
               ) : (
                 <div className="w-full flex flex-col">
                   {/* Job Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                     {jobs.slice(0, 3).map((job, index) => (
-                      <div 
+                      <div
                         key={job.job_id}
-                        onClick={() => setStep("speakerandmiccheck")}
-                        className="group cursor-pointer bg-white border border-gray-100 rounded-[2rem] p-10 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col h-[300px] opacity-0 custom-slide-up"
+                        className="opacity-0 custom-slide-up"
                         style={{ animationDelay: `${index * 150}ms`, animationFillMode: 'forwards' }}
                       >
                         <div className="flex items-center gap-4 mb-6">
@@ -871,8 +869,8 @@ export default function SelfApply() {
                     ))}
                   </div>
 
-                  <div className="text-center space-y-4 opacity-0 custom-fade-in pb-12" style={{ animationDelay: '600ms', animationFillMode: 'forwards' }}>
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-[0.2em]">
+                  <div className="text-center space-y-3 opacity-0 custom-fade-in pb-12" style={{ animationDelay: '600ms', animationFillMode: 'forwards' }}>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                       Can't find a role?
                     </h3>
                     
@@ -881,9 +879,18 @@ export default function SelfApply() {
                         onClick={() => setIsCreateJobModalOpen(true)}
                         className="bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-black px-8 py-4 h-auto rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2 border-b-4 border-[#1a3a1b]"
                       >
-                        <Plus size={18} />
-                        <span className="text-sm uppercase tracking-wider">Create Custom Interview</span>
+                        <Plus size={16} />
+                        <span className="text-sm">Create Custom Interview</span>
                       </Button>
+                    </div>
+
+                    {/* Chrome notification below button */}
+                    <div className="flex justify-center pt-4 px-4">
+                      <Badge className="px-3 md:px-4 py-2 font-bold text-[#007AFF] rounded-lg md:rounded-xl bg-[#EBF5FF] border border-[#D1E9FF] text-[9px] md:text-[10px] uppercase tracking-wide shadow-sm flex items-center gap-2">
+                        <Info size={12} className="md:hidden" />
+                        <Info size={14} className="hidden md:block" />
+                        <span className="text-center">Please note that Zoe works best on Google Chrome</span>
+                      </Badge>
                     </div>
                   </div>
                 </div>
@@ -899,7 +906,7 @@ export default function SelfApply() {
                     </h3>
                   </div>
                   <div className="p-10 bg-[#FAFAFA]">
-                    <div className="bg-white rounded-[1.5rem] p-6 shadow-inner border border-gray-50">
+                    <div className="bg-white rounded-3xl p-6 shadow-inner border border-gray-50">
                       <DeviceTester onStartInterview={handleStartInterview} />
                     </div>
                   </div>
@@ -968,6 +975,13 @@ export default function SelfApply() {
         .line-clamp-3 {
           display: -webkit-box;
           -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;  
+          overflow: hidden;
+        }
+        
+        .line-clamp-4 {
+          display: -webkit-box;
+          -webkit-line-clamp: 4;
           -webkit-box-orient: vertical;  
           overflow: hidden;
         }
