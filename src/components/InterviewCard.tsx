@@ -36,10 +36,8 @@ const InterviewCard: React.FC<InterviewCardProps> = ({
       >
         {/* Icon and Title Row */}
         <div className="flex items-center gap-4 mb-5">
-          <div className="p-4 rounded-2xl shrink-0 bg-[#E6F6EF] group-hover:bg-[#2B5E2B] transition-all duration-300 group-hover:scale-110">
-            <div className="group-hover:[&_svg]:text-white transition-colors duration-300">
-              {icon}
-            </div>
+            <div className="p-4 rounded-2xl shrink-0 bg-[#E6F6EF]">
+            {icon}
           </div>
           <div className="flex flex-col flex-1 min-w-0">
             <h4 className={`text-lg md:text-xl font-bold leading-tight transition-colors duration-300 ${comingSoon ? 'text-slate-700' : 'text-[#2B5E2B] group-hover:text-[#1a3a1b]'}`}>
