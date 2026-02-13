@@ -41,7 +41,7 @@ export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
             onClick={() => onChange(rating)}
             className={`
               w-12 h-12 md:w-14 md:h-14 rounded-xl font-bold text-base md:text-lg
-              transition-all duration-200 border-2
+              transition-all duration-200 border-2 cursor-pointer
               ${value === rating
                 ? "bg-[#2B5E2B] text-white border-[#2B5E2B] shadow-lg scale-110"
                 : "bg-white text-gray-600 border-slate-200 hover:border-[#2B5E2B] hover:scale-105"
