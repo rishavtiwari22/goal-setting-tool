@@ -714,17 +714,17 @@ import {
   Terminal,
   Globe,
   Layout,
-  Stars,
   Info
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import Header from "@/components/Header";
 
 const getJobIcon = (title: string) => {
   const t = title.toLowerCase();
-  if (t.includes('javascript') || t.includes('react')) return <Layout className="text-[#00A35C]" size={24} />;
-  if (t.includes('frontend')) return <Globe className="text-[#00A35C]" size={24} />;
-  if (t.includes('python')) return <Terminal className="text-[#00A35C]" size={24} />;
-  return <Code2 className="text-[#00A35C]" size={24} />;
+  if (t.includes('javascript') || t.includes('react')) return <Layout className="text-[#2B5E2B]" size={26} />;
+  if (t.includes('frontend')) return <Globe className="text-[#2B5E2B]" size={26} />;
+  if (t.includes('python')) return <Terminal className="text-[#2B5E2B]" size={26} />;
+  return <Code2 className="text-[#2B5E2B]" size={26} />;
 };
 
 export default function SelfApply() {
@@ -791,18 +791,17 @@ export default function SelfApply() {
   };
 
   return (
-    <div className="h-screen bg-white flex flex-col font-sans overflow-hidden relative">
+    <div className="h-screen bg-[#FBFAF8] flex flex-col font-sans overflow-hidden relative">
       
-      {/* --- HEADER --- */}
-      <header className="shrink-0 border-b border-gray-100 py-6 bg-white z-10">
-        <div className="flex items-center justify-center gap-3">
-          <Stars className="text-yellow-400 fill-yellow-400 animate-pulse" size={22} />
-          <h1 className="text-xl font-black text-gray-900 tracking-tighter uppercase">
-            Zoe: Your Learning Assistant
-          </h1>
-          <Sparkles className="text-blue-400" size={20} />
-        </div>
-      </header>
+      {/* --- FLOATING NOTE (Top Right) --- */}
+      <div className="absolute top-20 right-8 z-20 hidden md:block opacity-0 custom-fade-in" style={{ animationDelay: '800ms', animationFillMode: 'forwards' }}>
+        <Badge className="px-4 py-2 font-black text-[#007AFF] rounded-xl bg-[#EBF5FF] border border-[#D1E9FF] text-[9px] uppercase tracking-widest shadow-sm flex items-center gap-2">
+          <Info size={14} />
+          Works best on Google Chrome
+        </Badge>
+      </div>
+
+      <Header />
 
       {/* --- MAIN AREA --- */}
       <main className="flex-1 flex flex-col px-12 py-4 relative overflow-y-auto md:overflow-hidden">
@@ -835,7 +834,7 @@ export default function SelfApply() {
               </h2>
 
               {loadingJobs ? (
-                <Spinner className="text-[#2C5F2D]" />
+                <Spinner className="text-[#2B5E2B]" />
               ) : (
                 <div className="w-full flex flex-col">
                   {/* Job Cards */}
@@ -846,13 +845,26 @@ export default function SelfApply() {
                         className="opacity-0 custom-slide-up"
                         style={{ animationDelay: `${index * 150}ms`, animationFillMode: 'forwards' }}
                       >
-                        <InterviewCard
-                          icon={getJobIcon(job.job_title)}
-                          title={job.job_title}
-                          description={job.job_description || "Test your knowledge, and practice your communication skills with an AI assistant."}
-                          estimatedTime="5-10 mins"
-                          onClick={() => setStep("speakerandmiccheck")}
-                        />
+                        <div className="flex items-center gap-4 mb-6">
+                          <div className="p-4 bg-[#E6F6EF] rounded-2xl">
+                            {getJobIcon(job.job_title)}
+                          </div>
+                          <h3 className="text-[#2B5E2B] font-black text-xl leading-tight group-hover:text-black transition-colors">{job.job_title}</h3>
+                        </div>
+
+                        <p className="text-gray-500 text-sm leading-relaxed mb-8 line-clamp-3 flex-1 font-medium">
+                          {job.job_description || "Sharpen your skills for this specific role with a simulated high-pressure technical interview."}
+                        </p>
+                        
+                        <div className="pt-6 border-t border-gray-50 flex items-center justify-between text-gray-400 font-bold">
+                          <div className="flex items-center gap-2">
+                            <Clock size={16} />
+                            <span className="text-[10px] uppercase tracking-widest">5-10 mins</span>
+                          </div>
+                          <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-[#2B5E2B] group-hover:scale-110 transition-all duration-300">
+                            <ArrowRight size={20} className="text-gray-400 group-hover:text-white transition-colors" />
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -865,7 +877,7 @@ export default function SelfApply() {
                     <div className="flex justify-center">
                       <Button
                         onClick={() => setIsCreateJobModalOpen(true)}
-                        className="bg-[#2C5F2D] hover:bg-[#1a3a1b] text-white font-bold px-6 py-2.5 h-auto rounded-lg shadow-md transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+                        className="bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-black px-8 py-4 h-auto rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2 border-b-4 border-[#1a3a1b]"
                       >
                         <Plus size={16} />
                         <span className="text-sm">Create Custom Interview</span>
@@ -888,7 +900,7 @@ export default function SelfApply() {
             /* --- SYSTEM CHECK UI (SCREENSHOT STYLE) --- */
             <div className="w-full max-w-3xl custom-zoom-in mt-6 zoe-hardware-wrapper">
                <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-[0_20px_60px_rgba(0,0,0,0.1)] overflow-hidden">
-                  <div className="bg-[#2C5F2D] p-8 text-white flex items-center px-10">
+                  <div className="bg-[#2B5E2B] p-8 text-white flex items-center px-10">
                     <h3 className="text-xl font-black flex items-center gap-3">
                       <Laptop size={24} className="text-green-300" /> System Check
                     </h3>
@@ -955,7 +967,7 @@ export default function SelfApply() {
         }
 
         .zoe-hardware-wrapper .p-4.border:hover, .zoe-hardware-wrapper .p-6.border:hover {
-            border-color: #2C5F2D !important;
+            border-color: #2B5E2B !important;
             box-shadow: 0 12px 30px rgba(44,95,45,0.12) !important;
             animation: none;
         }
