@@ -178,9 +178,7 @@ export class InterviewStateManager {
     const lowerAnswer = answer.toLowerCase().trim();
     const endCallPhrases = [
       'end the call', 'end call', 'end interview', 'stop interview',
-      'quit interview', 'exit interview', 'i want to end', 'please end',
-      'bye', 'goodbye', 'i am done', 'finish', 'thank you bye', 'i\'m done',
-      'stop now', 'end now', 'close interview', 'wrap up'
+      'quit interview', 'i want to end'
     ];
     const isExplicitEndRequest = endCallPhrases.some(phrase => lowerAnswer.includes(phrase));
 

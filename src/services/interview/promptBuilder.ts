@@ -146,15 +146,14 @@ Introduction Questions Asked So Far: {intro_question_count}
 Current Phase: Introduction
 
 Phase Guidelines:
-- Build rapport with the candidate through 2-3 introduction questions
+- Build rapport with the candidate through 2 introduction questions
 - Question 1: Ask candidate to introduce themselves (name, background, years of experience)
 - Question 2: Ask about what excites them about this role or their career motivation
-- Question 3 (optional): Ask about their preferred working style or team collaboration approach
 - Keep questions warm, welcoming, and conversational
 - DO NOT jump to technical questions yet - this is about building rapport
 - Do NOT use bold texts or any other formatting. No * or ** or *** or ***
 
-After 2-3 introduction questions, the feedback system will transition to project discussion.
+After 2 introduction questions, the feedback system will transition to project discussion.
 
 Generate the next introduction question. Be warm and conversational. Do NOT include phase labels in the question.`;
 
@@ -330,7 +329,7 @@ Current Phase: Introduction
 
 Phase Transition Rules:
 - Stay in "introduction" if fewer than 2 questions have been asked
-- Move to "project" after 2-3 introduction questions when candidate has shared sufficient background
+- Move to "project" after 2 introduction questions when candidate has shared sufficient background
 - If candidate naturally mentions projects, still complete at least 2 intro questions first
 
 Generate:
