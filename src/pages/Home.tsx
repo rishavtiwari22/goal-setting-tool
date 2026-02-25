@@ -91,7 +91,7 @@ export default function Home() {
         </div>
 
         {/* Responsive Grid: 1 column on mobile, 3 on desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full text-left">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full  text-left">
           {interviewTypes.map((type, index) => (
             <motion.div
               key={type.id}

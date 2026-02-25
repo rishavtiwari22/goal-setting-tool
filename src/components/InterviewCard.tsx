@@ -27,16 +27,16 @@ const InterviewCard: React.FC<InterviewCardProps> = ({
       <div
         onClick={onClick}
         className={`
-          group relative p-8 rounded-4xl border-2 transition-all duration-300 cursor-pointer 
+          group relative p-6 rounded-lg border-2 transition-all duration-300 cursor-pointer 
           flex flex-col min-h-60 md:h-65 bg-white
-          ${isSelected ? "border-[#2B5E2B] ring-4 ring-[#E6F6EF] shadow-xl -translate-y-2" : "border-slate-100 hover:border-[#2B5E2B] shadow-sm hover:shadow-2xl hover:-translate-y-2"}
+          ${isSelected ? "border-[#21302B] ring-4 ring-[#E6F6EF] shadow-xl -translate-y-2" : "border-[#21302B] shadow-sm hover:shadow-2xl hover:-translate-y-2"}
           ${comingSoon ? "opacity-80 cursor-not-allowed hover:translate-y-0 hover:shadow-sm" : ""}
           ${className}
         `}
       >
         {/* Icon and Title Row */}
         <div className="flex items-center gap-4 mb-5">
-            <div className="p-4 rounded-2xl shrink-0 bg-[#E6F6EF]">
+            <div className="p-4 rounded-lg shrink-0 bg-[#E6F6EF]">
             {icon}
           </div>
           <div className="flex flex-col flex-1 min-w-0">

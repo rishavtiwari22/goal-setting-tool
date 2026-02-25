@@ -424,30 +424,26 @@ export const TestResults: React.FC<TestResultsProps> = ({
         {/* Top Action Bar */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6 min-w-0">
           <div className="flex items-center gap-2 min-w-0">
-            <img 
-              src="/assets/zoe-talking 1.svg" 
-              alt="Zoe" 
-              className="w-8 h-8 md:w-10 md:h-10 shrink-0 object-contain"
-            />
+        
             <h1 className="text-base md:text-lg lg:text-xl font-bold text-gray-900 break-words">
               {userName ? `Great start, ${userName}!` : "Interview Complete!"}
             </h1>
           </div>
           <Button
-            className="bg-[#2B5E2B] text-white font-semibold hover:bg-[#1a3a1b] hover:scale-[1.02] transition-all rounded-xl px-5 py-2 shadow-lg text-sm whitespace-nowrap shrink-0"
+            className="bg-[#2B5E2B] text-white font-semibold hover:bg-[#1a3a1b] hover:scale-[1.02] transition-all rounded-lg px-6 h-12 shadow-lg text-sm whitespace-nowrap shrink-0"
             onClick={() => (window.location.href = "/")}
           >
             <img
               src="/assets/Vector (Stroke).svg"
               alt=""
-              className="w-4 h-4 mr-2"
+              className="w-5 h-5 mr-2 shrink-0"
             />
             Try Another Interview
           </Button>
         </div>
 
         {/* Interview Summary Card */}
-        <div className="bg-white shadow-sm rounded-2xl border-2 border-slate-200 p-4 md:p-5 mb-4 md:mb-6 min-w-0">
+        <div className="bg-white shadow-sm rounded-lg border-2 border-slate-200 p-6 mb-4 md:mb-6 min-w-0">
           <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-3 min-w-0">
             <div className="flex items-center gap-3 min-w-0">
               <img src="/assets/summary.png" alt="" className="w-10 h-10 md:w-12 md:h-12 shrink-0 object-contain" />
@@ -455,7 +451,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
                 Interview Summary
               </h2>
             </div>
-            <div className="flex items-center gap-2 bg-slate-50 border-2 border-slate-200 px-3 py-1.5 rounded-xl whitespace-nowrap shrink-0">
+            <div className="flex items-center gap-2 bg-slate-50 border-2 border-slate-200 px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0">
               <Clock className="w-4 h-4 text-slate-600" />
               <span className="text-sm font-semibold text-gray-700">
                 {Math.round(testResult.elapse_time)} mins
@@ -471,7 +467,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
         {/* Top Strengths and Improvement Areas - Side by Side */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 min-w-0">
           {/* Top Strengths Card */}
-          <div className="bg-white shadow-sm rounded-2xl border-2 border-slate-200 p-4 md:p-5 hover:shadow-lg transition-all duration-300 min-w-0">
+          <div className="bg-white shadow-sm rounded-lg border-2 border-slate-200 p-6 hover:shadow-lg transition-all duration-300 min-w-0">
             <div className="flex items-center gap-3 mb-4 min-w-0">
               <img src="/assets/assessment.png" alt="" className="w-10 h-10 md:w-12 md:h-12 shrink-0 object-contain" />
               <h2 className="text-base md:text-lg font-bold text-gray-900 break-words">
@@ -481,7 +477,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
             <div className="space-y-3 min-w-0">
               {displayData.topStrengths.length > 0 ? (
                 displayData.topStrengths.map((item, i) => (
-                  <div key={i} className="bg-[#E6F6EF] rounded-xl p-3 border-2 border-[#2B5E2B]/20 min-w-0">
+                  <div key={i} className="bg-[#E6F6EF] rounded-lg p-3 border-2 border-[#2B5E2B]/20 min-w-0">
                     <p className="font-bold text-gray-900 mb-1.5 text-sm md:text-base break-words">
                       {item.title.replace(/\*/g, "").trim()}
                     </p>
@@ -497,7 +493,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
           </div>
 
           {/* Improvement Areas Card */}
-          <div className="bg-white shadow-sm rounded-2xl border-2 border-slate-200 p-4 md:p-5 hover:shadow-lg transition-all duration-300 min-w-0">
+          <div className="bg-white shadow-sm rounded-lg border-2 border-slate-200 p-6 hover:shadow-lg transition-all duration-300 min-w-0">
             <div className="flex items-center gap-3 mb-4 min-w-0">
               <img src="/assets/conclusion.png" alt="" className="w-10 h-10 md:w-12 md:h-12 shrink-0 object-contain" />
               <h2 className="text-base md:text-lg font-bold text-gray-900 break-words">
@@ -507,7 +503,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
             <div className="space-y-3 min-w-0">
               {displayData.improvementAreas.length > 0 ? (
                 displayData.improvementAreas.map((item, i) => (
-                  <div key={i} className="bg-amber-50 rounded-xl p-3 border-2 border-amber-200 min-w-0">
+                  <div key={i} className="bg-amber-50 rounded-lg p-3 border-2 border-amber-200 min-w-0">
                     <p className="font-bold text-gray-900 mb-1.5 text-sm md:text-base break-words">
                       {item.title.replace(/\*/g, "").trim()}
                     </p>
@@ -534,7 +530,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
         >
           <AccordionItem value="item-0" className="border-none">
             <div className="flex justify-center mb-4">
-              <AccordionTrigger className="cursor-pointer gap-3 w-auto hover:bg-slate-50 rounded-xl px-5 py-2.5 border-2 border-slate-200 bg-white shadow-sm hover:shadow-md transition-all hover:no-underline">
+              <AccordionTrigger className="cursor-pointer gap-3 w-auto hover:bg-slate-50 rounded-lg px-6 h-12 border-2 border-[#21302B] bg-white shadow-sm hover:shadow-md transition-all hover:no-underline">
                 <img 
                   src="/assets/zoe-talking 1.svg" 
                   alt="Zoe" 
@@ -561,7 +557,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
                           className="w-10 h-10 md:w-12 md:h-12"
                         />
                       </div>
-                      <div className="flex-1 bg-[#E6F6EF] border-2 border-[#2B5E2B]/20 p-3 rounded-2xl shadow-sm min-w-0">
+                      <div className="flex-1 bg-[#E6F6EF] border-2 border-[#2B5E2B]/20 p-3 rounded-lg shadow-sm min-w-0">
                         <p className="font-bold text-gray-900 mb-1.5 text-xs md:text-sm">
                           Zoe
                         </p>
@@ -573,7 +569,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
 
                     {/* User's Answer */}
                     <div className="flex gap-3 justify-end w-full min-w-0">
-                      <div className="max-w-[85%] bg-white border-2 border-slate-200 p-3 rounded-2xl shadow-sm min-w-0">
+                      <div className="max-w-[85%] bg-white border-2 border-slate-200 p-3 rounded-lg shadow-sm min-w-0">
                         <p className="font-bold text-gray-900 mb-1.5 text-xs md:text-sm">
                           You
                         </p>
@@ -589,7 +585,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
                     {/* Feedback */}
                     {qa.summary && (
                       <div className="flex justify-center w-full min-w-0">
-                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 px-4 py-3 rounded-2xl max-w-[90%] shadow-sm min-w-0">
+                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 px-4 py-3 rounded-lg max-w-[90%] shadow-sm min-w-0">
                           <div className="flex items-center gap-2 mb-2 justify-center">
                             <img
                               src="/assets/hand-heart (1).svg"

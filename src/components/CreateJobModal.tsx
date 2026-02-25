@@ -446,7 +446,7 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-            <DialogContent className="sm:max-w-[720px] max-h-[92vh] overflow-hidden p-0 gap-0 rounded-3xl border border-gray-200 shadow-2xl bg-[#fcfdfc]"
+            <DialogContent className="sm:max-w-180 max-h-[92vh] overflow-hidden p-0 gap-0 rounded-lg border border-gray-200 shadow-2xl bg-[#fcfdfc]"
                 onInteractOutside={(e) => e.preventDefault()}>
                 
                 <DialogDescription className="sr-only">Job interview creation form</DialogDescription>
@@ -461,7 +461,7 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                             {initialData ? "Edit Job Description" : "Create Custom Interview"}
                         </DialogTitle>
                     </div>
-                    <DialogClose onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                    <DialogClose onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                         <X className="w-5 h-5 text-gray-400" />
                     </DialogClose>
                 </DialogHeader>
@@ -486,7 +486,7 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                                     onFocus={() => setJobTitleFocused(true)}
                                     onBlur={() => setTimeout(() => setJobTitleFocused(false), 200)}
                                     className={cn(
-                                        "h-12 border-2 border-gray-100 focus:border-[#386641] rounded-2xl text-base transition-all",
+                                        "h-12 border-2 border-gray-100 focus:border-[#386641] rounded-lg text-base transition-all",
                                         errors.jobTitle && "border-red-200 bg-red-50/30"
                                     )}
                                 />
@@ -494,7 +494,7 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
 
                                 {/* Dropdown Container */}
                                 {jobTitleFocused && (filteredJobTitles.length > 0 || showCreateOption) && (
-                                    <div className="absolute top-full left-0 w-full mt-2 z-[999] rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                    <div className="absolute top-full left-0 w-full mt-2 z-999 rounded-lg bg-white shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                                         <ul className="max-h-56 overflow-y-auto custom-scrollbar p-1">
                                             {filteredJobTitles.map((suggestion) => (
                                                 <li key={suggestion}
@@ -502,13 +502,13 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                                                         handleJobTitleChange(suggestion);
                                                         setJobTitleFocused(false);
                                                     }}
-                                                    className="px-4 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-[#386641] rounded-xl cursor-pointer transition-colors font-medium flex items-center gap-2">
+                                                    className="px-4 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-[#386641] rounded-md cursor-pointer transition-colors font-medium flex items-center gap-2">
                                                     <div className="w-1.5 h-1.5 bg-green-300 rounded-full" />
                                                     {suggestion}
                                                 </li>
                                             ))}
                                             {showCreateOption && (
-                                                <li className="px-4 py-3 text-sm text-[#386641] bg-green-50/50 font-bold rounded-xl border-t border-dashed border-green-100 cursor-pointer">
+                                                <li className="px-4 py-3 text-sm text-[#386641] bg-green-50/50 font-bold rounded-md border-t border-dashed border-green-100 cursor-pointer">
                                                     + Use custom: "{jobTitle}"
                                                 </li>
                                             )}
@@ -524,12 +524,12 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                             <label className="text-xs font-bold text-[#386641] flex items-center gap-2 uppercase tracking-widest">
                                 <AlignLeft className="h-4 w-4" /> JOB DESCRIPTION
                             </label>
-                            <div className="bg-gray-50/30 rounded-2xl border-2 border-gray-100 p-1 focus-within:border-[#386641] transition-all">
+                            <div className="bg-gray-50/30 rounded-lg border-2 border-gray-100 p-1 focus-within:border-[#386641] transition-all">
                                 <Textarea
                                     placeholder="Paste job details here..."
                                     value={jobDescription}
                                     onChange={(e) => setJobDescription(e.target.value)}
-                                    className="min-h-[120px] border-none focus-visible:ring-0 rounded-xl p-3 text-base resize-none bg-transparent"
+                                    className="min-h-30 border-none focus-visible:ring-0 rounded-lg p-3 text-base resize-none bg-transparent"
                                 />
                             </div>
                         </div>
@@ -546,7 +546,7 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                                     suggestions={TECHNICAL_SKILL_SUGGESTIONS}
                                     placeholder="Add tech..."
                                     className={cn(
-                                        "bg-white border-2 border-gray-100 rounded-2xl min-h-[50px] focus-within:border-[#386641] transition-all [&>div]:max-h-32 [&>div]:overflow-y-auto [&>div]:custom-scrollbar",
+                                        "bg-white border-2 border-gray-100 rounded-lg min-h-12.5 focus-within:border-[#386641] transition-all [&>div]:max-h-32 [&>div]:overflow-y-auto [&>div]:custom-scrollbar",
                                         errors.technicalSkills && "border-red-200"
                                     )}
                                 />
@@ -563,7 +563,7 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                                     suggestions={SOFT_SKILL_SUGGESTIONS}
                                     placeholder="Add soft skills..."
                                     className={cn(
-                                        "bg-white border-2 border-gray-100 rounded-2xl min-h-[50px] focus-within:border-[#386641] transition-all [&>div]:max-h-32 [&>div]:overflow-y-auto [&>div]:custom-scrollbar",
+                                        "bg-white border-2 border-gray-100 rounded-lg min-h-12.5 focus-within:border-[#386641] transition-all [&>div]:max-h-32 [&>div]:overflow-y-auto [&>div]:custom-scrollbar",
                                         errors.soft_skills && "border-red-200"
                                     )}
                                 />
@@ -574,11 +574,11 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                 </div>
 
                 {/* Footer */}
-                <DialogFooter className="p-6 border-t border-gray-100 bg-white flex justify-end gap-3 sticky bottom-0 z-30 rounded-b-3xl">
-                    <Button variant="ghost" onClick={handleClose} className="font-bold text-gray-400 hover:bg-gray-100 px-6 h-12 rounded-2xl">
+                <DialogFooter className="p-6 border-t border-gray-100 bg-white flex justify-end gap-3 sticky bottom-0 z-30 rounded-b-lg">
+                    <Button variant="ghost" onClick={handleClose} className="font-bold text-gray-400 hover:bg-gray-100 px-6 h-12 rounded-lg">
                         Cancel
                     </Button>
-                    <Button form="job-form" type="submit" className="bg-[#386641] hover:bg-[#2a4d31] text-white font-bold px-10 h-12 rounded-2xl shadow-lg">
+                    <Button form="job-form" type="submit" className="bg-[#386641] hover:bg-[#2a4d31] text-white font-bold px-6 h-12 rounded-lg shadow-lg">
                         {initialData ? "Update Job" : "Create Interview"}
                     </Button>
                 </DialogFooter>

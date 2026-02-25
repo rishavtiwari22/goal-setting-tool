@@ -5,7 +5,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 shrink-0 w-full border-b border-slate-200 bg-white/90 backdrop-blur-sm shadow-sm">
       <div className="max-w-7xl mx-auto h-16 flex items-center justify-between px-4 md:px-12">
         {/* Logo Left */}
-        <div className="flex justify-start md:-ml-30">
+        <div className="flex justify-start">
           <img 
             src="/assets/image 1.svg" 
             alt="Logo" 

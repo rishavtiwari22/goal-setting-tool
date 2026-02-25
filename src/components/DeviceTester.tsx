@@ -75,7 +75,7 @@ const CustomSelect = ({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={`
-          w-full px-4 py-3 rounded-xl text-left text-sm font-medium
+          w-full px-4 py-3 rounded-lg text-left text-sm font-medium
           border-2 transition-all duration-200 outline-none
           flex items-center justify-between gap-3
           ${disabled 
@@ -102,7 +102,7 @@ const CustomSelect = ({
       </button>
 
       {isOpen && !disabled && (
-        <div className="absolute z-50 w-full mt-2 bg-white border-2 border-[#2B5E2B] rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute z-50 w-full mt-2 bg-white border-2 border-[#2B5E2B] rounded-lg shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="max-h-60 overflow-y-auto custom-scrollbar">
             {options.map((option) => (
               <button
@@ -381,7 +381,7 @@ const DeviceTester = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 w-full mb-6 md:mb-8">
         {/* Microphone Card */}
         <div className={`
-          group relative p-5 md:p-6 rounded-2xl md:rounded-3xl border-2 transition-all duration-300
+          group relative p-5 md:p-6 rounded-lg border-2 transition-all duration-300
           flex flex-col min-h-[260px] md:min-h-[280px] bg-white
           ${isMicReady 
             ? "border-[#2B5E2B] ring-4 ring-[#E6F6EF] shadow-lg" 
@@ -428,7 +428,7 @@ const DeviceTester = ({
                 </div>
                 <Button
                   onClick={checkDevicesAndPermissions}
-                  className="w-full bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-semibold rounded-xl transition-all duration-200 hover:scale-[1.02]"
+                  className="w-full bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-semibold rounded-lg h-12 px-6 transition-all duration-200 hover:scale-[1.02]"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Retry Access
@@ -470,7 +470,7 @@ const DeviceTester = ({
 
         {/* Speaker Card */}
         <div className={`
-          group relative p-5 md:p-6 rounded-2xl md:rounded-3xl border-2 transition-all duration-300
+          group relative p-5 md:p-6 rounded-lg border-2 transition-all duration-300
           flex flex-col min-h-[260px] md:min-h-[280px] bg-white
           ${isSpeakerReady 
             ? "border-[#2B5E2B] ring-4 ring-[#E6F6EF] shadow-lg" 
@@ -546,7 +546,7 @@ const DeviceTester = ({
           onClick={onStartInterview}
           disabled={!isReadyToStart}
           className={`
-            w-full py-4 md:py-6 px-4 md:px-8 rounded-2xl font-bold text-xs md:text-base shadow-lg
+            w-full px-6 h-12 rounded-lg font-bold text-xs md:text-base shadow-lg
             transition-all duration-300 flex items-center justify-center gap-2 md:gap-3
             ${isReadyToStart
               ? "bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white hover:scale-[1.02] hover:shadow-xl active:scale-95"

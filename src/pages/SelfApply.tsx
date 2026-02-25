@@ -206,7 +206,7 @@ export default function SelfApply() {
                     <div className="flex justify-center">
                       <Button
                         onClick={() => setIsCreateJobModalOpen(true)}
-                        className="bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-black px-8 py-4 h-auto rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2 border-b-4 border-[#1a3a1b]"
+                        className="bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-black px-6 h-12 rounded-lg shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2 border-b-4 border-[#1a3a1b]"
                       >
                         <Plus size={16} />
                         <span className="text-sm">Create Custom Interview</span>
