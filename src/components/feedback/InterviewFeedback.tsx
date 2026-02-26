@@ -42,10 +42,10 @@ export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
             onClick={() => onChange(rating)}
             className={`
               flex-1 h-12 rounded-lg font-bold text-base md:text-lg
-              transition-all duration-200 border-2 cursor-pointer
+              transition-all duration-200 border cursor-pointer
               ${value === rating
-                ? "bg-[#2B5E2B] text-white border-[#2B5E2B] shadow-lg scale-105"
-                : "bg-white text-gray-600 border-slate-200 hover:border-[#2B5E2B] hover:scale-105"
+                ? "bg-[#2B5E2B] text-white border-[#2B5E2B] shadow-sm scale-105"
+                : "bg-white text-gray-600 border-gray-200 hover:border-[#2B5E2B] hover:scale-105"
               }
             `}
           >
@@ -87,11 +87,11 @@ export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {/* Question Relevance Card */}
           <div className={`
-            p-6 rounded-lg border-2 transition-all duration-300
-            bg-white shadow-sm hover:shadow-lg
+            p-6 rounded-xl border transition-all duration-300
+            bg-white shadow-none hover:shadow-sm
             ${questionRelevance !== null 
-              ? "border-[#2B5E2B] ring-4 ring-[#E6F6EF]" 
-              : "border-slate-200 hover:border-[#2B5E2B]"
+              ? "border-[#2B5E2B] ring-2 ring-[#E6F6EF]" 
+              : "border-gray-200 hover:border-[#2B5E2B]"
             }
           `}>
             <div className="flex items-start gap-3 md:gap-4 mb-4 md:mb-6">
@@ -125,11 +125,11 @@ export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
 
           {/* Referral Likelihood Card */}
           <div className={`
-            p-5 md:p-6 rounded-lg border-2 transition-all duration-300
-            bg-white shadow-sm hover:shadow-lg
+            p-5 md:p-6 rounded-xl border transition-all duration-300
+            bg-white shadow-none hover:shadow-sm
             ${referralLikelihood !== null 
-              ? "border-[#2B5E2B] ring-4 ring-[#E6F6EF]" 
-              : "border-slate-200 hover:border-[#2B5E2B]"
+              ? "border-[#2B5E2B] ring-2 ring-[#E6F6EF]" 
+              : "border-gray-200 hover:border-[#2B5E2B]"
             }
           `}>
             <div className="flex items-start gap-3 md:gap-4 mb-4 md:mb-6">
@@ -171,7 +171,7 @@ export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
               px-6 h-12 rounded-lg font-bold text-sm md:text-base
               transition-all duration-300 inline-flex items-center justify-center gap-2
               ${isComplete
-                ? "bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white hover:scale-[1.02] shadow-lg hover:shadow-xl active:scale-95"
+                ? "bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white hover:scale-[1.01] shadow-sm hover:shadow-md active:scale-95"
                 : "bg-[#2B5E2B]/40 text-white/70 cursor-not-allowed shadow-none"
               }
             `}

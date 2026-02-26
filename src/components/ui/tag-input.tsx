@@ -1,7 +1,6 @@
 import React, { useState, KeyboardEvent, useRef } from "react";
 import { X, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 interface TagInputProps {
@@ -23,6 +22,7 @@ export function TagInput({
     const [isFocused, setIsFocused] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const mouseOverDropdown = useRef(false);
 
     const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter" || e.key === ",") {
@@ -55,12 +55,12 @@ export function TagInput({
                 s.toLowerCase().includes(inputValue.toLowerCase()) &&
                 !tags.some(t => t.toLowerCase() === s.toLowerCase())
         )
-        .slice(0, 8);
+        .slice(0, 5);
 
     const showCreateOption = inputValue && !tags.some(t => t.toLowerCase() === inputValue.trim().toLowerCase()) && !filteredSuggestions.includes(inputValue);
 
     return (
-        <div className="space-y-2 relative" ref={containerRef}>
+        <div className="relative" ref={containerRef}>
             <div
                 onClick={handleContainerClick}
                 className={cn(
@@ -96,17 +96,16 @@ export function TagInput({
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
                     onFocus={() => setIsFocused(true)}
-                    /* 
-                       Auto-save feature:
-                       When the user clicks away (onBlur), any text currently typed 
-                       is automatically converted into a tag/chip.
-                    */
                     onBlur={() => {
-                        // Delay blur to allow click event on suggestions to fire
                         setTimeout(() => {
+                            // If mouse is over the dropdown (scrollbar interaction), re-focus input
+                            if (mouseOverDropdown.current) {
+                                inputRef.current?.focus();
+                                return;
+                            }
                             setIsFocused(false);
                             addTag(inputValue);
-                        }, 200);
+                        }, 150);
                     }}
                     className="flex-1 bg-transparent border-none outline-none placeholder:text-muted-foreground min-w-[120px]"
                     placeholder={tags.length === 0 ? placeholder : ""}
@@ -116,16 +115,20 @@ export function TagInput({
                 </div>
             </div>
 
-            {/* Suggestions Dropdown */}
+            {/* Suggestions Dropdown — flows in document to avoid overflow clipping */}
             {(filteredSuggestions.length > 0 || showCreateOption) && isFocused && (
-                <div className="absolute top-full left-0 w-full z-50 mt-1 max-h-60 overflow-auto rounded-lg bg-white shadow-lg border border-gray-200">
+                <div
+                    className="mt-1 rounded-lg bg-white shadow-lg border border-gray-200"
+                    onMouseEnter={() => { mouseOverDropdown.current = true; }}
+                    onMouseLeave={() => { mouseOverDropdown.current = false; }}
+                >
                     <ul className="p-1">
                         {filteredSuggestions.map((suggestion) => (
                             <li
                                 key={suggestion}
                                 className="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
                                 onMouseDown={(e) => {
-                                    e.preventDefault(); // Prevent input blur
+                                    e.preventDefault();
                                     addTag(suggestion);
                                 }}
                             >

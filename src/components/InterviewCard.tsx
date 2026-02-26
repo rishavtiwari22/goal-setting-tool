@@ -27,10 +27,10 @@ const InterviewCard: React.FC<InterviewCardProps> = ({
       <div
         onClick={onClick}
         className={`
-          group relative p-6 rounded-lg border-2 transition-all duration-300 cursor-pointer 
+          group relative p-6 rounded-xl border transition-all duration-300 cursor-pointer 
           flex flex-col min-h-60 md:h-65 bg-white
-          ${isSelected ? "border-[#21302B] ring-4 ring-[#E6F6EF] shadow-xl -translate-y-2" : "border-[#21302B] shadow-sm hover:shadow-2xl hover:-translate-y-2"}
-          ${comingSoon ? "opacity-80 cursor-not-allowed hover:translate-y-0 hover:shadow-sm" : ""}
+          ${isSelected ? "border-[#2B5E2B] ring-2 ring-[#E6F6EF] shadow-sm -translate-y-1" : "border-gray-200 shadow-none hover:shadow-sm hover:border-[#2B5E2B] hover:-translate-y-1"}
+          ${comingSoon ? "opacity-80 cursor-not-allowed hover:translate-y-0 hover:shadow-none" : ""}
           ${className}
         `}
       >

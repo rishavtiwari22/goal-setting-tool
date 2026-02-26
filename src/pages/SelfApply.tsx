@@ -142,21 +142,21 @@ export default function SelfApply() {
       <Header />
 
       {/* --- MAIN AREA --- */}
-      <main className="flex-1 flex flex-col px-12 py-4 relative overflow-y-auto md:overflow-hidden">
+      <main className="flex-1 flex flex-col px-12 py-6 relative overflow-y-auto md:overflow-hidden">
         
-        {/* Back Button */}
-        <div className="shrink-0">
+        {/* Back Button — aligns to same max-width as content */}
+        <div className={`shrink-0 w-full ${step === "speakerandmiccheck" ? "max-w-4xl mx-auto" : "max-w-6xl mx-auto"}`}>
           <button 
             onClick={() => step === "speakerandmiccheck" ? setStep("job_selection") : navigate("/")}
             className="flex items-center gap-1 text-gray-400 hover:text-black transition-all group py-2"
           >
             <ChevronLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
-            <span className="text-[11px] font-black uppercase tracking-[0.2em]">Back</span>
+            <span className="text-[14px] font-black tracking-[0.2em]">Back</span>
           </button>
         </div>
 
         {/* Content Container */}
-        <div className="flex-1 flex flex-col items-center justify-start -mt-2">
+        <div className="flex-1 flex flex-col items-center justify-center">
           {step === "job_selection" ? (
             <div className="w-full max-w-6xl flex flex-col items-center">
               
@@ -206,7 +206,7 @@ export default function SelfApply() {
                     <div className="flex justify-center">
                       <Button
                         onClick={() => setIsCreateJobModalOpen(true)}
-                        className="bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-black px-6 h-12 rounded-lg shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2 border-b-4 border-[#1a3a1b]"
+                        className="bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-black px-6 h-12 rounded-lg shadow-sm transition-all hover:scale-[1.01] active:scale-95 flex items-center gap-2 border-b-2 border-[#1a3a1b]"
                       >
                         <Plus size={16} />
                         <span className="text-sm">Create Custom Interview</span>
@@ -215,7 +215,7 @@ export default function SelfApply() {
 
                     {/* Chrome notification below button */}
                     <div className="flex justify-center pt-4 px-4">
-                      <Badge className="px-3 md:px-4 py-2 font-bold text-[#007AFF] rounded-lg md:rounded-xl bg-[#EBF5FF] border border-[#D1E9FF] text-[9px] md:text-[10px] uppercase tracking-wide shadow-sm flex items-center gap-2">
+                      <Badge className="px-3 md:px-4 py-2 font-bold text-[#007AFF] rounded-lg md:rounded-xl bg-[#EBF5FF] border border-[#D1E9FF] text-[9px] md:text-[10px] uppercase tracking-wide shadow-none flex items-center gap-2">
                         <Info size={12} className="md:hidden" />
                         <Info size={14} className="hidden md:block" />
                         <span className="text-center">Please note that Zoe works best on Google Chrome</span>

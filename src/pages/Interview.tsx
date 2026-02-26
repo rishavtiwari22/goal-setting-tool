@@ -593,7 +593,7 @@ export default function Interview() {
               playsInline
               className={`video-smooth-transition ${
                 isVideoSwitching ? "loading" : ""
-              } w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 lg:w-72 lg:h-72 rounded-full object-cover relative z-10 shadow-2xl`}
+              } w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 lg:w-72 lg:h-72 rounded-full object-cover relative z-10 shadow-md`}
             />
           </div>
 
@@ -605,7 +605,7 @@ export default function Interview() {
             style={{ minHeight: "80px" }}
           >
             {showChatMessage && currentlySpokenText && (
-              <div className="bg-white/95 backdrop-blur-md rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-md border border-slate-200 relative z-20">
+              <div className="bg-white/95 backdrop-blur-md rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm border border-gray-200 relative z-20">
                 <p className="text-gray-800 text-sm md:text-base lg:text-lg font-medium leading-relaxed text-center">
                   {currentlySpokenText}
                 </p>
@@ -633,7 +633,7 @@ export default function Interview() {
                   isSpeechMode ? "Stop Speech Input" : "Start Speech Input"
                 }
                 onClick={handleMicClick}
-                className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all shrink-0 bg-white border-2 border-slate-200 flex items-center justify-center group"
+                className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all shrink-0 bg-white border border-gray-200 flex items-center justify-center group"
               >
                 {isSpeechMode && !isTtsActive ? (
                   <AudioVisualizer isActive={isListening} size={40} />
@@ -647,7 +647,7 @@ export default function Interview() {
             <button
               aria-label="Toggle captions"
               onClick={() => setShowChatMessage((prev) => !prev)}
-              className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-xl bg-white hover:scale-105 active:scale-95 transition-all shrink-0 border-2 border-slate-200 flex items-center justify-center group"
+              className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md bg-white hover:scale-105 active:scale-95 transition-all shrink-0 border border-gray-200 flex items-center justify-center group"
             >
               {showChatMessage ? (
                 <Captions className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-600 group-hover:text-gray-900 transition-colors" />
@@ -660,7 +660,7 @@ export default function Interview() {
             <button
               aria-label="End interview"
               onClick={() => handleEndCall()}
-              className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-xl text-white bg-red-500 hover:bg-red-600 hover:scale-105 active:scale-95 transition-all shrink-0 border-2 border-red-600 flex items-center justify-center"
+              className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md text-white bg-red-500 hover:bg-red-600 hover:scale-105 active:scale-95 transition-all shrink-0 border border-red-600 flex items-center justify-center"
             >
               <PhoneMissed className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
             </button>

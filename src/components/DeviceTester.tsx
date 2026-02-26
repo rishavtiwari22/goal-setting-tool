@@ -76,13 +76,13 @@ const CustomSelect = ({
         disabled={disabled}
         className={`
           w-full px-4 py-3 rounded-lg text-left text-sm font-medium
-          border-2 transition-all duration-200 outline-none
+          border transition-all duration-200 outline-none
           flex items-center justify-between gap-3
           ${disabled 
-            ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed' 
+            ? 'bg-slate-50 border-gray-200 text-slate-400 cursor-not-allowed' 
             : isOpen
-              ? 'bg-white border-[#2B5E2B] ring-2 ring-[#E6F6EF] text-gray-900'
-              : 'bg-white border-slate-200 text-gray-900 hover:border-[#2B5E2B] hover:shadow-sm'
+              ? 'bg-white border-[#2B5E2B] ring-1 ring-[#E6F6EF] text-gray-900'
+              : 'bg-white border-gray-200 text-gray-900 hover:border-[#2B5E2B]'
           }
         `}
       >
@@ -102,7 +102,7 @@ const CustomSelect = ({
       </button>
 
       {isOpen && !disabled && (
-        <div className="absolute z-50 w-full mt-2 bg-white border-2 border-[#2B5E2B] rounded-lg shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute z-50 w-full mt-2 bg-white border border-[#2B5E2B] rounded-lg shadow-md overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="max-h-60 overflow-y-auto custom-scrollbar">
             {options.map((option) => (
               <button
@@ -356,17 +356,10 @@ const DeviceTester = ({
   const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
 
   return (
-    <div className="w-full max-w-4xl mx-auto flex flex-col items-center px-4 py-6 md:py-0">
+    <div className="w-full max-w-4xl mx-auto flex flex-col items-center px-4 py-8 md:py-12">
       {/* Header Section */}
-      <div className="mb-6 md:mb-8 text-center">
-        <div className="relative inline-block mb-3 md:mb-4 custom-float">
-          <div className="absolute inset-0 bg-green-100 blur-3xl rounded-full opacity-40"></div>
-          <img 
-            src="/assets/zoe-talking 1.svg" 
-            alt="Zoe" 
-            className="relative w-20 h-20 md:w-24 md:h-24 lg:w-28 lg:h-28" 
-          />
-        </div>
+      <div className="mb-8 md:mb-10 text-center">
+    
        
         {/* <p className="text-slate-500 text-sm md:text-base font-medium">
           Make sure Zoe can hear and speak with you clearly
@@ -378,14 +371,14 @@ const DeviceTester = ({
       
 
       {/* Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 w-full mb-6 md:mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-8 md:mb-10">
         {/* Microphone Card */}
         <div className={`
-          group relative p-5 md:p-6 rounded-lg border-2 transition-all duration-300
-          flex flex-col min-h-[260px] md:min-h-[280px] bg-white
+          group relative p-6 rounded-xl border transition-all duration-300
+          flex flex-col min-h-65 md:min-h-70 bg-white
           ${isMicReady 
-            ? "border-[#2B5E2B] ring-4 ring-[#E6F6EF] shadow-lg" 
-            : "border-slate-200 hover:border-[#2B5E2B] shadow-sm hover:shadow-lg"
+            ? "border-[#2B5E2B] ring-2 ring-[#E6F6EF] shadow-sm" 
+            : "border-gray-200 hover:border-[#2B5E2B] shadow-none hover:shadow-sm"
           }
         `}>
           {/* Icon and Title */}
@@ -397,7 +390,7 @@ const DeviceTester = ({
             />
             <div className="flex-1">
               <h3 className="text-base md:text-lg font-bold text-gray-900 mb-1">Test mic</h3>
-              <p className="text-xs text-slate-500 font-medium">
+              <p className="text-sm text-slate-500 font-medium">
                 {micPermission === "denied" 
                   ? "We need your permission" 
                   : isMicReady 
@@ -428,7 +421,7 @@ const DeviceTester = ({
                 </div>
                 <Button
                   onClick={checkDevicesAndPermissions}
-                  className="w-full bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-semibold rounded-lg h-12 px-6 transition-all duration-200 hover:scale-[1.02]"
+                  className="w-full bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-semibold rounded-lg h-12 px-6 transition-all duration-200 hover:scale-[1.01]"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Retry Access
@@ -437,7 +430,7 @@ const DeviceTester = ({
             ) : (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Select Microphone
                   </label>
                   <CustomSelect
@@ -457,7 +450,7 @@ const DeviceTester = ({
                 </div>
                 {isTestingMic && (
                   <div>
-                    <p className="text-xs font-semibold text-gray-700 mb-2">
+                    <p className="text-sm font-semibold text-gray-700 mb-2">
                       Speak now to test
                     </p>
                     <AudioVisualizer volume={micVolume} />
@@ -470,11 +463,11 @@ const DeviceTester = ({
 
         {/* Speaker Card */}
         <div className={`
-          group relative p-5 md:p-6 rounded-lg border-2 transition-all duration-300
-          flex flex-col min-h-[260px] md:min-h-[280px] bg-white
+          group relative p-6 rounded-xl border transition-all duration-300
+          flex flex-col min-h-65 md:min-h-70 bg-white
           ${isSpeakerReady 
-            ? "border-[#2B5E2B] ring-4 ring-[#E6F6EF] shadow-lg" 
-            : "border-slate-200 hover:border-[#2B5E2B] shadow-sm hover:shadow-lg"
+            ? "border-[#2B5E2B] ring-2 ring-[#E6F6EF] shadow-sm" 
+            : "border-gray-200 hover:border-[#2B5E2B] shadow-none hover:shadow-sm"
           }
         `}>
           {/* Icon and Title */}
@@ -486,7 +479,7 @@ const DeviceTester = ({
             />
             <div className="flex-1">
               <h3 className="text-base md:text-lg font-bold text-gray-900 mb-1">Test speaker</h3>
-              <p className="text-xs text-slate-500 font-medium">
+              <p className="text-sm text-slate-500 font-medium">
                 {isSpeakerReady 
                   ? "Ready to play audio" 
                   : audioOutputDevices.length === 0 
@@ -504,7 +497,7 @@ const DeviceTester = ({
           <div className="flex-1">
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Select Speaker
                 </label>
                 <CustomSelect
@@ -541,16 +534,16 @@ const DeviceTester = ({
       </div>
 
       {/* Primary CTA */}
-      <div className="text-center w-full max-w-md px-2 md:px-0">
+      <div className="flex flex-col items-center gap-3">
         <Button
           onClick={onStartInterview}
           disabled={!isReadyToStart}
           className={`
-            w-full px-6 h-12 rounded-lg font-bold text-xs md:text-base shadow-lg
-            transition-all duration-300 flex items-center justify-center gap-2 md:gap-3
+            px-6 h-12 rounded-lg font-bold text-sm
+            transition-all duration-300 inline-flex items-center justify-center gap-2
             ${isReadyToStart
-              ? "bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white hover:scale-[1.02] hover:shadow-xl active:scale-95"
-              : "bg-slate-200 text-slate-400 cursor-not-allowed"
+              ? "bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white hover:scale-[1.01] shadow-sm hover:shadow-md active:scale-95"
+              : "bg-[#2B5E2B]/40 text-white/70 cursor-not-allowed shadow-none"
             }
           `}
         >
@@ -563,7 +556,7 @@ const DeviceTester = ({
         </Button>
 
         {!isReadyToStart && (
-          <p className="text-xs text-slate-500 mt-3 font-medium px-2">
+          <p className="text-sm text-slate-500 font-medium text-center">
             Please enable both microphone and speaker to continue
           </p>
         )}

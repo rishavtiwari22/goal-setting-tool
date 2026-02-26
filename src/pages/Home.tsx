@@ -77,7 +77,7 @@ export default function Home() {
           <img
             src="/assets/zoe-talking 1.svg"
             alt="Zoe"
-            className="w-20 h-20 md:w-28 md:h-28 drop-shadow-2xl animate-bounce-slow mx-auto"
+            className="w-20 h-20 md:w-28 md:h-28 drop-shadow-md animate-bounce-slow mx-auto"
           />
         </motion.div>
 
@@ -114,7 +114,7 @@ export default function Home() {
 
         {/* System Hint */}
         <div className="mt-12 mx-auto pb-6">
-          <div className="px-6 py-2 bg-[#E8F3FF] border border-[#D0E7FF] rounded-full shadow-sm inline-block">
+          <div className="px-6 py-2 bg-[#E8F3FF] border border-[#D0E7FF] rounded-full shadow-none inline-block">
             <span className="text-[10px] md:text-[12px] font-bold text-[#2D7FF9]">
                Please note that Zoe works best on Google Chrome
             </span>
