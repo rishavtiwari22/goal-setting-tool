@@ -43,7 +43,7 @@ export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
             className={`
               flex-1 h-12 rounded-lg font-bold text-base md:text-lg
               transition-all duration-200 border cursor-pointer
-              ${value === rating
+              ${value === rating || rating === maxRating
                 ? "bg-[#2B5E2B] text-white border-[#2B5E2B] shadow-sm scale-105"
                 : "bg-white text-gray-600 border-gray-200 hover:border-[#2B5E2B] hover:scale-105"
               }
