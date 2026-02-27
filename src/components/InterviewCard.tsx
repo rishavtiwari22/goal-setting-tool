@@ -35,7 +35,7 @@ const InterviewCard: React.FC<InterviewCardProps> = ({
         `}
       >
         {/* Icon and Title Row */}
-        <div className="flex items-center gap-4 mb-5">
+        <div className="flex items-start gap-4 mb-5">
             <div className="p-4 rounded-lg shrink-0 bg-[#E6F6EF]">
             {icon}
           </div>

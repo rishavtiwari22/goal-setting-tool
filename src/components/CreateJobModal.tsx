@@ -445,11 +445,12 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-            <DialogContent className="sm:max-w-180 max-h-[92vh] p-0 gap-0 rounded-lg border border-gray-200 shadow-2xl bg-white overflow-y-auto custom-scrollbar"
+            <DialogContent className="sm:max-w-180 max-h-[92vh] p-0 gap-0 rounded-lg border border-gray-200 shadow-2xl bg-white overflow-visible"
                 onInteractOutside={(e) => e.preventDefault()}>
                 
                 <DialogDescription className="sr-only">Job interview creation form</DialogDescription>
 
+              <div className="overflow-y-auto max-h-[92vh] custom-scrollbar rounded-lg">
                 {/* Header */}
                 <DialogHeader className="p-6 border-b border-gray-100 flex flex-row justify-between items-center bg-white sticky top-0 z-30">
                     <div className="flex items-center gap-3">
@@ -470,8 +471,8 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                     
                     {/* Job Title */}
                     <div className="space-y-2">
-                        <label className="text-xs font-bold text-[#386641] flex items-center gap-2 uppercase tracking-widest">
-                            <Briefcase className="h-4 w-4" /> JOB TITLE <span className="text-red-500">*</span>
+                        <label className="text-xs font-bold text-[#386641] flex items-center gap-2">
+                            <Briefcase className="h-4 w-4" /> Job Title <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
                             <Input
@@ -520,8 +521,8 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
 
                     {/* Job Description */}
                     <div className="space-y-2">
-                        <label className="text-xs font-bold text-[#386641] flex items-center gap-2 uppercase tracking-widest">
-                            <AlignLeft className="h-4 w-4" /> JOB DESCRIPTION
+                        <label className="text-xs font-bold text-[#386641] flex items-center gap-2">
+                            <AlignLeft className="h-4 w-4" /> Job Description
                         </label>
                         <Textarea
                             placeholder="Paste job details here..."
@@ -534,8 +535,8 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                     {/* Skills */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-[#386641] flex items-center gap-2 uppercase tracking-widest">
-                                <Code2 className="h-4 w-4" /> TECHNICAL SKILLS*
+                            <label className="text-xs font-bold text-[#386641] flex items-center gap-2">
+                                <Code2 className="h-4 w-4" /> Technical Skills<span className="text-red-500">*</span>
                             </label>
                             <TagInput
                                 tags={technicalSkills}
@@ -551,8 +552,8 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-[#386641] flex items-center gap-2 uppercase tracking-widest">
-                                <Users2 className="h-4 w-4" /> SOFT SKILLS*
+                            <label className="text-xs font-bold text-[#386641] flex items-center gap-2">
+                                <Users2 className="h-4 w-4" /> Soft Skills<span className="text-red-500">*</span>
                             </label>
                             <TagInput
                                 tags={softSkills}
@@ -578,6 +579,8 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                         </Button>
                     </div>
                 </form>
+
+              </div>
 
                 <style>{`
                     .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }

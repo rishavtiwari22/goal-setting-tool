@@ -1,4 +1,5 @@
-import React, { useState, KeyboardEvent, useRef } from "react";
+import React, { useState, useEffect, useCallback, KeyboardEvent, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -20,9 +21,33 @@ export function TagInput({
 }: TagInputProps) {
     const [inputValue, setInputValue] = useState("");
     const [isFocused, setIsFocused] = useState(false);
+    const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const mouseOverDropdown = useRef(false);
+
+    const updatePos = useCallback(() => {
+        if (!containerRef.current) return;
+        const r = containerRef.current.getBoundingClientRect();
+        const dialog = containerRef.current.closest("[role='dialog']");
+        if (dialog) {
+            const dr = dialog.getBoundingClientRect();
+            setPos({ top: r.bottom - dr.top + 4, left: r.left - dr.left, width: r.width });
+        } else {
+            setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!isFocused) return;
+        updatePos();
+        window.addEventListener("scroll", updatePos, true);
+        window.addEventListener("resize", updatePos);
+        return () => {
+            window.removeEventListener("scroll", updatePos, true);
+            window.removeEventListener("resize", updatePos);
+        };
+    }, [isFocused, updatePos, tags]);
 
     const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter" || e.key === ",") {
@@ -55,7 +80,7 @@ export function TagInput({
                 s.toLowerCase().includes(inputValue.toLowerCase()) &&
                 !tags.some(t => t.toLowerCase() === s.toLowerCase())
         )
-        .slice(0, 5);
+        .slice(0, 8);
 
     const showCreateOption = inputValue && !tags.some(t => t.toLowerCase() === inputValue.trim().toLowerCase()) && !filteredSuggestions.includes(inputValue);
 
@@ -115,40 +140,44 @@ export function TagInput({
                 </div>
             </div>
 
-            {/* Suggestions Dropdown — flows in document to avoid overflow clipping */}
-            {(filteredSuggestions.length > 0 || showCreateOption) && isFocused && (
-                <div
-                    className="mt-1 rounded-lg bg-white shadow-lg border border-gray-200"
-                    onMouseEnter={() => { mouseOverDropdown.current = true; }}
-                    onMouseLeave={() => { mouseOverDropdown.current = false; }}
-                >
-                    <ul className="p-1">
-                        {filteredSuggestions.map((suggestion) => (
-                            <li
-                                key={suggestion}
-                                className="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                                onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    addTag(suggestion);
-                                }}
-                            >
-                                {suggestion}
-                            </li>
-                        ))}
-                        {showCreateOption && (
-                            <li
-                                className="cursor-pointer px-3 py-2 text-sm text-[#386641] hover:bg-green-50 font-medium rounded-md transition-colors border-t border-gray-100 mt-1"
-                                onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    addTag(inputValue);
-                                }}
-                            >
-                                + Create "{inputValue}"
-                            </li>
-                        )}
-                    </ul>
-                </div>
-            )}
+            {/* Suggestions Dropdown — portaled into dialog to escape overflow clipping */}
+            {(filteredSuggestions.length > 0 || showCreateOption) && isFocused &&
+                createPortal(
+                    <div
+                        style={{ position: "absolute", top: pos.top, left: pos.left, width: pos.width, zIndex: 99999 }}
+                        className="rounded-lg bg-white shadow-lg border border-gray-200 max-h-48 overflow-y-auto"
+                        onMouseEnter={() => { mouseOverDropdown.current = true; }}
+                        onMouseLeave={() => { mouseOverDropdown.current = false; }}
+                    >
+                        <ul className="p-1">
+                            {filteredSuggestions.map((suggestion) => (
+                                <li
+                                    key={suggestion}
+                                    className="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        addTag(suggestion);
+                                    }}
+                                >
+                                    {suggestion}
+                                </li>
+                            ))}
+                            {showCreateOption && (
+                                <li
+                                    className="cursor-pointer px-3 py-2 text-sm text-[#386641] hover:bg-green-50 font-medium rounded-md transition-colors border-t border-gray-100 mt-1"
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        addTag(inputValue);
+                                    }}
+                                >
+                                    + Create "{inputValue}"
+                                </li>
+                            )}
+                        </ul>
+                    </div>,
+                    containerRef.current?.closest("[role='dialog']") ?? document.body
+                )
+            }
         </div>
     );
 }
