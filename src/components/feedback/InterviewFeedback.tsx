@@ -10,8 +10,8 @@ interface InterviewFeedbackProps {
 }
 
 export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
-  const [questionRelevance, setQuestionRelevance] = useState<number | null>(null);
-  const [referralLikelihood, setReferralLikelihood] = useState<number | null>(null);
+  const [questionRelevance, setQuestionRelevance] = useState<number | null>(5);
+  const [referralLikelihood, setReferralLikelihood] = useState<number | null>(5);
 
   const isComplete = questionRelevance !== null && referralLikelihood !== null;
 
@@ -43,7 +43,7 @@ export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
             className={`
               flex-1 h-12 rounded-lg font-bold text-base md:text-lg
               transition-all duration-200 border cursor-pointer
-              ${value === rating || rating === maxRating
+              ${value === rating
                 ? "bg-[#2B5E2B] text-white border-[#2B5E2B] shadow-sm scale-105"
                 : "bg-white text-gray-600 border-gray-200 hover:border-[#2B5E2B] hover:scale-105"
               }
