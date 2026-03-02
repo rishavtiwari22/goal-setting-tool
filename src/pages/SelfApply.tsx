@@ -43,6 +43,7 @@ export default function SelfApply() {
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [customJobData, setCustomJobData] = useState<{ job_title: string; job_description: string; technical_skills: string[]; soft_skills: string[] } | null>(null);
 
   useEffect(() => {
     fetchJobs();
@@ -96,30 +97,47 @@ export default function SelfApply() {
       return;
     }
 
-    if (!selectedJobId) {
+    if (!selectedJobId && !customJobData) {
       toast.error("Please select a job role first");
       return;
     }
 
     try {
-      const selectedJob = jobs.find((j) => j.job_id === selectedJobId);
-      if (!selectedJob) {
-        throw new Error("Selected job not found");
-      }
+      let interviewConfig;
 
-      const interviewConfig = {
-        userId,
-        jobId: selectedJob.job_id,
-        jobTitle: selectedJob.job_title,
-        jobDescription: selectedJob.job_description,
-        interviewTime: 10, // Default 10 minutes
-        language: "English",
-        difficulty: "medium",
-        examinationPoints: [
-          ...(selectedJob.technical_skills || []),
-          ...(selectedJob.soft_skills || [])
-        ],
-      };
+      if (customJobData) {
+        interviewConfig = {
+          userId,
+          jobId: `custom_${Date.now()}`,
+          jobTitle: customJobData.job_title,
+          jobDescription: customJobData.job_description,
+          interviewTime: 10,
+          language: "English",
+          difficulty: "medium",
+          examinationPoints: [
+            ...(customJobData.technical_skills || []),
+            ...(customJobData.soft_skills || [])
+          ],
+        };
+      } else {
+        const selectedJob = jobs.find((j) => j.job_id === selectedJobId);
+        if (!selectedJob) {
+          throw new Error("Selected job not found");
+        }
+        interviewConfig = {
+          userId,
+          jobId: selectedJob.job_id,
+          jobTitle: selectedJob.job_title,
+          jobDescription: selectedJob.job_description,
+          interviewTime: 10,
+          language: "English",
+          difficulty: "medium",
+          examinationPoints: [
+            ...(selectedJob.technical_skills || []),
+            ...(selectedJob.soft_skills || [])
+          ],
+        };
+      }
 
       sessionStorage.setItem(
         "interviewConfig",
@@ -303,7 +321,9 @@ export default function SelfApply() {
       <CreateJobModal
         isOpen={isCreateJobModalOpen}
         onClose={() => setIsCreateJobModalOpen(false)}
-        onSubmit={() => {
+        onSubmit={(jobData) => {
+          setCustomJobData(jobData);
+          setSelectedJobId(null);
           setIsCreateJobModalOpen(false);
           setStep("speakerandmiccheck");
         }}
