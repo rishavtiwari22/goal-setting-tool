@@ -75,9 +75,9 @@ export default function Home() {
         
         <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mb-4">
           <img
-            src="/assets/zoe-talking 1.svg"
+            src="/assets/thoughtbubble.webp"
             alt="Zoe"
-            className="w-20 h-20 md:w-28 md:h-28 drop-shadow-md animate-bounce-slow mx-auto"
+            className="w-32 h-32 md:w-40 md:h-40 mx-auto object-contain"
           />
         </motion.div>
 

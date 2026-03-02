@@ -30,26 +30,23 @@ export default function Interview() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [activeThinkingVideo, setActiveThinkingVideo] =
     useState<string>("thinking");
-  const [isVideoSwitching, setIsVideoSwitching] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasSelectedAlternativeRef = useRef<boolean>(false);
   const lastSelectedAnimationRef = useRef<string | null>(null);
-  const videoTransitionDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  const preloadedVideosRef = useRef<Set<string>>(new Set());
+  const animationTransitionDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const pendingSessionRef = useRef<InterviewSession | null>(null); // Store session to navigate after TTS
 
-  const videoStates: { [key: string]: string } = {
-    speaking: "/assets/speaking-edited.mp4",
-    listening: "/assets/listening.mp4",
-    thinking: "/assets/regular-thinking.mp4",
-    juggling: "/assets/juggling.mp4",
-    bubblepop: "/assets/bubblepop.mp4",
-    glassadjustment: "/assets/glassadjustment.mp4",
-    thoughtbubble: "/assets/thoughtbubble.mp4",
-    ballbounce: "/assets/ballbounce.mp4",
+  const animationStates: { [key: string]: string } = {
+    speaking: "/assets/speaking-edited.webp",
+    listening: "/assets/listening.webp",
+    thinking: "/assets/regular-thinking.webp",
+    juggling: "/assets/juggling.webp",
+    bubblepop: "/assets/bubblepop.webp",
+    glassadjustment: "/assets/glassadjustment.webp",
+    thoughtbubble: "/assets/thoughtbubble.webp",
+    ballbounce: "/assets/ballbounce.webp",
   };
 
   const alternativeThinkingVideos = [
@@ -283,42 +280,20 @@ export default function Interview() {
     scrollToBottom();
   }, [messages]);
 
+  // Preload animated WebP images
   useEffect(() => {
-    const preloadVideo = (src: string) => {
-      return new Promise<void>((resolve) => {
-        const video = document.createElement("video");
-        video.preload = "auto";
-        video.src = src;
-
-        const handleCanPlay = () => {
-          preloadedVideosRef.current.add(src);
-          resolve();
-        };
-
-        video.addEventListener("canplaythrough", handleCanPlay, { once: true });
-        video.addEventListener("error", () => resolve(), { once: true });
-        video.load();
-      });
+    const preloadImage = (src: string) => {
+      const img = new Image();
+      img.src = src;
     };
 
-    const priorityOrder = [
-      videoStates.juggling,
-      videoStates.thinking,
-      videoStates.speaking,
-      videoStates.listening,
-      ...alternativeThinkingVideos.map((key) => videoStates[key]),
-    ];
-
-    (async () => {
-      for (const src of priorityOrder) {
-        await preloadVideo(src);
-      }
-    })();
+    // Preload all animation images (lightweight, no decode overhead like video)
+    Object.values(animationStates).forEach(preloadImage);
   }, []);
 
   useEffect(() => {
-    if (videoTransitionDebounceRef.current) {
-      clearTimeout(videoTransitionDebounceRef.current);
+    if (animationTransitionDebounceRef.current) {
+      clearTimeout(animationTransitionDebounceRef.current);
     }
 
     // Helper to clean up thinking state when exiting
@@ -405,7 +380,7 @@ export default function Interview() {
     if (isHighPriority) {
       setCurrentVideoState(newState);
     } else {
-      videoTransitionDebounceRef.current = setTimeout(() => {
+      animationTransitionDebounceRef.current = setTimeout(() => {
         setCurrentVideoState(newState);
       }, 100);
     }
@@ -424,80 +399,13 @@ export default function Interview() {
       if (thinkingTimerRef.current) {
         clearTimeout(thinkingTimerRef.current);
       }
-      if (videoTransitionDebounceRef.current) {
-        clearTimeout(videoTransitionDebounceRef.current);
+      if (animationTransitionDebounceRef.current) {
+        clearTimeout(animationTransitionDebounceRef.current);
       }
     };
   }, []);
 
-  useEffect(() => {
-    const videoEl = videoRef.current;
-    if (!videoEl) return;
-
-    const initialSrc = videoStates["juggling"];
-    videoEl.dataset.srcKey = initialSrc;
-    videoEl.src = initialSrc;
-
-    const handleInitialCanPlay = () => {
-      videoEl.play().catch(() => {});
-    };
-
-    videoEl.addEventListener("canplay", handleInitialCanPlay, { once: true });
-    videoEl.load();
-
-    return () => {
-      videoEl.removeEventListener("canplay", handleInitialCanPlay);
-    };
-  }, []);
-
-  useEffect(() => {
-    const videoEl = videoRef.current;
-    if (!videoEl) return;
-
-    const newSrc = videoStates[currentVideoState];
-
-    if (videoEl.dataset.srcKey === newSrc) {
-      return;
-    }
-
-    const isPreloaded = preloadedVideosRef.current.has(newSrc);
-
-    setIsVideoSwitching(true);
-
-    const handleCanPlay = () => {
-      setIsVideoSwitching(false);
-
-      requestAnimationFrame(() => {
-        videoEl.play().catch(() => {});
-      });
-    };
-
-    if (isPreloaded) {
-      videoEl.addEventListener("canplay", handleCanPlay, { once: true });
-      videoEl.dataset.srcKey = newSrc;
-      videoEl.src = newSrc;
-    } else {
-      const handleCanPlayThrough = () => {
-        preloadedVideosRef.current.add(newSrc);
-        handleCanPlay();
-      };
-
-      videoEl.addEventListener("canplaythrough", handleCanPlayThrough, {
-        once: true,
-      });
-      videoEl.dataset.srcKey = newSrc;
-      videoEl.src = newSrc;
-      videoEl.load();
-
-      return () => {
-        videoEl.removeEventListener("canplaythrough", handleCanPlayThrough);
-      };
-    }
-
-    return () => {
-      videoEl.removeEventListener("canplay", handleCanPlay);
-    };
-  }, [currentVideoState]);
+  // No complex video loading logic needed - animated WebP images load instantly
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -580,20 +488,15 @@ export default function Interview() {
             backgroundRepeat: "no-repeat",
           }}
         >
-          {/* Video Avatar Container */}
+          {/* Animation Avatar Container */}
           <div className="relative flex items-center justify-center shrink-0 my-6 md:my-8 lg:my-12">
             {isTtsActive && !isListening && (
               <div className="absolute ripple-effect" />
             )}
-            <video
-              ref={videoRef}
-              autoPlay
-              loop
-              muted
-              playsInline
-              className={`video-smooth-transition ${
-                isVideoSwitching ? "loading" : ""
-              } w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 lg:w-72 lg:h-72 rounded-full object-cover relative z-10 shadow-md`}
+            <img
+              src={animationStates[currentVideoState]}
+              alt="Interview avatar"
+              className="w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 lg:w-72 lg:h-72 rounded-full object-cover relative z-10 shadow-md transition-opacity duration-200"
             />
           </div>
 
@@ -782,14 +685,7 @@ export default function Interview() {
           }
         }
         
-        .video-smooth-transition {
-          transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          will-change: opacity;
-        }
-        
-        .video-smooth-transition.loading {
-          opacity: 0.5;
-        }
+
       `}</style>
     </div>
   );

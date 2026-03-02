@@ -160,11 +160,8 @@ export default function SelfApply() {
           {step === "job_selection" ? (
             <div className="w-full max-w-6xl flex flex-col items-center">
               
-              <div className="mb-6 custom-float shrink-0">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-green-100 blur-3xl rounded-full opacity-40"></div>
-                    <img src="/assets/zoe-talking 1.svg" alt="Zoe" className="relative w-24 h-24 md:w-28 md:h-28" />
-                  </div>
+              <div className="mb-6 shrink-0">
+                  <img src="/assets/glassadjustment.webp" alt="Zoe" className="w-28 h-28 md:w-36 md:h-36 object-contain mx-auto" />
               </div>
 
               <h2 className="text-2xl font-black text-center mb-10 text-gray-900 tracking-tight custom-fade-in">
