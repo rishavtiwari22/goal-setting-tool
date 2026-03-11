@@ -210,7 +210,7 @@ Job Title: {job_title}
 Knowledge Areas: {knowledge_points}
 Language: {language}
 Remaining Time: {remaining_time} minutes
-Bad Answer Count: {bad_answer_count}/2
+Bad Answer Count: {bad_answer_count}/100
 
 The candidate's previous response was incorrect, nonsense, or a refusal to answer.
 {warning_message}
@@ -277,8 +277,8 @@ export function buildCreateQuestionPrompt(params: BuildCreateQuestionPromptParam
     let warningMessage = '';
     let warningInstruction = '';
 
-    if (badCount >= 2) {
-      warningMessage = ' IMPORTANT: This is the candidate\'s FINAL WARNING. They have given 2 bad/irrelevant answers. You MUST clearly warn them that this is their last chance and if they give one more bad answer, the interview will be ended.';
+    if (badCount >= 100) {
+      warningMessage = ' IMPORTANT: This is the candidate\'s FINAL WARNING. They have given 100 bad/irrelevant answers. You MUST clearly warn them that this is their last chance and if they give one more bad answer, the interview will be ended.';
       warningInstruction = 'CLEARLY warn the candidate that this is their final chance. State explicitly: "This is your last opportunity. One more insufficient answer and we will need to end the interview."';
     } else {
       warningMessage = '';
