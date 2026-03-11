@@ -32,14 +32,14 @@ export default function AdminRecruitment() {
     email: "",
     job_id: "",
     deadline: "",
-    interview_time: 20,
+    interview_time: 30,
   });
 
   const [bulkForm, setBulkForm] = useState({
     file: null as File | null,
     job_id: "",
     deadline: "",
-    interview_time: 20,
+    interview_time: 30,
   });
 
   useEffect(() => {
@@ -103,7 +103,7 @@ export default function AdminRecruitment() {
     try {
       await createInvitation(singleForm as InvitationRequest);
       toast.success("Invitation sent successfully");
-      setSingleForm({ email: "", job_id: "", deadline: "", interview_time: 20 });
+      setSingleForm({ email: "", job_id: "", deadline: "", interview_time: 30 });
       const data = await getInvitations();
       setInvitations(data.invitations);
     } catch (error) {
@@ -132,7 +132,7 @@ export default function AdminRecruitment() {
         bulkForm.interview_time
       );
       toast.success("Bulk invitations sent successfully");
-      setBulkForm({ file: null, job_id: "", deadline: "", interview_time: 20 });
+      setBulkForm({ file: null, job_id: "", deadline: "", interview_time: 30 });
       const data = await getInvitations();
       setInvitations(data.invitations);
     } catch (error) {

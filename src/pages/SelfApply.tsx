@@ -53,7 +53,7 @@ export default function SelfApply() {
     jobDescription: "",
     technicalSkills: [],
     softSkills: [],
-    testTime: 10,
+    testTime: 30,
   });
 
   useEffect(() => {
