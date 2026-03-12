@@ -75,6 +75,7 @@ Decision Rules (in priority order):
 
 2. FOLLOW-UP if (only if there's hope of a better answer):
    - Answer is too brief but shows SOME engagement
+   - Followup only 1 time on a question/topic to get more info. If followup already asked, then move on.
    - Answer needs minor clarification
    - This is the FIRST vague answer on this topic
 
