@@ -15,6 +15,7 @@ import AudioVisualizer from "@/components/AudioVisualizer";
 import type { InterviewSession } from "../models/interview";
 import { loadInterviewSessionBySessionId, recoverOngoingSessionFromFirebase } from "../services/storage/interviewStorage";
 
+
 export default function Interview() {
   const navigate = useNavigate();
   const { sessionId } = useParams<{ sessionId?: string }>();
@@ -29,26 +30,23 @@ export default function Interview() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [activeThinkingVideo, setActiveThinkingVideo] =
     useState<string>("thinking");
-  const [isVideoSwitching, setIsVideoSwitching] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasSelectedAlternativeRef = useRef<boolean>(false);
   const lastSelectedAnimationRef = useRef<string | null>(null);
-  const videoTransitionDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  const preloadedVideosRef = useRef<Set<string>>(new Set());
+  const animationTransitionDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const pendingSessionRef = useRef<InterviewSession | null>(null); // Store session to navigate after TTS
 
-  const videoStates: { [key: string]: string } = {
-    speaking: "/assets/speaking-edited.mp4",
-    listening: "/assets/listening.mp4",
-    thinking: "/assets/regular-thinking.mp4",
-    juggling: "/assets/juggling.mp4",
-    bubblepop: "/assets/bubblepop.mp4",
-    glassadjustment: "/assets/glassadjustment.mp4",
-    thoughtbubble: "/assets/thoughtbubble.mp4",
-    ballbounce: "/assets/ballbounce.mp4",
+  const animationStates: { [key: string]: string } = {
+    speaking: "/assets/speaking-edited.webp",
+    listening: "/assets/listening.webp",
+    thinking: "/assets/regular-thinking.webp",
+    juggling: "/assets/juggling.webp",
+    bubblepop: "/assets/bubblepop.webp",
+    glassadjustment: "/assets/glassadjustment.webp",
+    thoughtbubble: "/assets/thoughtbubble.webp",
+    ballbounce: "/assets/ballbounce.webp",
   };
 
   const alternativeThinkingVideos = [
@@ -282,42 +280,20 @@ export default function Interview() {
     scrollToBottom();
   }, [messages]);
 
+  // Preload animated WebP images
   useEffect(() => {
-    const preloadVideo = (src: string) => {
-      return new Promise<void>((resolve) => {
-        const video = document.createElement("video");
-        video.preload = "auto";
-        video.src = src;
-
-        const handleCanPlay = () => {
-          preloadedVideosRef.current.add(src);
-          resolve();
-        };
-
-        video.addEventListener("canplaythrough", handleCanPlay, { once: true });
-        video.addEventListener("error", () => resolve(), { once: true });
-        video.load();
-      });
+    const preloadImage = (src: string) => {
+      const img = new Image();
+      img.src = src;
     };
 
-    const priorityOrder = [
-      videoStates.juggling,
-      videoStates.thinking,
-      videoStates.speaking,
-      videoStates.listening,
-      ...alternativeThinkingVideos.map((key) => videoStates[key]),
-    ];
-
-    (async () => {
-      for (const src of priorityOrder) {
-        await preloadVideo(src);
-      }
-    })();
+    // Preload all animation images (lightweight, no decode overhead like video)
+    Object.values(animationStates).forEach(preloadImage);
   }, []);
 
   useEffect(() => {
-    if (videoTransitionDebounceRef.current) {
-      clearTimeout(videoTransitionDebounceRef.current);
+    if (animationTransitionDebounceRef.current) {
+      clearTimeout(animationTransitionDebounceRef.current);
     }
 
     // Helper to clean up thinking state when exiting
@@ -404,7 +380,7 @@ export default function Interview() {
     if (isHighPriority) {
       setCurrentVideoState(newState);
     } else {
-      videoTransitionDebounceRef.current = setTimeout(() => {
+      animationTransitionDebounceRef.current = setTimeout(() => {
         setCurrentVideoState(newState);
       }, 100);
     }
@@ -423,80 +399,13 @@ export default function Interview() {
       if (thinkingTimerRef.current) {
         clearTimeout(thinkingTimerRef.current);
       }
-      if (videoTransitionDebounceRef.current) {
-        clearTimeout(videoTransitionDebounceRef.current);
+      if (animationTransitionDebounceRef.current) {
+        clearTimeout(animationTransitionDebounceRef.current);
       }
     };
   }, []);
 
-  useEffect(() => {
-    const videoEl = videoRef.current;
-    if (!videoEl) return;
-
-    const initialSrc = videoStates["juggling"];
-    videoEl.dataset.srcKey = initialSrc;
-    videoEl.src = initialSrc;
-
-    const handleInitialCanPlay = () => {
-      videoEl.play().catch(() => {});
-    };
-
-    videoEl.addEventListener("canplay", handleInitialCanPlay, { once: true });
-    videoEl.load();
-
-    return () => {
-      videoEl.removeEventListener("canplay", handleInitialCanPlay);
-    };
-  }, []);
-
-  useEffect(() => {
-    const videoEl = videoRef.current;
-    if (!videoEl) return;
-
-    const newSrc = videoStates[currentVideoState];
-
-    if (videoEl.dataset.srcKey === newSrc) {
-      return;
-    }
-
-    const isPreloaded = preloadedVideosRef.current.has(newSrc);
-
-    setIsVideoSwitching(true);
-
-    const handleCanPlay = () => {
-      setIsVideoSwitching(false);
-
-      requestAnimationFrame(() => {
-        videoEl.play().catch(() => {});
-      });
-    };
-
-    if (isPreloaded) {
-      videoEl.addEventListener("canplay", handleCanPlay, { once: true });
-      videoEl.dataset.srcKey = newSrc;
-      videoEl.src = newSrc;
-    } else {
-      const handleCanPlayThrough = () => {
-        preloadedVideosRef.current.add(newSrc);
-        handleCanPlay();
-      };
-
-      videoEl.addEventListener("canplaythrough", handleCanPlayThrough, {
-        once: true,
-      });
-      videoEl.dataset.srcKey = newSrc;
-      videoEl.src = newSrc;
-      videoEl.load();
-
-      return () => {
-        videoEl.removeEventListener("canplaythrough", handleCanPlayThrough);
-      };
-    }
-
-    return () => {
-      videoEl.removeEventListener("canplay", handleCanPlay);
-    };
-  }, [currentVideoState]);
+  // No complex video loading logic needed - animated WebP images load instantly
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -566,95 +475,54 @@ export default function Interview() {
   }
 
   return (
-    <div className="max-w-screen w-full py-0 px-0 h-screen">
-      <div className="flex flex-col h-full relative">
-        <header className="border-b border-gray-200 bg-white">
-          <div className="relative w-full px-6 py-4 flex items-center justify-center">
-            <button
-              onClick={() => navigate("/")}
-              className="absolute left-6 text-gray-600 hover:text-gray-900"
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M15 5L5 15M5 5L15 15"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-            <h1 className="text-base font-semibold">
-              Zoe-Your Learning Assistant
-            </h1>
-          </div>
-        </header>
-
+    <div className="max-w-screen w-full h-screen flex flex-col bg-[#FBFAF8]">
+      
+      <div className="flex flex-col flex-1 relative overflow-hidden">
         <div
-          className="flex flex-col items-center justify-center flex-1 w-full px-5 relative overflow-hidden"
+          className="flex flex-col items-center justify-center flex-1 w-full px-4 md:px-6 lg:px-8 relative"
           style={{
             background:
-              "radial-gradient(53% 119.66% at 50% 47%, rgba(255, 255, 255, 0.2) 0%, rgba(111, 185, 113, 0.2) 100%)",
+              "radial-gradient(53% 119.66% at 50% 47%, rgba(255, 255, 255, 0.3) 0%, rgba(111, 185, 113, 0.15) 100%)",
             backgroundSize: "cover",
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
           }}
         >
-          <div
-            className="relative flex items-center justify-center shrink-0"
-            style={{ height: "320px", marginTop: "48px", marginBottom: "48px" }}
-          >
+          {/* Animation Avatar Container */}
+          <div className="relative flex items-center justify-center shrink-0 my-6 md:my-8 lg:my-12">
             {isTtsActive && !isListening && (
               <div className="absolute ripple-effect" />
             )}
-            <video
-              ref={videoRef}
-              autoPlay
-              loop
-              muted
-              playsInline
-              className={`video-smooth-transition ${
-                isVideoSwitching ? "loading" : ""
-              }`}
-              style={{
-                width: "260px",
-                height: "259px",
-                position: "relative",
-                zIndex: 2,
-                objectFit: "cover",
-                borderRadius: "50%",
-              }}
+            <img
+              src={animationStates[currentVideoState]}
+              alt="Interview avatar"
+              className="w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 lg:w-72 lg:h-72 rounded-full object-cover relative z-10 shadow-md transition-opacity duration-200"
             />
           </div>
 
+          {/* Caption Container */}
           <div
-            className="caption-container transition-opacity duration-300"
-            style={{
-              opacity: showChatMessage && currentlySpokenText ? 1 : 0,
-              height: "120px",
-            }}
+            className={`transition-opacity duration-300 w-full max-w-2xl lg:max-w-3xl mx-auto px-4 mt-4 md:mt-6 ${
+              showChatMessage && currentlySpokenText ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{ minHeight: "80px" }}
           >
             {showChatMessage && currentlySpokenText && (
-              <p className="caption-text font-semibold">
-                {currentlySpokenText}
-              </p>
+              <div className="bg-white/95 backdrop-blur-md rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm border border-gray-200 relative z-20">
+                <p className="text-gray-800 text-sm md:text-base lg:text-lg font-medium leading-relaxed text-center">
+                  {currentlySpokenText}
+                </p>
+              </div>
             )}
           </div>
 
+          {/* Control Buttons */}
           <div
-            className="flex gap-6 justify-center items-center"
-            style={{
-              height: "64px",
-              marginTop: "80px",
-              visibility: config && !isCompleted ? "visible" : "hidden",
-            }}
+            className={`flex gap-3 md:gap-4 lg:gap-6 justify-center items-center mt-6 md:mt-10 lg:mt-16 mb-6 md:mb-8 ${
+              config && !isCompleted ? "visible" : "invisible"
+            }`}
           >
+            {/* Microphone Button */}
             <div className="relative flex items-center justify-center">
               {isListening && (
                 <div className="mic-ripple-container">
@@ -663,68 +531,42 @@ export default function Interview() {
                   <div className="mic-ripple"></div>
                 </div>
               )}
-              <Button
-                variant="ghost"
-                size="icon-lg"
+              <button
                 aria-label={
                   isSpeechMode ? "Stop Speech Input" : "Start Speech Input"
                 }
                 onClick={handleMicClick}
-                className="rounded-xl shadow-sm hover:scale-105 transition-transform flex-shrink-0 bg-white"
-                style={{
-                  width: "56px",
-                  height: "56px",
-                  minWidth: "56px",
-                  minHeight: "56px",
-                }}
+                className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all shrink-0 bg-white border border-gray-200 flex items-center justify-center group"
               >
                 {isSpeechMode && !isTtsActive ? (
-                  <AudioVisualizer isActive={isListening} size={56} />
+                  <AudioVisualizer isActive={isListening} size={40} />
                 ) : (
-                  <MicOff className="size-6" />
+                  <MicOff className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-600 group-hover:text-gray-900 transition-colors" />
                 )}
-              </Button>
+              </button>
             </div>
 
-            <Button
-              variant="ghost"
-              size="icon-lg"
-              aria-label="Type message"
+            {/* Caption Toggle Button */}
+            <button
+              aria-label="Toggle captions"
               onClick={() => setShowChatMessage((prev) => !prev)}
-              className="rounded-xl shadow-sm bg-white hover:scale-105 transition-transform flex-shrink-0"
-              style={{
-                width: "56px",
-                height: "56px",
-                minWidth: "56px",
-                minHeight: "56px",
-              }}
+              className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md bg-white hover:scale-105 active:scale-95 transition-all shrink-0 border border-gray-200 flex items-center justify-center group"
             >
               {showChatMessage ? (
-                <Captions className="size-6" />
+                <Captions className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-600 group-hover:text-gray-900 transition-colors" />
               ) : (
-                <CaptionsOff className="size-6" />
+                <CaptionsOff className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-600 group-hover:text-gray-900 transition-colors" />
               )}
-            </Button>
+            </button>
 
-            <Button
-              variant="ghost"
-              size="icon-lg"
-              aria-label={
-                isSpeechOutputEnabled
-                  ? "Disable Speech Output"
-                  : "Enable Speech Output"
-              }
+            {/* End Call Button */}
+            <button
+              aria-label="End interview"
               onClick={() => handleEndCall()}
-              className="rounded-xl shadow-sm text-white bg-red-500 hover:scale-105 transition-transform flex-shrink-0"
-              style={{
-                width: "56px",
-                height: "56px",
-                minWidth: "56px",
-                minHeight: "56px",
-              }}
+              className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md text-white bg-red-500 hover:bg-red-600 hover:scale-105 active:scale-95 transition-all shrink-0 border border-red-600 flex items-center justify-center"
             >
-              <PhoneMissed className="size-6" />
-            </Button>
+              <PhoneMissed className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
+            </button>
           </div>
         </div>
       </div>
@@ -742,13 +584,36 @@ export default function Interview() {
         }
         .ripple-effect {
           display: block;
-          width: 250px;
-          height: 250px;
+          width: 200px;
+          height: 200px;
+          height: 200px;
           animation: ripple 1.5s ease-out infinite;
           border-radius: 9999px;
           position: absolute;
-          z-index: -1;
+          z-index: 1;
         }
+        
+        @media (min-width: 640px) {
+          .ripple-effect {
+            width: 224px;
+            height: 224px;
+          }
+        }
+        
+        @media (min-width: 768px) {
+          .ripple-effect {
+            width: 256px;
+            height: 256px;
+          }
+        }
+        
+        @media (min-width: 1024px) {
+          .ripple-effect {
+            width: 288px;
+            height: 288px;
+          }
+        }
+        
         .mic-ripple-container {
           position: absolute;
           top: 50%;
@@ -759,76 +624,68 @@ export default function Interview() {
           pointer-events: none;
           z-index: -1;
         }
+        
         .mic-ripple {
           position: absolute;
           top: 50%;
           left: 50%;
-          width: 100px;
-          height: 100px;
+          width: 60px;
+          height: 60px;
           border-radius: 50%;
-          background: rgba(253, 238, 227, 1);
+          background: rgba(253, 238, 227, 0.8);
           transform: translate(-50%, -50%);
-          animation: micRipple 1.5s ease-out infinite;
+          animation: micRipple 1.8s ease-out infinite;
         }
+        
         .mic-ripple:nth-child(1) {
           animation-delay: 0s;
         }
         .mic-ripple:nth-child(2) {
-          animation-delay: 1s;
+          animation-delay: 0.6s;
         }
         .mic-ripple:nth-child(3) {
-          animation-delay: 2s;
+          animation-delay: 1.2s;
         }
+        
         @keyframes micRipple {
           0% {
-            width: 80px;
-            height: 80px;
-            opacity: 1;
+            width: 60px;
+            height: 60px;
+            opacity: 0.8;
           }
           50% {
-            width: 120px;
-            height: 120px;
+            width: 100px;
+            height: 100px;
             opacity: 0.4;
           }
           100% {
-            width: 160px;
-            height: 160px;
+            width: 140px;
+            height: 140px;
             opacity: 0;
           }
         }
-        .video-smooth-transition {
-          opacity: 1;
-          transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          will-change: opacity;
+        
+        @media (min-width: 768px) {
+          @keyframes micRipple {
+            0% {
+              width: 70px;
+              height: 70px;
+              opacity: 0.8;
+            }
+            50% {
+              width: 120px;
+              height: 120px;
+              opacity: 0.4;
+            }
+            100% {
+              width: 170px;
+              height: 170px;
+              opacity: 0;
+            }
+          }
         }
-        .video-smooth-transition.loading {
-          opacity: 0.3;
-        }
-        .caption-container {
-          background: rgba(255, 255, 255, 0.6);
-          border-radius: 3px;
-          padding: 12px 16px;
-          max-width: 850px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 16px;
-          backdrop-filter: blur(8px);
-          flex-shrink: 0;
-          overflow: hidden;
-        }
-        .caption-text {
-          overflow: auto;
-          color: #1f2937;
-          font-size: 21px;
-          font-weight: semi-bold;
-          line-height: 1.5;
-          text-align: left;
-          margin: 0;
-          white-space: pre-wrap;
-          word-wrap: break-word;
-        }
+        
+
       `}</style>
     </div>
   );

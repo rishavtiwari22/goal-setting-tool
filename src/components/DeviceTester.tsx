@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { CircleAlert, Mic } from "lucide-react";
+import { Mic, Volume2, CheckCircle2, AlertCircle, RefreshCw, ChevronDown } from "lucide-react";
 
 interface MediaDeviceInfo {
   deviceId: string;
@@ -13,20 +13,130 @@ const AudioVisualizer = ({ volume }: { volume: number }) => {
   const activeDots = Math.round((volume / 100) * totalDots);
 
   const dots = Array.from({ length: totalDots }, (_, i) => {
-    let bgColor = "bg-gray-300";
+    let bgColor = "bg-gray-200";
     if (i < activeDots) {
       if (i < 5) {
-        bgColor = "bg-green-500";
+        bgColor = "bg-[#2B5E2B]";
+      } else if (i < 7) {
+        bgColor = "bg-[#FF9900]";
       } else {
-        bgColor = "bg-red-500";
+        bgColor = "bg-[#FF9900]";
       }
     }
     return (
-      <span key={i} className={`w-3 h-3 ${bgColor} rounded-full mr-1`}></span>
+      <span key={i} className={`w-2.5 h-2.5 ${bgColor} rounded-full transition-colors duration-150`}></span>
     );
   });
 
-  return <div className="flex mt-4">{dots}</div>;
+  return <div className="flex gap-1.5 mt-4">{dots}</div>;
+};
+
+// Custom Select Component with better styling
+const CustomSelect = ({ 
+  value, 
+  onChange, 
+  options, 
+  disabled = false,
+  placeholder = "Select an option",
+  icon: Icon
+}: { 
+  value: string; 
+  onChange: (value: string) => void; 
+  options: { value: string; label: string }[];
+  disabled?: boolean;
+  placeholder?: string;
+  icon?: React.ComponentType<{ className?: string }>;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const selectedOption = options.find(opt => opt.value === value);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`
+          w-full px-4 py-3 rounded-lg text-left text-sm font-medium
+          border transition-all duration-200 outline-none
+          flex items-center justify-between gap-3
+          ${disabled 
+            ? 'bg-slate-50 border-gray-200 text-slate-400 cursor-not-allowed' 
+            : isOpen
+              ? 'bg-white border-[#2B5E2B] ring-1 ring-[#E6F6EF] text-gray-900'
+              : 'bg-white border-gray-200 text-gray-900 hover:border-[#2B5E2B]'
+          }
+        `}
+      >
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          {Icon && (
+            <Icon className={`w-4 h-4 shrink-0 ${disabled ? 'text-slate-400' : 'text-[#2B5E2B]'}`} />
+          )}
+          <span className="truncate">
+            {selectedOption?.label || placeholder}
+          </span>
+        </div>
+        <ChevronDown 
+          className={`w-4 h-4 shrink-0 transition-transform duration-200 ${
+            isOpen ? 'rotate-180' : ''
+          } ${disabled ? 'text-slate-400' : 'text-gray-600'}`} 
+        />
+      </button>
+
+      {isOpen && !disabled && (
+        <div className="absolute z-50 w-full mt-2 bg-white border border-[#2B5E2B] rounded-lg shadow-md overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="max-h-60 overflow-y-auto custom-scrollbar">
+            {options.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={`
+                  w-full px-4 py-3 text-left text-sm font-medium transition-colors duration-150
+                  flex items-center gap-3
+                  ${option.value === value
+                    ? 'bg-[#E6F6EF] text-[#2B5E2B]'
+                    : 'text-gray-700 hover:bg-slate-50 hover:text-gray-900'
+                  }
+                `}
+              >
+                {Icon && (
+                  <Icon className={`w-4 h-4 shrink-0 ${
+                    option.value === value ? 'text-[#2B5E2B]' : 'text-gray-400'
+                  }`} />
+                )}
+                <span className="truncate flex-1">{option.label}</span>
+                {option.value === value && (
+                  <CheckCircle2 className="w-4 h-4 text-[#2B5E2B] shrink-0" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 const DeviceTester = ({
@@ -238,167 +348,229 @@ const DeviceTester = ({
     }
   };
 
-  return (
-    <div className="p-8 rounded-lg max-w-4xl mx-auto">
-      <h3 className="text-lg font-bold text-center mb-6">
-        Before you start, please test your mic and speaker
-      </h3>
-      {/* <p className=" flex items-center justify-center text-gray-800 font-semibold">
-        <CircleAlert className="inline-block mr-2" size={20} />
-        <span>
-          Pro tip: Be 5 minutes early to your interview. This helps you settle
-          in and form a good first impression.
-        </span>
-      </p> */}
+  const isMicReady = micPermission === "granted" && selectedMic && audioInputDevices.length > 0;
+  const isSpeakerReady = selectedSpeaker && audioOutputDevices.length > 0;
+  const isReadyToStart = isMicReady && isSpeakerReady;
 
-      <div className="grid md:grid-cols-2 gap-8 mt-4">
-        <div
-          className="
-          group relative bg-white p-5 rounded-lg border border-gray-200
-          transition-all duration-200
-          hover:shadow-md hover:scale-[1.01]
-          hover:border-2 hover:border-[#6AEDAA]
-          "
-        >
-          <div className="flex items-center mb-4">
-            <img
-              className="w-[52px] h-[64px] mr-2"
-              src="/assets/testmic.png"
+  // Check if user is on Chrome
+  const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+
+  return (
+    <div className="w-full max-w-4xl mx-auto flex flex-col items-center px-4 py-8 md:py-12">
+      {/* Header Section */}
+      <div className="mb-8 md:mb-10 text-center">
+    
+       
+        {/* <p className="text-slate-500 text-sm md:text-base font-medium">
+          Make sure Zoe can hear and speak with you clearly
+        </p> */}
+         <h2 className="text-xl md:text-2xl lg:text-3xl font-black text-gray-900 tracking-tight mb-2 px-2">
+            Before you start, please test your mic and speaker
+        </h2>
+      </div>
+      
+
+      {/* Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-8 md:mb-10">
+        {/* Microphone Card */}
+        <div className={`
+          group relative p-6 rounded-xl border transition-all duration-300
+          flex flex-col min-h-65 md:min-h-70 bg-white
+          ${isMicReady 
+            ? "border-[#2B5E2B] ring-2 ring-[#E6F6EF] shadow-sm" 
+            : "border-gray-200 hover:border-[#2B5E2B] shadow-none hover:shadow-sm"
+          }
+        `}>
+          {/* Icon and Title */}
+          <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+            <img 
+              src="/assets/testmic.png" 
               alt="Microphone"
+              className="w-12 h-14 md:w-14 md:h-16 shrink-0 object-contain"
             />
-            <h3 className="text-lg text-[var(--text-primary)] font-semibold">
-              Test mic
-            </h3>
-          </div>
-          {micPermission === "denied" ? (
-            <div>
-              <p className="text-red-500 mb-3">
-                Microphone access denied. Please enable it in your browser
-                settings.
+            <div className="flex-1">
+              <h3 className="text-base md:text-lg font-bold text-gray-900 mb-1">Test mic</h3>
+              <p className="text-sm text-slate-500 font-medium">
+                {micPermission === "denied" 
+                  ? "We need your permission" 
+                  : isMicReady 
+                    ? "Ready to record" 
+                    : "Select your microphone"
+                }
               </p>
-              <Button
-                onClick={checkDevicesAndPermissions}
-                className="w-full bg-[#2C5F2D] hover:bg-[#2C5F2D]/90 text-white"
-              >
-                Retry Microphone Access
-              </Button>
             </div>
-          ) : (
-            <>
-              <div>
-                <select
-                  value={selectedMic}
-                  onChange={(e) => {
-                    setSelectedMic(e.target.value);
-                  }}
-                  className="w-full p-2 border rounded-md"
-                  disabled={isTestingMic}
+            {/* {isMicReady && (
+              <CheckCircle2 className="w-6 h-6 text-[#2B5E2B] animate-in fade-in duration-500" />
+            )} */}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1">
+            {micPermission === "denied" ? (
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200">
+                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-900 mb-1">
+                      Microphone access needed
+                    </p>
+                    <p className="text-xs text-amber-700">
+                      Please enable microphone access in your browser settings to continue
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={checkDevicesAndPermissions}
+                  className="w-full bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-semibold rounded-lg h-12 px-6 transition-all duration-200 hover:scale-[1.01]"
                 >
-                  {audioInputDevices.length === 0 ? (
-                    <option value="">No microphones detected</option>
-                  ) : (
-                    audioInputDevices.map((device) => (
-                      <option key={device.deviceId} value={device.deviceId}>
-                        {device.label ||
-                          `Microphone ${audioInputDevices.indexOf(device) + 1}`}
-                      </option>
-                    ))
-                  )}
-                </select>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Retry Access
+                </Button>
               </div>
-              <AudioVisualizer volume={micVolume} />
-              {/* {isTestingMic && (
-                <p className="text-sm text-gray-500 mt-2">
-                  Testing microphone...
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Select Microphone
+                  </label>
+                  <CustomSelect
+                    value={selectedMic}
+                    onChange={setSelectedMic}
+                    options={audioInputDevices.length === 0 
+                      ? [{ value: "", label: "No microphones detected" }]
+                      : audioInputDevices.map((device) => ({
+                          value: device.deviceId,
+                          label: device.label || `Microphone ${audioInputDevices.indexOf(device) + 1}`
+                        }))
+                    }
+                    disabled={isTestingMic || audioInputDevices.length === 0}
+                    placeholder="Choose a microphone"
+                    icon={Mic}
+                  />
+                </div>
+                {isTestingMic && (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-2">
+                      Speak now to test
+                    </p>
+                    <AudioVisualizer volume={micVolume} />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Speaker Card */}
+        <div className={`
+          group relative p-6 rounded-xl border transition-all duration-300
+          flex flex-col min-h-65 md:min-h-70 bg-white
+          ${isSpeakerReady 
+            ? "border-[#2B5E2B] ring-2 ring-[#E6F6EF] shadow-sm" 
+            : "border-gray-200 hover:border-[#2B5E2B] shadow-none hover:shadow-sm"
+          }
+        `}>
+          {/* Icon and Title */}
+          <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+            <img 
+              src="/assets/testspeakers.png" 
+              alt="Speaker"
+              className="w-12 h-14 md:w-14 md:h-16 shrink-0 object-contain"
+            />
+            <div className="flex-1">
+              <h3 className="text-base md:text-lg font-bold text-gray-900 mb-1">Test speaker</h3>
+              <p className="text-sm text-slate-500 font-medium">
+                {isSpeakerReady 
+                  ? "Ready to play audio" 
+                  : audioOutputDevices.length === 0 
+                    ? "No speakers found" 
+                    : "Select your speaker"
+                }
+              </p>
+            </div>
+            {/* {isSpeakerReady && (
+              <CheckCircle2 className="w-6 h-6 text-[#2B5E2B] animate-in fade-in duration-500" />
+            )} */}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Select Speaker
+                </label>
+                <CustomSelect
+                  value={selectedSpeaker}
+                  onChange={setSelectedSpeaker}
+                  options={audioOutputDevices.length === 0 
+                    ? [{ value: "", label: "No speakers detected" }]
+                    : audioOutputDevices.map((device) => ({
+                        value: device.deviceId,
+                        label: device.label || `Speaker ${audioOutputDevices.indexOf(device) + 1}`
+                      }))
+                  }
+                  disabled={audioOutputDevices.length === 0}
+                  placeholder="Choose a speaker"
+                  icon={Volume2}
+                />
+              </div>
+              {audioOutputDevices.length === 0 && (
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                  <AlertCircle className="w-5 h-5 text-slate-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-slate-600">
+                    No audio output devices found. You can still continue using your system's default speaker.
+                  </p>
+                </div>
+              )}
+              {/* {selectedSpeaker && (
+                <p className="text-xs text-slate-500 italic">
+                  💡 A test tone plays automatically when you select a speaker
                 </p>
               )} */}
-            </>
-          )}
-          <div
-            className="
-            absolute bottom-0 left-0 right-0 h-1.5
-            bg-gradient-to-r from-[#FF8C42] via-[#FF9F5A] to-[#FFA500]
-            rounded-b-lg
-            opacity-0 group-hover:opacity-100
-            transition-opacity duration-200
-            "
-          />
-        </div>
-
-        <div
-          className="
-          group relative bg-white p-6 rounded-lg border border-gray-200
-          transition-all duration-200
-          hover:shadow-md hover:scale-[1.01]
-          hover:border-2 hover:border-[#6AEDAA]
-          "
-        >
-          <div className="flex items-center mb-4">
-            <img
-              className="w-[52px] h-[64px] mr-2"
-              src="/assets/testspeakers.png"
-              alt="Speaker"
-            />
-            <h3 className="text-lg text-[var(--text-primary)] font-semibold">
-              Test speaker
-            </h3>
+            </div>
           </div>
-          <div>
-            <select
-              value={selectedSpeaker}
-              onChange={(e) => {
-                setSelectedSpeaker(e.target.value);
-              }}
-              className="w-full p-2 border rounded-md"
-            >
-              {audioOutputDevices.length === 0 ? (
-                <option value="">No speakers detected</option>
-              ) : (
-                audioOutputDevices.map((device) => (
-                  <option key={device.deviceId} value={device.deviceId}>
-                    {device.label ||
-                      `Speaker ${audioOutputDevices.indexOf(device) + 1}`}
-                  </option>
-                ))
-              )}
-            </select>
-          </div>
-          <div className="flex mt-4 h-3"></div>
-          {/* <p className="text-sm text-gray-500 mt-2">
-            A test sound will play when you select a speaker.
-          </p> */}
-          <div
-            className="
-            absolute bottom-0 left-0 right-0 h-1.5
-            bg-gradient-to-r from-[#FF8C42] via-[#FF9F5A] to-[#FFA500]
-            rounded-b-lg
-            opacity-0 group-hover:opacity-100
-            transition-opacity duration-200
-            "
-          />
         </div>
       </div>
-      {/* 
-      <p className="text-base font-normal text-center my-4">
-        Or, you can start right away
-      </p> */}
 
-      <div className="text-center mt-5">
+      {/* Primary CTA */}
+      <div className="flex flex-col items-center gap-3">
         <Button
-          className="mt-3 bg-[#2C5F2D] hover:bg-[#2C5F2D]/90 text-white"
-          size="lg"
           onClick={onStartInterview}
+          disabled={!isReadyToStart}
+          className={`
+            px-6 h-12 rounded-lg font-bold text-sm
+            transition-all duration-300 inline-flex items-center justify-center gap-2
+            ${isReadyToStart
+              ? "bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white hover:scale-[1.01] shadow-sm hover:shadow-md active:scale-95"
+              : "bg-[#2B5E2B]/40 text-white/70 cursor-not-allowed shadow-none"
+            }
+          `}
         >
-          <img
+           <img
             src="/assets/bot-message-square (4).svg"
-            className="text-white mr-3"
+            className="w-4 h-4 md:w-6 md:h-6 shrink-0"
             alt="Start Interview"
-            width={24}
-            height={24}
           />
-          Start practice interview
+          <span className="whitespace-nowrap">Start Practice Interview</span>
         </Button>
+
+        {!isReadyToStart && (
+          <p className="text-sm text-slate-500 font-medium text-center">
+            Please enable both microphone and speaker to continue
+          </p>
+        )}
       </div>
+
+      {/* Footer Note */}
+      {!isChrome && (
+        <div className="mt-8 text-center opacity-0 animate-in fade-in duration-700" style={{ animationDelay: '400ms', animationFillMode: 'forwards' }}>
+          <p className="text-xs text-slate-400 font-medium flex items-center justify-center gap-2">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+            Best experience on Google Chrome
+          </p>
+        </div>
+      )}
     </div>
   );
 };

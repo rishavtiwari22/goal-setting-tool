@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/accordion";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { useNavigate } from "react-router-dom";
+import Header from "@/components/Header";
 
 interface TestResult {
   id: string;
@@ -416,142 +417,111 @@ export const TestResults: React.FC<TestResultsProps> = ({
   };
 
   return (
-    <div className="min-h-screen w-screen ">
-      <header className="mb-8">
-        <div className="relative w-full px-6 py-4 flex items-center justify-center">
-          <button
-            onClick={() => navigate("/")}
-            className="cursor-pointer absolute left-6 text-gray-600 hover:text-gray-900"
-          >
-            <X />
-          </button>
-          {/* <div className="flex gap-3 items-center"> */}
-          <h1 className="text-base font-semibold ">
-            Zoe: Your Learning Assistant
-          </h1>
-          {/* <Badge className="px-1 bg-green-400 rounded-sm font-semibold">
-                    Beta
-                  </Badge> */}
-          {/* </div> */}
-        </div>
-      </header>
-      <div className="w-full px-20">
-        <div className="flex justify-end items-center mb-5">
-          <h1>{userName ? `Great start, ${userName}!` : ""}</h1>
+    <div className="min-h-screen w-full overflow-x-hidden bg-[#FBFAF8] flex flex-col">
+      <Header />
+
+      <div className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-12 py-4 md:py-6">
+        {/* Top Action Bar */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+        
+            <h1 className="text-base md:text-lg lg:text-xl font-bold text-gray-900 break-words">
+              {userName ? `Great start, ${userName}!` : "Interview Complete!"}
+            </h1>
+          </div>
           <Button
-            className="bg-[#2C5F2D] text-white font-semibold hover:bg-[#1F4420] hover:scale-[1.01] transition-all"
+            className="bg-[#2B5E2B] text-white font-semibold hover:bg-[#1a3a1b] hover:scale-[1.01] transition-all rounded-lg px-6 h-12 shadow-sm text-sm whitespace-nowrap shrink-0"
             onClick={() => (window.location.href = "/")}
           >
             <img
               src="/assets/Vector (Stroke).svg"
               alt=""
-              className="w-4 h-4 mr-2"
+              className="w-5 h-5 mr-2 shrink-0"
             />
-            Try another interview
+            Try Another Interview
           </Button>
         </div>
 
-        <div className="shadow-sm rounded-md  p-6 ">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex items-center gap-3">
-              <img src="/assets/summary.png" alt="" className="w-10 h-10" />
-              <h1 className="text-normal font-bold text-gray-800">
+        {/* Interview Summary Card */}
+        <div className="bg-white shadow-none rounded-xl border border-gray-200 p-6 mb-4 md:mb-6 min-w-0">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-3 min-w-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <img src="/assets/summary.png" alt="" className="w-10 h-10 md:w-12 md:h-12 shrink-0 object-contain" />
+              <h2 className="text-base md:text-lg font-bold text-gray-900 break-words">
                 Interview Summary
-              </h1>
+              </h2>
             </div>
-            <div className="flex items-center gap-2 border px-3 py-1.5 rounded-md">
-              <Clock className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">
+            <div className="flex items-center gap-2 bg-slate-50 border border-gray-200 px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0">
+              <Clock className="w-4 h-4 text-slate-600" />
+              <span className="text-sm font-semibold text-gray-700">
                 {Math.round(testResult.elapse_time)} mins
               </span>
             </div>
           </div>
 
-          <p className="text-gray-700 mb-6 leading-relaxed">
+          <p className="text-sm md:text-base text-gray-700 leading-relaxed break-words">
             {displayData.mainSummary}
           </p>
         </div>
 
-        {/* <div className="flex items-center gap-6 mb-8 flex-wrap">
-            <span className="font-semibold text-gray-800">
-              Results overview
-            </span>
-            <ResultOverviewItem color="#22c55e">
-              Technical: Exceeds Expectations
-            </ResultOverviewItem>
-            <ResultOverviewItem color="#22c55e">
-              Problem Solving: Strong
-            </ResultOverviewItem>
-            <ResultOverviewItem color="#ef4444">
-              Communication: Development Needed
-            </ResultOverviewItem>
-          </div> */}
-
-        <Separator className="my-8" />
-
-        {/* Detailed Assessment and Interview Conclusion Side by Side */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          {/* Detailed Assessment */}
-          <div className="bg-white shadow-sm p-6 rounded-lg">
-            <div className="flex items-center gap-3 mb-6">
-              <img src="/assets/assessment.png" alt="" className="w-10 h-10" />
-              <h2 className="text-normal text-gray-800 font-semibold">
+        {/* Top Strengths and Improvement Areas - Side by Side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 min-w-0">
+          {/* Top Strengths Card */}
+          <div className="bg-white shadow-none rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all duration-300 min-w-0">
+            <div className="flex items-center gap-3 mb-4 min-w-0">
+              <img src="/assets/assessment.png" alt="" className="w-10 h-10 md:w-12 md:h-12 shrink-0 object-contain" />
+              <h2 className="text-base md:text-lg font-bold text-gray-900 break-words">
                 Top Strengths
               </h2>
             </div>
-            <div className="flex flex-col items-stretch gap-6">
+            <div className="space-y-3 min-w-0">
               {displayData.topStrengths.length > 0 ? (
                 displayData.topStrengths.map((item, i) => (
-                  <div key={i}>
-                    <p className="font-semibold text-gray-800 mb-2 text-base">
+                  <div key={i} className="bg-[#E6F6EF] rounded-lg p-3 border border-[#2B5E2B]/20 min-w-0">
+                    <p className="font-bold text-gray-900 mb-1.5 text-sm md:text-base break-words">
                       {item.title.replace(/\*/g, "").trim()}
                     </p>
-                    <p className="text-sm text-gray-600 leading-relaxed">
+                    <p className="text-xs md:text-sm text-gray-700 leading-relaxed break-words">
                       {item.description.replace(/\*/g, "").trim()}
                     </p>
                   </div>
                 ))
               ) : (
-                <div>
-                  {/* <p className="font-semibold text-gray-800 mb-2 text-base">-</p> */}
-                  <p className="text-sm text-gray-600 leading-relaxed">-</p>
-                </div>
+                <p className="text-sm text-slate-500 italic">No specific strengths identified</p>
               )}
             </div>
           </div>
 
-          {/* Interview Conclusion */}
-          <div className="bg-white shadow-sm p-6 rounded-lg">
-            <div className="flex items-center gap-3 mb-6">
-              <img src="/assets/conclusion.png" alt="" className="w-10 h-10" />
-              <h2 className="text-normal text-gray-800 font-semibold">
+          {/* Improvement Areas Card */}
+          <div className="bg-white shadow-none rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-all duration-300 min-w-0">
+            <div className="flex items-center gap-3 mb-4 min-w-0">
+              <img src="/assets/conclusion.png" alt="" className="w-10 h-10 md:w-12 md:h-12 shrink-0 object-contain" />
+              <h2 className="text-base md:text-lg font-bold text-gray-900 break-words">
                 Improvement Areas
               </h2>
             </div>
-            <div className="flex flex-col items-stretch gap-6">
+            <div className="space-y-3 min-w-0">
               {displayData.improvementAreas.length > 0 ? (
                 displayData.improvementAreas.map((item, i) => (
-                  <div key={i}>
-                    <p className="font-semibold text-gray-800 mb-2 text-base">
+                  <div key={i} className="bg-amber-50 rounded-lg p-3 border border-amber-200 min-w-0">
+                    <p className="font-bold text-gray-900 mb-1.5 text-sm md:text-base break-words">
                       {item.title.replace(/\*/g, "").trim()}
                     </p>
-                    <p className="text-sm text-gray-600 leading-relaxed">
+                    <p className="text-xs md:text-sm text-gray-700 leading-relaxed break-words">
                       {item.description.replace(/\*/g, "").trim()}
                     </p>
                   </div>
                 ))
               ) : (
-                <div>
-                  {/* <p className="font-semibold text-gray-800 mb-2 text-base">-</p> */}
-                  <p className="text-sm text-gray-600 leading-relaxed">-</p>
-                </div>
+                <p className="text-sm text-slate-500 italic">No specific areas identified</p>
               )}
             </div>
           </div>
         </div>
 
-        <Separator className="my-8" />
+        <Separator className="my-6 bg-slate-200" />
 
+        {/* Session Transcript Accordion */}
         <Accordion
           type="single"
           collapsible
@@ -559,79 +529,83 @@ export const TestResults: React.FC<TestResultsProps> = ({
           className="border-none"
         >
           <AccordionItem value="item-0" className="border-none">
-            <div className="flex justify-center">
-              <AccordionTrigger className="cursor-pointer gap-2 w-auto hover:bg-gray-50 rounded-full px-3 py-2.5 border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all hover:no-underline">
-                <span className="font-semibold text-sm">
-                  Session Transcript
+            <div className="flex justify-center mb-4">
+              <AccordionTrigger className="cursor-pointer gap-3 w-auto hover:bg-slate-50 rounded-lg px-6 h-12 border border-[#2B5E2B] bg-white shadow-none hover:shadow-sm transition-all hover:no-underline">
+                <img 
+                  src="/assets/zoe-talking 1.svg" 
+                  alt="Zoe" 
+                  className="w-5 h-5 md:w-6 md:h-6 shrink-0 object-contain"
+                />
+                <span className="font-bold text-sm md:text-base text-gray-900">
+                  View Session Transcript
                 </span>
               </AccordionTrigger>
             </div>
-            <AccordionContent className="pb-4 pt-6">
-              <div className="flex flex-col items-stretch gap-4 max-w-[900px] mx-auto">
+            <AccordionContent className="pb-4 pt-4">
+              <div className="flex flex-col items-stretch gap-5 w-full mx-auto min-w-0">
                 {testResult.qa_history.map((qa, index) => (
                   <div
                     key={index}
-                    className="flex flex-col items-stretch gap-4"
+                    className="flex flex-col items-stretch gap-4 w-full min-w-0"
                   >
-                    <div className="flex gap-3">
+                    {/* Zoe's Question */}
+                    <div className="flex gap-3 w-full min-w-0">
                       <div className="rounded-full flex items-center justify-center shrink-0">
                         <img
                           src="/assets/zoe-talking 1 (2).svg"
                           alt=""
-                          className="w-[46px] h-[46px]"
+                          className="w-10 h-10 md:w-12 md:h-12"
                         />
                       </div>
-                      <div className="flex-1 bg-emerald-50 p-2 rounded-md">
-                        <p className="font-semibold text-gray-800 mb-1 text-sm">
+                      <div className="flex-1 bg-[#E6F6EF] border border-[#2B5E2B]/20 p-3 rounded-lg shadow-none min-w-0">
+                        <p className="font-bold text-gray-900 mb-1.5 text-xs md:text-sm">
                           Zoe
                         </p>
-                        <p className="text-gray-700 text-sm leading-relaxed ">
+                        <p className="text-gray-800 text-sm leading-relaxed break-words">
                           {qa.question}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex gap-3 justify-end ">
-                      <div className="px-3 shadow-md max-w-fit bg-white p-2 rounded-sm">
-                        <p className="font-semibold text-gray-800 mb-1 text-sm">
+                    {/* User's Answer */}
+                    <div className="flex gap-3 justify-end w-full min-w-0">
+                      <div className="max-w-[85%] bg-white border border-gray-200 p-3 rounded-lg shadow-none min-w-0">
+                        <p className="font-bold text-gray-900 mb-1.5 text-xs md:text-sm">
                           You
                         </p>
-                        <p className="text-[#5A615F] text-sm leading-relaxed">
-                          "{qa.answer}"
+                        <p className="text-gray-700 text-sm leading-relaxed break-words">
+                          {qa.answer}
                         </p>
                       </div>
-                      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center shrink-0">
-                        <img src="/assets/Frame 56.svg" alt="" />
+                      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center shrink-0 overflow-hidden">
+                        <img src="/assets/avatar.png" alt="User avatar" className="w-full h-full object-cover" />
                       </div>
                     </div>
 
+                    {/* Feedback */}
                     {qa.summary && (
-                      <div className="flex justify-center">
-                        <div
-                          className="px-4 py-3 rounded-md border border-green-200 max-w-[85%]"
-                          style={{
-                            backgroundImage:
-                              "url('/assets/Rectangle 5 (2).svg')",
-                            backgroundSize: "cover",
-                            backgroundPosition: "center",
-                            backgroundRepeat: "no-repeat",
-                          }}
-                        >
-                          <div className="flex items-center gap-2 mb-6 justify-center">
+                      <div className="flex justify-center w-full min-w-0">
+                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 px-4 py-3 rounded-lg max-w-[90%] shadow-none min-w-0">
+                          <div className="flex items-center gap-2 mb-2 justify-center">
                             <img
                               src="/assets/hand-heart (1).svg"
                               alt=""
-                              className="w-4 h-4"
+                              className="w-4 h-4 shrink-0"
                             />
-                            <p className="text-sm font-semibold text-green-800">
-                              Improvement area
+                            <p className="text-sm font-bold text-green-800">
+                              💡 Improvement Tip
                             </p>
                           </div>
-                          <p className="text-sm text-gray-700 leading-relaxed">
+                          <p className="text-sm text-gray-800 leading-relaxed text-center break-words">
                             {getFeedbackText(qa.summary)}
                           </p>
                         </div>
                       </div>
+                    )}
+
+                    {/* Divider between Q&A pairs */}
+                    {index < testResult.qa_history.length - 1 && (
+                      <Separator className="my-1 bg-slate-200" />
                     )}
                   </div>
                 ))}

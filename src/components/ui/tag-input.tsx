@@ -1,7 +1,7 @@
-import React, { useState, KeyboardEvent, useRef } from "react";
+import React, { useState, useEffect, useCallback, KeyboardEvent, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 interface TagInputProps {
@@ -21,8 +21,33 @@ export function TagInput({
 }: TagInputProps) {
     const [inputValue, setInputValue] = useState("");
     const [isFocused, setIsFocused] = useState(false);
+    const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const mouseOverDropdown = useRef(false);
+
+    const updatePos = useCallback(() => {
+        if (!containerRef.current) return;
+        const r = containerRef.current.getBoundingClientRect();
+        const dialog = containerRef.current.closest("[role='dialog']");
+        if (dialog) {
+            const dr = dialog.getBoundingClientRect();
+            setPos({ top: r.bottom - dr.top + 4, left: r.left - dr.left, width: r.width });
+        } else {
+            setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!isFocused) return;
+        updatePos();
+        window.addEventListener("scroll", updatePos, true);
+        window.addEventListener("resize", updatePos);
+        return () => {
+            window.removeEventListener("scroll", updatePos, true);
+            window.removeEventListener("resize", updatePos);
+        };
+    }, [isFocused, updatePos, tags]);
 
     const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter" || e.key === ",") {
@@ -60,7 +85,7 @@ export function TagInput({
     const showCreateOption = inputValue && !tags.some(t => t.toLowerCase() === inputValue.trim().toLowerCase()) && !filteredSuggestions.includes(inputValue);
 
     return (
-        <div className="space-y-2 relative" ref={containerRef}>
+        <div className="relative" ref={containerRef}>
             <div
                 onClick={handleContainerClick}
                 className={cn(
@@ -96,17 +121,16 @@ export function TagInput({
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
                     onFocus={() => setIsFocused(true)}
-                    /* 
-                       Auto-save feature:
-                       When the user clicks away (onBlur), any text currently typed 
-                       is automatically converted into a tag/chip.
-                    */
                     onBlur={() => {
-                        // Delay blur to allow click event on suggestions to fire
                         setTimeout(() => {
+                            // If mouse is over the dropdown (scrollbar interaction), re-focus input
+                            if (mouseOverDropdown.current) {
+                                inputRef.current?.focus();
+                                return;
+                            }
                             setIsFocused(false);
                             addTag(inputValue);
-                        }, 200);
+                        }, 150);
                     }}
                     className="flex-1 bg-transparent border-none outline-none placeholder:text-muted-foreground min-w-[120px]"
                     placeholder={tags.length === 0 ? placeholder : ""}
@@ -116,36 +140,44 @@ export function TagInput({
                 </div>
             </div>
 
-            {/* Suggestions Dropdown */}
-            {(filteredSuggestions.length > 0 || showCreateOption) && isFocused && (
-                <div className="absolute top-full left-0 w-full z-50 mt-1 max-h-60 overflow-auto rounded-lg bg-white shadow-lg border border-gray-200">
-                    <ul className="p-1">
-                        {filteredSuggestions.map((suggestion) => (
-                            <li
-                                key={suggestion}
-                                className="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                                onMouseDown={(e) => {
-                                    e.preventDefault(); // Prevent input blur
-                                    addTag(suggestion);
-                                }}
-                            >
-                                {suggestion}
-                            </li>
-                        ))}
-                        {showCreateOption && (
-                            <li
-                                className="cursor-pointer px-3 py-2 text-sm text-[#386641] hover:bg-green-50 font-medium rounded-md transition-colors border-t border-gray-100 mt-1"
-                                onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    addTag(inputValue);
-                                }}
-                            >
-                                + Create "{inputValue}"
-                            </li>
-                        )}
-                    </ul>
-                </div>
-            )}
+            {/* Suggestions Dropdown — portaled into dialog to escape overflow clipping */}
+            {(filteredSuggestions.length > 0 || showCreateOption) && isFocused &&
+                createPortal(
+                    <div
+                        style={{ position: "absolute", top: pos.top, left: pos.left, width: pos.width, zIndex: 99999 }}
+                        className="rounded-lg bg-white shadow-lg border border-gray-200 max-h-48 overflow-y-auto"
+                        onMouseEnter={() => { mouseOverDropdown.current = true; }}
+                        onMouseLeave={() => { mouseOverDropdown.current = false; }}
+                    >
+                        <ul className="p-1">
+                            {filteredSuggestions.map((suggestion) => (
+                                <li
+                                    key={suggestion}
+                                    className="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        addTag(suggestion);
+                                    }}
+                                >
+                                    {suggestion}
+                                </li>
+                            ))}
+                            {showCreateOption && (
+                                <li
+                                    className="cursor-pointer px-3 py-2 text-sm text-[#386641] hover:bg-green-50 font-medium rounded-md transition-colors border-t border-gray-100 mt-1"
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        addTag(inputValue);
+                                    }}
+                                >
+                                    + Create "{inputValue}"
+                                </li>
+                            )}
+                        </ul>
+                    </div>,
+                    containerRef.current?.closest("[role='dialog']") ?? document.body
+                )
+            }
         </div>
     );
 }
