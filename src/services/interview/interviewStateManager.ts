@@ -6,7 +6,7 @@ import { buildDecisionPrompt, buildCreateQuestionPrompt, buildCreateFeedbackProm
 import { syncManager } from '../storage/syncManager';
 
 // Configuration constants for Phase 2: Irrelevant answer handling
-const MAX_CONSECUTIVE_IRRELEVANT = 2;  // Max retries before ending (so 3 bad answers total = 2 retries + 1 final)
+const MAX_CONSECUTIVE_IRRELEVANT = 100;  // Max retries before ending
 const MAX_TOPIC_FOLLOWUPS = 3;         // Max follow-ups on a single topic before moving on
 
 export class InterviewStateManager {

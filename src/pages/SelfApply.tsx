@@ -44,6 +44,17 @@ export default function SelfApply() {
   const [userId, setUserId] = useState<string | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [customJobData, setCustomJobData] = useState<{ job_title: string; job_description: string; technical_skills: string[]; soft_skills: string[] } | null>(null);
+  const pageStartTime = useRef<number>(Date.now());
+  const jobSelectionStartTime = useRef<number>(Date.now());
+  const [formData, setFormData] = useState<FormData>({
+    email: "",
+    selectedJobId: undefined,
+    jobTitle: "",
+    jobDescription: "",
+    technicalSkills: [],
+    softSkills: [],
+    testTime: 30,
+  });
 
   useEffect(() => {
     fetchJobs();
