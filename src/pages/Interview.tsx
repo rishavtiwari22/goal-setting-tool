@@ -6,12 +6,13 @@ import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { FiSend, FiMic, FiMicOff, FiVolume2, FiVolumeX } from "react-icons/fi";
 import { Captions, CaptionsOff, MicOff, PhoneMissed } from "lucide-react";
-import { useInterview, type Message } from "../hooks/useInterview";
+import { useSinglePromptInterview } from "../hooks/useSinglePromptInterview";
 import type { InterviewConfig } from "../services/interview/interviewEngine";
-import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
-import { useStreamingTTS } from "../hooks/useStreamingTTS";
+import { useSpeechToText } from "../hooks/useSpeechToText";
+import { usePiper } from "../hooks/usePiper";
 import { useScreenWakeLock } from "../hooks/useScreenWakeLock";
 import AudioVisualizer from "@/components/AudioVisualizer";
+import ScreenCapturePanel from "@/components/ScreenCapturePanel";
 import type { InterviewSession } from "../models/interview";
 import { loadInterviewSessionBySessionId, recoverOngoingSessionFromFirebase } from "../services/storage/interviewStorage";
 
@@ -31,12 +32,19 @@ export default function Interview() {
   const [activeThinkingVideo, setActiveThinkingVideo] =
     useState<string>("thinking");
 
+  const [spokenCaption, setSpokenCaption] = useState("");
+  const [ocrText, setOcrText] = useState("");
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasSelectedAlternativeRef = useRef<boolean>(false);
   const lastSelectedAnimationRef = useRef<string | null>(null);
   const animationTransitionDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const pendingSessionRef = useRef<InterviewSession | null>(null); // Store session to navigate after TTS
+  const audioBufferRef = useRef<string>("");
+  const shouldResumeAfterTTSRef = useRef(false);
+  const prevHasPendingSpeechRef = useRef(false);
+  const submitAnswerRef = useRef<((text: string) => void) | null>(null);
 
   const animationStates: { [key: string]: string } = {
     speaking: "/assets/speaking-edited.webp",
@@ -180,6 +188,44 @@ export default function Interview() {
     }
   };
 
+  // ── TTS (usePiper) ──
+  const {
+    speak,
+    isPlaying,
+    hasPendingSpeech,
+    stop: stopTts,
+    isReady: isTTSReady,
+  } = usePiper(
+    isSpeechOutputEnabled
+      ? {
+          voiceModelUrl: "/models/Indian_accent_1.onnx",
+          voiceConfigUrl: "/models/Indian_accent_1.json",
+          warmupText: "hello",
+        }
+      : null
+  );
+
+  const isTtsActive = isPlaying || hasPendingSpeech;
+  const isActuallyPlaying = isPlaying;
+
+  // Buffer chunks from LLM stream and speak complete sentences
+  const processBufferForTTS = useCallback(() => {
+    const buffer = audioBufferRef.current;
+    const sentenceEndings = /[.!?]\s|[।॥]/;
+    const match = buffer.match(sentenceEndings);
+    if (match && match.index !== undefined) {
+      const splitIndex = match.index + match[0].length;
+      const sentence = buffer.slice(0, splitIndex).trim();
+      const remainder = buffer.slice(splitIndex);
+      if (sentence && isSpeechOutputEnabled) {
+        setSpokenCaption(sentence);
+        speak(sentence).catch((err) => console.error("TTS Error:", err));
+      }
+      audioBufferRef.current = remainder;
+      if (remainder.match(sentenceEndings)) processBufferForTTS();
+    }
+  }, [speak, isSpeechOutputEnabled]);
+
   const {
     messages,
     isLoading,
@@ -188,27 +234,32 @@ export default function Interview() {
     submitAnswer,
     sessionId: currentSessionId,
     currentQuestion,
-  } = useInterview({
+  } = useSinglePromptInterview({
     config,
     sessionId,
     onComplete: handleComplete,
-    onStreamChunk: (chunk) => {
+    onStreamChunk: (chunk: string) => {
       if (isSpeechOutputEnabled) {
-        addTtsChunk(chunk);
+        audioBufferRef.current += chunk;
+        processBufferForTTS();
       }
     },
     onStreamComplete: () => {
-      if (isSpeechOutputEnabled) {
-        finishTtsStreaming();
+      if (isSpeechOutputEnabled && audioBufferRef.current.trim()) {
+        const finalChunk = audioBufferRef.current.trim();
+        audioBufferRef.current = "";
+        setSpokenCaption(finalChunk);
+        speak(finalChunk).catch((err) => console.error("TTS Error:", err));
       }
+      audioBufferRef.current = "";
     },
-    onFeedback: (feedback) => {
-      if (isSpeechOutputEnabled) {
-        addTtsChunk(feedback);
-        finishTtsStreaming();
-      }
-    },
+    screenCode: ocrText || localStorage.getItem('ocr_processed_text') || undefined,
   });
+
+  // Keep submitAnswer in a ref so async closures always have the latest version
+  useEffect(() => {
+    submitAnswerRef.current = submitAnswer;
+  }, [submitAnswer]);
 
   useEffect(() => {
     if (currentSessionId && !sessionId) {
@@ -216,55 +267,69 @@ export default function Interview() {
     }
   }, [currentSessionId, sessionId, navigate]);
 
+  // ── STT (useSpeechToText) ──
   const {
     isListening,
-    isSpeechMode,
+    transcript,
+    interimTranscript,
     startListening,
     stopListening,
-    pauseListening,
-    resumeListening,
-  } = useSpeechRecognition({
-    onSpeechResult: (text) => {
-      // Clear previous captions when user responds
-      clearCaption();
-      submitAnswer(text);
-    },
-    enabled: true,
-  });
+    resetTranscript,
+  } = useSpeechToText({ lang: "en-US", continuous: true, silenceTimeout: 1500 });
 
-  const {
-    addChunk: addTtsChunk,
-    finishStreaming: finishTtsStreaming,
-    stop: stopTts,
-    isSpeaking: isTtsActive,
-    isActuallyPlaying,
-    currentlySpokenText,
-    clearCaption,
-  } = useStreamingTTS({
-    enabled: isSpeechOutputEnabled,
-    onStartSpeaking: () => {
-      pauseListening();
-    },
-    onStopSpeaking: () => {
-      // Check if there's a pending session to navigate to results
+  // When TTS becomes active: always flag mic to resume after, and stop it if currently running
+  useEffect(() => {
+    if (isTtsActive) {
+      shouldResumeAfterTTSRef.current = true;
+      if (isListening) {
+        stopListening();
+      }
+    }
+  }, [isTtsActive, isListening, stopListening]);
+
+  // Auto-resume mic after TTS finishes
+  useEffect(() => {
+    const hadPending = prevHasPendingSpeechRef.current;
+    prevHasPendingSpeechRef.current = hasPendingSpeech;
+
+    if (hadPending && !hasPendingSpeech && !isPlaying && shouldResumeAfterTTSRef.current) {
       if (pendingSessionRef.current) {
-        // TTS finished speaking the goodbye message, now navigate to results
         pendingSessionRef.current = null;
         navigate("/results");
         return;
       }
-
       if (!isCompleted && !forceEndRef.current) {
-        resumeListening();
+        shouldResumeAfterTTSRef.current = false;
+        resetTranscript();
+        setTimeout(() => startListening(), 350);
       }
-    },
-    onAudioStart: () => {
-      // Audio actually started playing
-    },
-    onAudioStop: () => {
-      // Audio chunk finished playing
-    },
-  });
+    }
+  }, [hasPendingSpeech, isPlaying, isCompleted, navigate, resetTranscript, startListening]);
+
+  // Auto-submit when silence detected (mic stopped with transcript present)
+  useEffect(() => {
+    if (isListening) return;
+    const combined = (transcript + " " + interimTranscript).trim();
+    if (!combined) return;
+
+    if (combined.length < 3) {
+      resetTranscript();
+      if (!isTtsActive) startListening();
+      return;
+    }
+
+    const t = setTimeout(() => {
+      const text = combined.replace(/\[INTERVIEW_OVER\]/gi, "").trim();
+      if (text && submitAnswerRef.current) {
+        setSpokenCaption("");
+        resetTranscript();
+        submitAnswerRef.current(text);
+      }
+    }, 50);
+
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isListening]);
 
   const isInterviewActive = !!config && !isCompleted;
   useScreenWakeLock(isInterviewActive);
@@ -275,6 +340,7 @@ export default function Interview() {
       stopListening();
     };
   }, [stopTts, stopListening]);
+
 
   useEffect(() => {
     scrollToBottom();
@@ -432,17 +498,20 @@ export default function Interview() {
 
   const sendMessage = () => {
     if (input.trim() && submitAnswer) {
-      // Clear previous captions when user responds
-      clearCaption();
+      setSpokenCaption("");
+      audioBufferRef.current = "";
       submitAnswer(input);
       setInput("");
     }
   };
 
   const handleMicClick = () => {
-    if (isSpeechMode) {
+    if (isListening) {
+      shouldResumeAfterTTSRef.current = false;
       stopListening();
     } else {
+      if (isTtsActive) return;
+      resetTranscript();
       startListening();
     }
   };
@@ -457,7 +526,7 @@ export default function Interview() {
   const handleEndCall = () => {
     forceEndRef.current = true;
     setIsEndCallClicked(true);
-    if (isSpeechMode) {
+    if (isListening) {
       stopListening();
     }
     stopTts();
@@ -503,14 +572,14 @@ export default function Interview() {
           {/* Caption Container */}
           <div
             className={`transition-opacity duration-300 w-full max-w-2xl lg:max-w-3xl mx-auto px-4 mt-4 md:mt-6 ${
-              showChatMessage && currentlySpokenText ? 'opacity-100' : 'opacity-0'
+              showChatMessage && spokenCaption ? 'opacity-100' : 'opacity-0'
             }`}
             style={{ minHeight: "80px" }}
           >
-            {showChatMessage && currentlySpokenText && (
+            {showChatMessage && spokenCaption && (
               <div className="bg-white/95 backdrop-blur-md rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm border border-gray-200 relative z-20">
                 <p className="text-gray-800 text-sm md:text-base lg:text-lg font-medium leading-relaxed text-center">
-                  {currentlySpokenText}
+                  {spokenCaption}
                 </p>
               </div>
             )}
@@ -533,12 +602,12 @@ export default function Interview() {
               )}
               <button
                 aria-label={
-                  isSpeechMode ? "Stop Speech Input" : "Start Speech Input"
+                  isListening ? "Stop Speech Input" : "Start Speech Input"
                 }
                 onClick={handleMicClick}
                 className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all shrink-0 bg-white border border-gray-200 flex items-center justify-center group"
               >
-                {isSpeechMode && !isTtsActive ? (
+                {isListening && !isTtsActive ? (
                   <AudioVisualizer isActive={isListening} size={40} />
                 ) : (
                   <MicOff className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-600 group-hover:text-gray-900 transition-colors" />
@@ -558,6 +627,11 @@ export default function Interview() {
                 <CaptionsOff className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-600 group-hover:text-gray-900 transition-colors" />
               )}
             </button>
+
+            {/* Screen Share / OCR Button */}
+            <ScreenCapturePanel
+              onCaptureComplete={(text) => setOcrText(text)}
+            />
 
             {/* End Call Button */}
             <button

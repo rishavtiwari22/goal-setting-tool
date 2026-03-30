@@ -45,8 +45,9 @@ export default function Home() {
       return;
     }
     setSelectedType(id);
+    const token = searchParams.get("token") || searchParams.get("jwt");
     setTimeout(() => {
-      navigate("/selfapply");
+      navigate(token ? `/selfapply?token=${token}` : "/selfapply");
     }, 300);
   };
 

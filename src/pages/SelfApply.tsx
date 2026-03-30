@@ -36,6 +36,7 @@ const getJobIcon = (title: string) => {
 
 export default function SelfApply() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [step, setStep] = useState<"job_selection" | "speakerandmiccheck">("job_selection");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
@@ -157,7 +158,8 @@ export default function SelfApply() {
 
       // Don't block navigation - voice will be prepared in Interview component if needed
       // This prevents UI freezing on button click
-      navigate("/interview");
+      const token = searchParams.get("token") || searchParams.get("jwt");
+      navigate(token ? `/interview?token=${token}` : "/interview");
     } catch (error) {
       console.error("Error starting interview:", error);
       toast.error((error as Error).message || "Failed to start interview");

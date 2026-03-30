@@ -354,7 +354,7 @@
 
 
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
     Dialog,
     DialogContent,
@@ -368,7 +368,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TagInput } from "@/components/ui/tag-input";
 import { Input } from "@/components/ui/input";
-import { X, ChevronDown, Briefcase, AlignLeft, Code2, Users2, Sparkles } from "lucide-react";
+import { X, ChevronDown, Briefcase, AlignLeft, Code2, Users2, Sparkles, FileText, PenLine } from "lucide-react";
 
 const JOB_TITLE_SUGGESTIONS = ["Software Engineer", "Frontend Developer", "Backend Developer", "Full Stack Developer", "DevOps Engineer", "Data Scientist", "Product Manager", "UX Designer", "QA Engineer", "Mobile Developer"];
 const TECHNICAL_SKILL_SUGGESTIONS = ["JavaScript", "TypeScript", "React", "Node.js", "Python", "Java", "SQL", "AWS", "Docker", "Git", "REST APIs", "GraphQL", "MongoDB", "PostgreSQL", "Kubernetes"];
@@ -389,12 +389,18 @@ interface CreateJobModalProps {
 }
 
 export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData }: CreateJobModalProps) {
+    const [activeTab, setActiveTab] = useState<"manual" | "jd">("manual");
+
+    // Manual tab state
     const [jobTitle, setJobTitle] = useState(initialData?.job_title || "");
     const [jobTitleFocused, setJobTitleFocused] = useState(false);
     const [jobDescription, setJobDescription] = useState(initialData?.job_description || "");
     const [technicalSkills, setTechnicalSkills] = useState<string[]>(initialData?.technical_skills || []);
     const [softSkills, setSoftSkills] = useState<string[]>(initialData?.soft_skills || []);
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    // JD tab state
+    const [jdText, setJdText] = useState("");
 
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {};
@@ -417,12 +423,26 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
         resetForm();
     };
 
+    const handleJDSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!jdText.trim()) return;
+        onSubmit({
+            job_title: "Custom Position",
+            job_description: jdText.trim(),
+            technical_skills: [],
+            soft_skills: [],
+        });
+        resetForm();
+    };
+
     const resetForm = () => {
         setJobTitle("");
         setJobDescription("");
         setTechnicalSkills([]);
         setSoftSkills([]);
         setErrors({});
+        setJdText("");
+        setActiveTab("manual");
     };
 
     const handleJobTitleChange = (value: string) => {
@@ -466,7 +486,70 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                     </DialogClose>
                 </DialogHeader>
 
-                {/* Single scrollable form — no separate footer */}
+                {/* Tab switcher */}
+                <div className="px-8 pt-5 flex gap-1 border-b border-gray-100 bg-white">
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab("manual")}
+                        className={cn(
+                            "flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-colors",
+                            activeTab === "manual"
+                                ? "border-[#386641] text-[#386641] bg-green-50/60"
+                                : "border-transparent text-gray-400 hover:text-gray-700 hover:bg-gray-50"
+                        )}
+                    >
+                        <PenLine className="h-4 w-4" />
+                        Manual
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab("jd")}
+                        className={cn(
+                            "flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-colors",
+                            activeTab === "jd"
+                                ? "border-[#386641] text-[#386641] bg-green-50/60"
+                                : "border-transparent text-gray-400 hover:text-gray-700 hover:bg-gray-50"
+                        )}
+                    >
+                        <FileText className="h-4 w-4" />
+                        From JD
+                    </button>
+                </div>
+
+                {/* JD tab form */}
+                {activeTab === "jd" && (
+                    <form onSubmit={handleJDSubmit} className="px-8 py-6 space-y-5">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-[#386641] flex items-center gap-2">
+                                <FileText className="h-4 w-4" /> Job Description
+                            </label>
+                            <p className="text-xs text-gray-500">
+                                Paste the full job description. The AI will structure the interview based on it.
+                            </p>
+                            <Textarea
+                                placeholder="Paste the full job description here..."
+                                value={jdText}
+                                onChange={(e) => setJdText(e.target.value)}
+                                className="min-h-52 border border-gray-200 focus:border-[#386641] rounded-lg p-3 text-base resize-none"
+                            />
+                        </div>
+                        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+                            <Button type="button" variant="ghost" onClick={handleClose} className="font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100 px-6 h-12 rounded-lg">
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={!jdText.trim()}
+                                className="bg-[#386641] hover:bg-[#2a4d31] text-white font-bold px-6 h-12 rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                Start Interview
+                            </Button>
+                        </div>
+                    </form>
+                )}
+
+                {/* Manual tab form — no separate footer */}
+                {activeTab === "manual" && (
                 <form onSubmit={handleSubmit} className="px-8 py-6 space-y-6">
                     
                     {/* Job Title */}
@@ -579,6 +662,7 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                         </Button>
                     </div>
                 </form>
+                )}
 
               </div>
 
