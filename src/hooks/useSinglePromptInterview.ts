@@ -31,6 +31,7 @@ interface UseInterviewProps {
   onStreamComplete?: () => void;
   onFeedback?: (feedback: string) => void;
   screenCode?: string;
+  mode?: InterviewConfig['mode'];
 }
 
 const RECENT_WINDOW = 6;
@@ -157,6 +158,7 @@ function createInitialSession(config: InterviewConfig, sessionId: string): Inter
     difficulty: config.difficulty,
     examinationPoints: config.examinationPoints,
     status: 'ongoing',
+    mode: config.mode ?? 'practice',
     consecutiveIrrelevantCount: 0,
     currentTopicFollowupCount: 0,
     discussedProjects: [],
@@ -178,6 +180,7 @@ export function useSinglePromptInterview({
   onStreamComplete,
   screenCode,
 }: UseInterviewProps) {
+  const sessionMode = config?.mode ?? 'practice';
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
@@ -237,6 +240,7 @@ export function useSinglePromptInterview({
         qaHistory: session.qaHistory.filter(qa => qa.answer),
         interviewTime: Math.floor(((session.interviewTime * 60) - timeRemainingRef.current) / 60),
         language: session.language || 'English',
+        mode: sessionMode,
       });
       const evalMsgs: ChatMessage[] = [
         { role: 'system', content: systemMessage },
@@ -352,7 +356,7 @@ export function useSinglePromptInterview({
       frameworkRef.current = framework;
 
       // Generate opening question (non-streaming)
-      const openingMsgs = buildOpeningMessages(framework);
+      const openingMsgs = buildOpeningMessages(framework, sessionMode);
       const openingQuestion = await chatCompletion(openingMsgs);
 
       // Add to internal message history
@@ -457,6 +461,7 @@ export function useSinglePromptInterview({
           answer,
           timeRemainingRef.current,
           (sessionRef.current?.interviewTime ?? 10) * 60,
+          sessionMode,
           screenCode,
         );
 

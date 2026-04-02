@@ -1,4 +1,5 @@
 export type InterviewPhase = 'introduction' | 'project' | 'technical';
+export type InterviewMode = 'practice' | 'mentor';
 
 export interface QAHistoryItem {
   question: string;
@@ -59,6 +60,7 @@ export interface InterviewSession {
   projectQuestionCount: number;             // Questions asked in project phase
   technicalQuestionCount: number;           // Questions asked in technical phase
   currentProjectQuestionCount: number;      // Technical questions on current project (reset on new project)
+  mode?: InterviewMode;                      // Session mode: 'practice' or 'mentor'
 }
 
 export interface InterviewResult {

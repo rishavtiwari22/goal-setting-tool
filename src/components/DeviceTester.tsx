@@ -141,8 +141,10 @@ const CustomSelect = ({
 
 const DeviceTester = ({
   onStartInterview,
+  mode = 'practice',
 }: {
   onStartInterview: () => void;
+  mode?: 'practice' | 'mentor';
 }) => {
   const [micPermission, setMicPermission] = useState<
     "prompt" | "granted" | "denied"
@@ -552,7 +554,7 @@ const DeviceTester = ({
             className="w-4 h-4 md:w-6 md:h-6 shrink-0"
             alt="Start Interview"
           />
-          <span className="whitespace-nowrap">Start Practice Interview</span>
+          <span className="whitespace-nowrap">{mode === 'mentor' ? 'Start Mentor Session' : 'Start Practice Interview'}</span>
         </Button>
 
         {!isReadyToStart && (

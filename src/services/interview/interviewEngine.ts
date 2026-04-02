@@ -1,3 +1,5 @@
+export type InterviewMode = 'practice' | 'mentor';
+
 export interface InterviewConfig {
   userId: string;
   jobId: string;
@@ -7,4 +9,6 @@ export interface InterviewConfig {
   language: string;
   difficulty: string;
   examinationPoints: string[];
+  mode: InterviewMode;
+  ocrEnabled?: boolean;
 }

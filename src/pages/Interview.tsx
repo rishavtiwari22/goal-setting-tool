@@ -83,6 +83,7 @@ export default function Interview() {
               language: recoveredSession.language,
               difficulty: recoveredSession.difficulty,
               examinationPoints: recoveredSession.examinationPoints,
+              mode: recoveredSession.mode ?? 'practice',
             };
             setConfig(interviewConfig);
             setIsInitializing(false);
@@ -137,6 +138,7 @@ export default function Interview() {
             language: session.language,
             difficulty: session.difficulty,
             examinationPoints: session.examinationPoints,
+            mode: session.mode ?? 'practice',
           };
           setConfig(interviewConfig);
           setIsInitializing(false);
@@ -253,7 +255,7 @@ export default function Interview() {
       }
       audioBufferRef.current = "";
     },
-    screenCode: ocrText || localStorage.getItem('ocr_processed_text') || undefined,
+    screenCode: config?.ocrEnabled ? (ocrText || undefined) : undefined,
   });
 
   // Keep submitAnswer in a ref so async closures always have the latest version
@@ -628,10 +630,12 @@ export default function Interview() {
               )}
             </button>
 
-            {/* Screen Share / OCR Button */}
-            <ScreenCapturePanel
-              onCaptureComplete={(text) => setOcrText(text)}
-            />
+            {/* Screen Share / OCR Button — only shown when user opted in */}
+            {config?.ocrEnabled && (
+              <ScreenCapturePanel
+                onCaptureComplete={(text) => setOcrText(text)}
+              />
+            )}
 
             {/* End Call Button */}
             <button

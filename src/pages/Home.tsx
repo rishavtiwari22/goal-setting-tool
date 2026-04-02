@@ -2,44 +2,55 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { getEmailFromJWT, isValidJWTFormat } from "../utils/jwt";
-import { motion } from "framer-motion"; 
-import { Briefcase, BrainCircuit, Code2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { Briefcase, BrainCircuit, GraduationCap } from "lucide-react";
 import Header from "@/components/Header";
 import InterviewCard from "@/components/InterviewCard";
+import type { InterviewMode } from "../services/interview/interviewEngine";
 
 export default function Home() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const interviewTypes = [
+  const interviewTypes: {
+    id: string;
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+    estimatedTime: string;
+    comingSoon: boolean;
+    mode?: InterviewMode;
+  }[] = [
     {
-      id: "1-1-interview",
+      id: "practice-interview",
       icon: <Briefcase className="w-6 h-6 text-[#2B5E2B]" />,
-      title: "1:1 Interview",
-      description: "Test your knowledge, and practice your communication skills with an AI assistant.",
-      estimatedTime: "5-10 mins",
+      title: "Practice Interview",
+      description: "Simulate a real interview. Get evaluated on your answers, communication, and technical depth.",
+      estimatedTime: "10-30 mins",
       comingSoon: false,
+      mode: "practice",
+    },
+    {
+      id: "mentor-session",
+      icon: <GraduationCap className="w-6 h-6 text-[#2B5E2B]" />,
+      title: "Mentor Guided Session",
+      description: "Learn at your own pace with an AI mentor who teaches, hints, and guides you through concepts.",
+      estimatedTime: "10-30 mins",
+      comingSoon: false,
+      mode: "mentor",
     },
     {
       id: "flowchart",
       icon: <BrainCircuit className="w-6 h-6 text-[#2B5E2B]" />,
       title: "Critical Thinking with Flowchart",
-      description: "Design flowcharts to test your problem-solving, algorithm, and process-thinking skills",
+      description: "Design flowcharts to test your problem-solving, algorithm, and process-thinking skills.",
       estimatedTime: "15-20 mins",
-      comingSoon: true,
-    },
-    {
-      id: "competitive-coding",
-      icon: <Code2 className="w-6 h-6 text-[#2B5E2B]" />,
-      title: "Competitive coding",
-      description: "Technical interview to solve algorithmic and data-structure problems under time pressure.",
-      estimatedTime: "30-45 mins",
       comingSoon: true,
     },
   ];
 
-  const handleCardClick = (id: string, isComingSoon: boolean) => {
+  const handleCardClick = (id: string, isComingSoon: boolean, mode?: InterviewMode) => {
     if (isComingSoon) {
       toast.info("This module is coming soon!");
       return;
@@ -47,7 +58,7 @@ export default function Home() {
     setSelectedType(id);
     const token = searchParams.get("token") || searchParams.get("jwt");
     setTimeout(() => {
-      navigate(token ? `/selfapply?token=${token}` : "/selfapply");
+      navigate(token ? `/selfapply?token=${token}` : "/selfapply", { state: { mode } });
     }, 300);
   };
 
@@ -66,14 +77,12 @@ export default function Home() {
   }, [searchParams]);
 
   return (
-    // min-h-screen allows the page to grow, overflow-y-auto enables scrolling
     <div className="min-h-screen w-full bg-[#FBFAF8] flex flex-col font-sans overflow-y-auto">
-      
+
       <Header />
 
-      {/* Main UI - py-10 added for breathing room on mobile */}
       <main className="flex-1 flex flex-col items-center justify-center max-w-6xl mx-auto px-6 py-10 w-full text-center">
-        
+
         <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mb-4">
           <img
             src="/assets/thoughtbubble.webp"
@@ -91,8 +100,7 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Responsive Grid: 1 column on mobile, 3 on desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full  text-left">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full text-left">
           {interviewTypes.map((type, index) => (
             <motion.div
               key={type.id}
@@ -105,7 +113,8 @@ export default function Home() {
                 icon={type.icon}
                 title={type.title}
                 description={type.description}
-                onClick={() => handleCardClick(type.id, type.comingSoon)}
+                estimatedTime={type.estimatedTime}
+                onClick={() => handleCardClick(type.id, type.comingSoon, type.mode)}
                 isSelected={selectedType === type.id}
                 comingSoon={type.comingSoon}
               />
@@ -113,7 +122,6 @@ export default function Home() {
           ))}
         </div>
 
-        {/* System Hint */}
         <div className="mt-12 mx-auto pb-6">
           <div className="px-6 py-2 bg-[#E8F3FF] border border-[#D0E7FF] rounded-full shadow-none inline-block">
             <span className="text-[10px] md:text-[12px] font-bold text-[#2D7FF9]">

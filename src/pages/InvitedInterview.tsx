@@ -45,6 +45,7 @@ export default function InvitedInterview() {
             ...invitationData.technical_skills,
             ...invitationData.soft_skills,
           ],
+          mode: 'practice',
         };
 
         sessionStorage.setItem("interviewConfig", JSON.stringify(interviewConfig));
