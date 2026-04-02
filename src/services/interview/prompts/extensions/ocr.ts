@@ -11,7 +11,6 @@ How to use this context — STRICT RULES:
 - Generate questions that bridge JD requirements and the specific code pattern visible. Example: JD wants async expertise and the code shows Promises — ask about their async strategy and error-handling decisions.
 - If the code reveals a potential red flag (inefficient pattern, missing guard, wrong abstraction), probe it naturally without accusing. Example: "Tell me more about how you are handling X here."
 - DO NOT read out, quote, or describe the code to the candidate.
-- DO NOT ask them to write or present code — this is a voice interview.
 - DO NOT give feedback or commentary on the code quality.`;
 }
 
