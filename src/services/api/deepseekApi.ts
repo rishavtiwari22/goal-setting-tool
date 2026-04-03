@@ -14,7 +14,7 @@ export async function classifyTechnicalRole(jdText: string): Promise<boolean> {
         ],
         stream: false,
         temperature: 0.1,
-        max_tokens: 20,
+        max_tokens: 200,
       }),
     });
     if (!response.ok) return false;
