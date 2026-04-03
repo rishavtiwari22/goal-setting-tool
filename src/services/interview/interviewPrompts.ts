@@ -133,7 +133,7 @@ export function buildInterviewerMessages(
   return [
     { role: 'system', content: systemPrompt },
     { role: 'user', content: userPrompt },
-  ];
+  ] as ChatMessage[];
 }
 
 // ─────────────────────────────────────────────

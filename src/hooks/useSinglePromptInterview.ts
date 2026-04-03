@@ -180,7 +180,7 @@ export function useSinglePromptInterview({
   onStreamComplete,
   screenCode,
 }: UseInterviewProps) {
-  const sessionMode = config?.mode ?? 'practice';
+  // Don't cache config mode here - use ref to always get latest value
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
@@ -189,6 +189,7 @@ export function useSinglePromptInterview({
   const [sessionId, setSessionId] = useState(initialSessionId || '');
 
   // Internal refs — not causing re-renders
+  const configRef = useRef<InterviewConfig | null>(config);
   const frameworkRef = useRef<SkillsFramework | null>(null);
   const recentMessagesRef = useRef<{ role: 'interviewer' | 'candidate'; content: string }[]>([]);
   const archivedRef = useRef<{ role: 'interviewer' | 'candidate'; content: string }[]>([]);
@@ -208,6 +209,7 @@ export function useSinglePromptInterview({
   const onCompleteRef = useRef(onComplete);
 
   // Keep refs in sync with latest values
+  useEffect(() => { configRef.current = config; }, [config]);
   useEffect(() => { currentQuestionRef.current = currentQuestion; }, [currentQuestion]);
   useEffect(() => { onStreamChunkRef.current = onStreamChunk; }, [onStreamChunk]);
   useEffect(() => { onStreamCompleteRef.current = onStreamComplete; }, [onStreamComplete]);
@@ -240,7 +242,7 @@ export function useSinglePromptInterview({
         qaHistory: session.qaHistory.filter(qa => qa.answer),
         interviewTime: Math.floor(((session.interviewTime * 60) - timeRemainingRef.current) / 60),
         language: session.language || 'English',
-        mode: sessionMode,
+        mode: configRef.current?.mode ?? 'practice',
       });
       const evalMsgs: ChatMessage[] = [
         { role: 'system', content: systemMessage },
@@ -356,7 +358,7 @@ export function useSinglePromptInterview({
       frameworkRef.current = framework;
 
       // Generate opening question (non-streaming)
-      const openingMsgs = buildOpeningMessages(framework, sessionMode);
+      const openingMsgs = buildOpeningMessages(framework, configRef.current?.mode ?? 'practice');
       const openingQuestion = await chatCompletion(openingMsgs);
 
       // Add to internal message history
@@ -461,7 +463,7 @@ export function useSinglePromptInterview({
           answer,
           timeRemainingRef.current,
           (sessionRef.current?.interviewTime ?? 10) * 60,
-          sessionMode,
+          configRef.current?.mode ?? 'practice',
           screenCode,
         );
 
