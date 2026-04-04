@@ -90,4 +90,8 @@ export const ENV = {
     const url = import.meta.env['VITE_ADMIN_API_BASE_URL'];
     return url && url.trim() !== '' ? url : '';
   },
+  GOOGLE_SHEETS_WEBHOOK_URL: () => {
+    const url = import.meta.env['VITE_GOOGLE_SHEETS_WEBHOOK_URL'];
+    return url && url.trim() !== '' ? url : '';
+  },
 };

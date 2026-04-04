@@ -67,6 +67,10 @@ export default function SelfApply() {
     if (storedToken) {
       const email = getEmailFromJWT(storedToken);
       if (email) setUserId(email);
+    } else {
+      // Fallback: use email from localStorage (bypass mode)
+      const storedEmail = localStorage.getItem("studentEmail");
+      if (storedEmail) setUserId(storedEmail);
     }
 
     const prepareVoiceWhenIdle = () => {
@@ -174,7 +178,7 @@ export default function SelfApply() {
           jobId: `custom_${Date.now()}`,
           jobTitle: customJobData.job_title,
           jobDescription: customJobData.job_description,
-          interviewTime: 10,
+          interviewTime: 15,
           language: "English",
           difficulty: "medium",
           examinationPoints: [
@@ -192,7 +196,7 @@ export default function SelfApply() {
           jobId: selectedJob.job_id,
           jobTitle: selectedJob.job_title,
           jobDescription: selectedJob.job_description,
-          interviewTime: 10,
+          interviewTime: 15,
           language: "English",
           difficulty: "medium",
           examinationPoints: [

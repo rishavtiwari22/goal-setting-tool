@@ -1,16 +1,22 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useImperativeHandle, forwardRef } from 'react';
 import { Monitor, Play, Square, Scan } from 'lucide-react';
 import { ocrService } from '../services/ocr/ocrService';
 
+export interface ScreenCapturePanelHandle {
+    stopSharing: () => void;
+}
+
 interface ScreenCapturePanelProps {
     onCaptureComplete?: (text: string) => void;
+    onShareStatusChange?: (isSharing: boolean) => void;
     className?: string;
 }
 
-const ScreenCapturePanel: React.FC<ScreenCapturePanelProps> = ({
+function ScreenCapturePanelInner({
     onCaptureComplete,
+    onShareStatusChange,
     className = '',
-}) => {
+}: ScreenCapturePanelProps, ref: React.ForwardedRef<ScreenCapturePanelHandle>) {
     const [isSharing, setIsSharing] = useState(false);
     const [capturedContent, setCapturedContent] = useState('');
     const [refinedCode, setRefinedCode] = useState('');
@@ -90,6 +96,7 @@ const ScreenCapturePanel: React.FC<ScreenCapturePanelProps> = ({
             setIsSharing(true);
             setIsInitializing(false);
             setShowPanel(true);
+            onShareStatusChange?.(true);
 
             addTrackedTimeout(() => startOCRProcessing(), 2000);
 
@@ -125,7 +132,12 @@ const ScreenCapturePanel: React.FC<ScreenCapturePanelProps> = ({
         setCapturedContent('');
         setRefinedCode('');
         lastRawOcrText.current = '';
+        onShareStatusChange?.(false);
     };
+
+    useImperativeHandle(ref, () => ({
+        stopSharing: stopScreenShare,
+    }));
 
     const startOCRProcessing = () => {
         if (ocrIntervalRef.current) clearInterval(ocrIntervalRef.current);
@@ -307,6 +319,7 @@ const ScreenCapturePanel: React.FC<ScreenCapturePanelProps> = ({
             `}</style>
         </div>
     );
-};
+}
 
+const ScreenCapturePanel = forwardRef(ScreenCapturePanelInner);
 export default ScreenCapturePanel;

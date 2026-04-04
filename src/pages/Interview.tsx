@@ -5,16 +5,23 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { FiSend, FiMic, FiMicOff, FiVolume2, FiVolumeX } from "react-icons/fi";
-import { Captions, CaptionsOff, MicOff, PhoneMissed } from "lucide-react";
+import { Captions, CaptionsOff, MicOff, PhoneMissed, PictureInPicture2 } from "lucide-react";
 import { useSinglePromptInterview } from "../hooks/useSinglePromptInterview";
 import type { InterviewConfig } from "../services/interview/interviewEngine";
 import { useSpeechToText } from "../hooks/useSpeechToText";
 import { usePiper } from "../hooks/usePiper";
 import { useScreenWakeLock } from "../hooks/useScreenWakeLock";
+import { useDocumentPiP } from "../hooks/useDocumentPiP";
 import AudioVisualizer from "@/components/AudioVisualizer";
 import ScreenCapturePanel from "@/components/ScreenCapturePanel";
+import type { ScreenCapturePanelHandle } from "@/components/ScreenCapturePanel";
+import { InterviewPiP } from "@/components/interview/InterviewPiP";
 import type { InterviewSession } from "../models/interview";
 import { loadInterviewSessionBySessionId, recoverOngoingSessionFromFirebase } from "../services/storage/interviewStorage";
+import { exportSessionToGoogleSheets } from "../services/export/googleSheetsExport";
+import { useOnboarding } from "../hooks/useOnboarding";
+import { INTERVIEW_GUIDE_STEPS, INTERVIEW_GUIDE_STEPS_OCR } from "../components/onboarding/onboardingSteps";
+import { OnboardingOverlay } from "../components/onboarding/OnboardingOverlay";
 
 
 export default function Interview() {
@@ -33,7 +40,16 @@ export default function Interview() {
     useState<string>("thinking");
 
   const [spokenCaption, setSpokenCaption] = useState("");
+  const [fullCaption, setFullCaption] = useState("");
   const [ocrText, setOcrText] = useState("");
+  // If guide was previously dismissed, interview can start immediately
+  const [guideDismissed, setGuideDismissed] = useState(
+    () => localStorage.getItem("zoe_guide_interview_v1") === "true"
+  );
+  const captionScrollRef = useRef<HTMLDivElement>(null);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const screenCapturePanelRef = useRef<ScreenCapturePanelHandle>(null);
+  const [loadingTextIndex, setLoadingTextIndex] = useState(0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -45,6 +61,14 @@ export default function Interview() {
   const shouldResumeAfterTTSRef = useRef(false);
   const prevHasPendingSpeechRef = useRef(false);
   const submitAnswerRef = useRef<((text: string) => void) | null>(null);
+
+  const loadingTexts = [
+    "Getting things ready for you...",
+    "Reviewing the job description...",
+    "Preparing your interview questions...",
+    "Setting up your personalized session...",
+    "Almost there, just a moment...",
+  ];
 
   const animationStates: { [key: string]: string } = {
     speaking: "/assets/speaking-edited.webp",
@@ -170,6 +194,8 @@ export default function Interview() {
   const handleComplete = (session: InterviewSession) => {
     try {
       sessionStorage.setItem("interviewSession", JSON.stringify(session));
+      // Fire-and-forget: export to Google Sheets (non-blocking)
+      exportSessionToGoogleSheets(session).catch(console.error);
       // If TTS is enabled, store session and wait for TTS to finish (with timeout fallback)
       if (isSpeechOutputEnabled) {
         pendingSessionRef.current = session;
@@ -245,6 +271,8 @@ export default function Interview() {
         audioBufferRef.current += chunk;
         processBufferForTTS();
       }
+      // Accumulate full caption for scrollable display
+      setFullCaption(prev => prev + chunk);
     },
     onStreamComplete: () => {
       if (isSpeechOutputEnabled && audioBufferRef.current.trim()) {
@@ -256,6 +284,7 @@ export default function Interview() {
       audioBufferRef.current = "";
     },
     screenCode: config?.ocrEnabled ? (ocrText || undefined) : undefined,
+    readyToStart: guideDismissed,
   });
 
   // Keep submitAnswer in a ref so async closures always have the latest version
@@ -324,6 +353,7 @@ export default function Interview() {
       const text = combined.replace(/\[INTERVIEW_OVER\]/gi, "").trim();
       if (text && submitAnswerRef.current) {
         setSpokenCaption("");
+        setFullCaption("");
         resetTranscript();
         submitAnswerRef.current(text);
       }
@@ -334,7 +364,38 @@ export default function Interview() {
   }, [isListening]);
 
   const isInterviewActive = !!config && !isCompleted;
+  const isFirstLoad = isInitializing || (isLoading && messages.length === 0);
+
+  useEffect(() => {
+    if (!isFirstLoad) return;
+    const interval = setInterval(() => {
+      setLoadingTextIndex(prev => (prev + 1) % loadingTexts.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [isFirstLoad]);
+
   useScreenWakeLock(isInterviewActive);
+
+  // ── Onboarding guide ──
+  // Guide shows immediately when config loads (before interview starts).
+  // Interview only begins after guide is dismissed or was previously dismissed.
+  const onboarding = useOnboarding({
+    storageKey: "zoe_guide_interview_v1",
+    steps: config?.ocrEnabled ? INTERVIEW_GUIDE_STEPS_OCR : INTERVIEW_GUIDE_STEPS,
+    enabled: !!config,
+  });
+
+  // When guide is dismissed (skipped or completed), allow interview to start
+  useEffect(() => {
+    if (config && !onboarding.isActive && !guideDismissed) {
+      setGuideDismissed(true);
+    }
+  }, [config, onboarding.isActive, guideDismissed]);
+
+  // ── Document PiP ──
+  const { isPiPOpen, isSupported: isPiPSupported, openPiP, closePiP, pipRootRef } = useDocumentPiP();
+
+  const handleToggleCaptions = useCallback(() => setShowChatMessage(prev => !prev), []);
 
   useEffect(() => {
     return () => {
@@ -498,9 +559,17 @@ export default function Interview() {
   const scrollToBottom = () =>
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 
+  // Auto-scroll caption container as new text streams in
+  useEffect(() => {
+    if (fullCaption && captionScrollRef.current) {
+      captionScrollRef.current.scrollTop = captionScrollRef.current.scrollHeight;
+    }
+  }, [fullCaption]);
+
   const sendMessage = () => {
     if (input.trim() && submitAnswer) {
       setSpokenCaption("");
+      setFullCaption("");
       audioBufferRef.current = "";
       submitAnswer(input);
       setInput("");
@@ -537,6 +606,38 @@ export default function Interview() {
     }
   };
 
+  const handleMaximize = useCallback(() => {
+    window.focus();
+    closePiP();
+  }, [closePiP]);
+
+  // Mirror-render: keep PiP content in sync with interview state
+  useEffect(() => {
+    if (!isPiPOpen || !pipRootRef.current) return;
+    pipRootRef.current.render(
+      <InterviewPiP
+        interviewerName="Zoe"
+        remainingTime={remainingTime}
+        currentlySpokenText={fullCaption}
+        showCaptions={showChatMessage}
+        isTtsActive={isTtsActive}
+        isActuallyPlaying={isActuallyPlaying}
+        isListening={isListening}
+        isLoading={isLoading}
+        onMicClick={handleMicClick}
+        onToggleCaptions={handleToggleCaptions}
+        onEndCall={handleEndCall}
+        onStopSharing={() => screenCapturePanelRef.current?.stopSharing()}
+        onMaximize={handleMaximize}
+      />
+    );
+  });
+
+  // Close PiP when interview completes
+  useEffect(() => {
+    if (isCompleted && isPiPOpen) closePiP();
+  }, [isCompleted, isPiPOpen, closePiP]);
+
   if (!config) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -571,21 +672,38 @@ export default function Interview() {
             />
           </div>
 
+          {/* Loading text carousel — shown while first question loads */}
+          {isFirstLoad && (
+            <div className="w-full max-w-md mx-auto px-4 mt-4 md:mt-6 text-center">
+              <p
+                key={loadingTextIndex}
+                className="text-gray-500 text-sm md:text-base font-medium animate-fade-in"
+              >
+                {loadingTexts[loadingTextIndex]}
+              </p>
+            </div>
+          )}
+
           {/* Caption Container */}
-          <div
-            className={`transition-opacity duration-300 w-full max-w-2xl lg:max-w-3xl mx-auto px-4 mt-4 md:mt-6 ${
-              showChatMessage && spokenCaption ? 'opacity-100' : 'opacity-0'
-            }`}
-            style={{ minHeight: "80px" }}
-          >
-            {showChatMessage && spokenCaption && (
-              <div className="bg-white/95 backdrop-blur-md rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm border border-gray-200 relative z-20">
-                <p className="text-gray-800 text-sm md:text-base lg:text-lg font-medium leading-relaxed text-center">
-                  {spokenCaption}
-                </p>
-              </div>
-            )}
-          </div>
+          {!isFirstLoad && (
+            <div
+              className={`transition-opacity duration-300 w-full max-w-2xl lg:max-w-3xl mx-auto px-4 mt-4 md:mt-6 ${
+                showChatMessage && fullCaption ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={{ minHeight: "80px" }}
+            >
+              {showChatMessage && fullCaption && (
+                <div
+                  ref={captionScrollRef}
+                  className="bg-white/95 backdrop-blur-md rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm border border-gray-200 relative z-20 max-h-40 md:max-h-48 overflow-y-auto"
+                >
+                  <p className="text-gray-800 text-sm md:text-base lg:text-lg font-medium leading-relaxed text-center">
+                    {fullCaption}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Control Buttons */}
           <div
@@ -594,7 +712,7 @@ export default function Interview() {
             }`}
           >
             {/* Microphone Button */}
-            <div className="relative flex items-center justify-center">
+            <div data-guide="mic-button" className="relative flex items-center justify-center">
               {isListening && (
                 <div className="mic-ripple-container">
                   <div className="mic-ripple"></div>
@@ -619,6 +737,7 @@ export default function Interview() {
 
             {/* Caption Toggle Button */}
             <button
+              data-guide="captions-button"
               aria-label="Toggle captions"
               onClick={() => setShowChatMessage((prev) => !prev)}
               className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md bg-white hover:scale-105 active:scale-95 transition-all shrink-0 border border-gray-200 flex items-center justify-center group"
@@ -632,13 +751,41 @@ export default function Interview() {
 
             {/* Screen Share / OCR Button — only shown when user opted in */}
             {config?.ocrEnabled && (
-              <ScreenCapturePanel
-                onCaptureComplete={(text) => setOcrText(text)}
-              />
+              <div data-guide="screenshare-button" className="contents">
+                <ScreenCapturePanel
+                  ref={screenCapturePanelRef}
+                  onCaptureComplete={(text) => setOcrText(text)}
+                  onShareStatusChange={(sharing) => {
+                    setIsScreenSharing(sharing);
+                    if (sharing && isPiPSupported && !isPiPOpen) openPiP();
+                    if (!sharing && isPiPOpen) closePiP();
+                  }}
+                />
+              </div>
+            )}
+
+            {/* PiP Mini View Button — only shown during screen share */}
+            {isPiPSupported && isScreenSharing && !isCompleted && (
+              <button
+                aria-label={isPiPOpen ? "Close Mini View" : "Open Mini View"}
+                onClick={isPiPOpen ? closePiP : openPiP}
+                className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all shrink-0 border flex items-center justify-center group ${
+                  isPiPOpen
+                    ? "bg-blue-50 border-blue-300"
+                    : "bg-white border-gray-200"
+                }`}
+              >
+                <PictureInPicture2 className={`w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 transition-colors ${
+                  isPiPOpen
+                    ? "text-blue-600"
+                    : "text-gray-600 group-hover:text-gray-900"
+                }`} />
+              </button>
             )}
 
             {/* End Call Button */}
             <button
+              data-guide="end-button"
               aria-label="End interview"
               onClick={() => handleEndCall()}
               className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md text-white bg-red-500 hover:bg-red-600 hover:scale-105 active:scale-95 transition-all shrink-0 border border-red-600 flex items-center justify-center"
@@ -762,9 +909,28 @@ export default function Interview() {
             }
           }
         }
-        
+
+        @keyframes fadeIn {
+          0% { opacity: 0; transform: translateY(6px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.5s ease-out;
+        }
 
       `}</style>
+
+      {/* Onboarding Guide */}
+      {onboarding.isActive && onboarding.currentStep && (
+        <OnboardingOverlay
+          step={onboarding.currentStep}
+          stepIndex={onboarding.currentStepIndex}
+          totalSteps={onboarding.totalSteps}
+          isLastStep={onboarding.isLastStep}
+          onNext={onboarding.next}
+          onSkip={onboarding.skip}
+        />
+      )}
     </div>
   );
 }

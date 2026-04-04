@@ -12,3 +12,13 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+// Document Picture-in-Picture API (Chrome 116+)
+interface DocumentPictureInPicture {
+  requestWindow(options?: { width?: number; height?: number; disallowReturnToOpener?: boolean }): Promise<Window>;
+  readonly window: Window | null;
+}
+
+interface Window {
+  documentPictureInPicture?: DocumentPictureInPicture;
+}

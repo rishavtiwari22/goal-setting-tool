@@ -32,10 +32,12 @@ interface UseInterviewProps {
   onFeedback?: (feedback: string) => void;
   screenCode?: string;
   mode?: InterviewConfig['mode'];
+  /** When false, delays starting the interview until set to true (e.g. after onboarding guide) */
+  readyToStart?: boolean;
 }
 
-const RECENT_WINDOW = 6;
-const SUMMARIZE_EVERY = 7;
+const RECENT_WINDOW = 3;
+const SUMMARIZE_START_AFTER = 2; // Start summarizing after 2nd answer
 
 // ── LLM client (reuses existing fetch infra) ──────────────────────────────────
 
@@ -179,6 +181,7 @@ export function useSinglePromptInterview({
   onStreamChunk,
   onStreamComplete,
   screenCode,
+  readyToStart = true,
 }: UseInterviewProps) {
   // Don't cache config mode here - use ref to always get latest value
   const [messages, setMessages] = useState<Message[]>([]);
@@ -298,30 +301,44 @@ export function useSinglePromptInterview({
     await endInterviewRef.current();
   }, []);
 
-  // ── Rolling summarization ──────────────────────────────────────────────────
+  // ── Rolling summarization (async, non-blocking) ────────────────────────────
 
-  const runSummarization = useCallback(async () => {
-    const toCompress = archivedRef.current;
+  const isSummarizingRef = useRef(false);
+
+  const runSummarization = useCallback(() => {
+    if (isSummarizingRef.current) return;
+    const toCompress = [...archivedRef.current];
     if (toCompress.length === 0 || !frameworkRef.current) return;
+
+    // Clear archived immediately so new messages don't get re-summarized
+    archivedRef.current = [];
+    isSummarizingRef.current = true;
 
     const skillsList = [
       ...frameworkRef.current.must_have_skills.map(s => s.skill),
       ...frameworkRef.current.nice_to_have_skills.map(s => s.skill),
     ];
 
-    try {
-      const msgs = buildSummarizationMessages(
-        frameworkRef.current.role,
-        rollingSummaryRef.current,
-        toCompress,
-        skillsList,
-      );
-      const summary = await chatCompletion(msgs);
-      rollingSummaryRef.current = summary;
-      archivedRef.current = [];
-    } catch (err) {
-      console.error('Summarization failed:', err);
-    }
+    const msgs = buildSummarizationMessages(
+      frameworkRef.current.role,
+      rollingSummaryRef.current,
+      toCompress,
+      skillsList,
+    );
+
+    // Fire-and-forget: runs in background, updates summary when ready
+    chatCompletion(msgs)
+      .then(summary => {
+        rollingSummaryRef.current = summary;
+      })
+      .catch(err => {
+        console.error('Summarization failed:', err);
+        // Put messages back so they can be retried next cycle
+        archivedRef.current = [...toCompress, ...archivedRef.current];
+      })
+      .finally(() => {
+        isSummarizingRef.current = false;
+      });
   }, []);
 
   // ── Start interview ────────────────────────────────────────────────────────
@@ -393,7 +410,7 @@ export function useSinglePromptInterview({
   // ── On config load ─────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!config || hasStartedRef.current) return;
+    if (!config || !readyToStart || hasStartedRef.current) return;
     hasStartedRef.current = true;
 
     const newSessionId = initialSessionId || crypto.randomUUID();
@@ -424,7 +441,7 @@ export function useSinglePromptInterview({
         timerRef.current = null;
       }
     };
-  }, [config]);
+  }, [config, readyToStart]);
 
   // ── Submit answer ──────────────────────────────────────────────────────────
 
@@ -533,10 +550,10 @@ export function useSinglePromptInterview({
           saveInterviewSessionBySessionId(sessionRef.current);
         }
 
-        // Periodic summarization
+        // Async summarization: every turn after the 2nd answer
         turnCountRef.current += 1;
-        if (turnCountRef.current % SUMMARIZE_EVERY === 0) {
-          runSummarization().catch(console.error);
+        if (turnCountRef.current >= SUMMARIZE_START_AFTER) {
+          runSummarization();
         }
 
         if (hasEndToken) {

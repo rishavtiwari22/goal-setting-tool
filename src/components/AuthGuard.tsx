@@ -1,9 +1,7 @@
-import { useEffect } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { isTokenValid, getEmailFromJWT, isValidJWTFormat } from "../utils/jwt";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const location = useLocation();
   const [searchParams] = useSearchParams();
 
   const tokenInQuery = searchParams.get("token") || searchParams.get("jwt");
@@ -19,28 +17,14 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   const tokenInStorage = localStorage.getItem("studentToken");
+  const emailInStorage = localStorage.getItem("studentEmail");
 
-  useEffect(() => {
-    if (!tokenInQuery && !isTokenValid(tokenInStorage)) {
-      const currentUrl = window.location.origin + location.pathname + location.search;
-      const zoeRedirectUrl = `zoe.zuvy.org?returnUrl=${encodeURIComponent(currentUrl)}`;
-      const redirectUrl = `https://app.zuvy.org?zoeRedirectUrl=${encodeURIComponent(zoeRedirectUrl)}`;
-
-      localStorage.removeItem("studentToken");
-      localStorage.removeItem("studentEmail");
-
-      window.location.href = redirectUrl;
-    }
-  }, [location, searchParams]);
-
-  if (tokenInQuery) {
+  // Allow through if: token in URL, valid token in storage, OR email in storage (bypass mode)
+  if (tokenInQuery || isTokenValid(tokenInStorage) || emailInStorage) {
     return <>{children}</>;
   }
 
-  if (!isTokenValid(tokenInStorage)) {
-    return null;
-  }
-
+  // No auth at all — still render children (Home will show email input)
   return <>{children}</>;
 }
 

@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, Volume2, CheckCircle2, AlertCircle, RefreshCw, ChevronDown } from "lucide-react";
+import { useOnboarding } from "../hooks/useOnboarding";
+import { SETUP_GUIDE_STEPS } from "./onboarding/onboardingSteps";
+import { OnboardingOverlay } from "./onboarding/OnboardingOverlay";
 
 interface MediaDeviceInfo {
   deviceId: string;
@@ -167,6 +170,12 @@ const DeviceTester = ({
   const animationFrameRef = useRef<number | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const onboarding = useOnboarding({
+    storageKey: "zoe_guide_setup_v1",
+    steps: SETUP_GUIDE_STEPS,
+    enabled: true,
+  });
 
   const checkDevicesAndPermissions = async () => {
     try {
@@ -375,11 +384,11 @@ const DeviceTester = ({
       {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-8 md:mb-10">
         {/* Microphone Card */}
-        <div className={`
+        <div data-guide="mic-card" className={`
           group relative p-6 rounded-xl border transition-all duration-300
           flex flex-col min-h-65 md:min-h-70 bg-white
-          ${isMicReady 
-            ? "border-[#2B5E2B] ring-2 ring-[#E6F6EF] shadow-sm" 
+          ${isMicReady
+            ? "border-[#2B5E2B] ring-2 ring-[#E6F6EF] shadow-sm"
             : "border-gray-200 hover:border-[#2B5E2B] shadow-none hover:shadow-sm"
           }
         `}>
@@ -464,11 +473,11 @@ const DeviceTester = ({
         </div>
 
         {/* Speaker Card */}
-        <div className={`
+        <div data-guide="speaker-card" className={`
           group relative p-6 rounded-xl border transition-all duration-300
           flex flex-col min-h-65 md:min-h-70 bg-white
-          ${isSpeakerReady 
-            ? "border-[#2B5E2B] ring-2 ring-[#E6F6EF] shadow-sm" 
+          ${isSpeakerReady
+            ? "border-[#2B5E2B] ring-2 ring-[#E6F6EF] shadow-sm"
             : "border-gray-200 hover:border-[#2B5E2B] shadow-none hover:shadow-sm"
           }
         `}>
@@ -536,7 +545,7 @@ const DeviceTester = ({
       </div>
 
       {/* Primary CTA */}
-      <div className="flex flex-col items-center gap-3">
+      <div className="flex flex-col items-center gap-3" data-guide="start-button">
         <Button
           onClick={onStartInterview}
           disabled={!isReadyToStart}
@@ -572,6 +581,18 @@ const DeviceTester = ({
             Best experience on Google Chrome
           </p>
         </div>
+      )}
+
+      {/* Onboarding Guide */}
+      {onboarding.isActive && onboarding.currentStep && (
+        <OnboardingOverlay
+          step={onboarding.currentStep}
+          stepIndex={onboarding.currentStepIndex}
+          totalSteps={onboarding.totalSteps}
+          isLastStep={onboarding.isLastStep}
+          onNext={onboarding.next}
+          onSkip={onboarding.skip}
+        />
       )}
     </div>
   );

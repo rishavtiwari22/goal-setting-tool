@@ -10,6 +10,8 @@ import type { InterviewMode } from "../services/interview/interviewEngine";
 
 export default function Home() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [email, setEmail] = useState(localStorage.getItem("studentEmail") || "");
+  const [needsEmail, setNeedsEmail] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -55,11 +57,36 @@ export default function Home() {
       toast.info("This module is coming soon!");
       return;
     }
-    setSelectedType(id);
+
     const token = searchParams.get("token") || searchParams.get("jwt");
+    const storedEmail = localStorage.getItem("studentEmail");
+
+    // If no token and no email stored, prompt for email first
+    if (!token && !storedEmail) {
+      setNeedsEmail(true);
+      setSelectedType(id);
+      return;
+    }
+
+    setSelectedType(id);
     setTimeout(() => {
       navigate(token ? `/selfapply?token=${token}` : "/selfapply", { state: { mode } });
     }, 300);
+  };
+
+  const handleEmailSubmit = () => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || !trimmed.includes("@")) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    localStorage.setItem("studentEmail", trimmed);
+    setNeedsEmail(false);
+
+    const selectedMode = interviewTypes.find(t => t.id === selectedType)?.mode;
+    setTimeout(() => {
+      navigate("/selfapply", { state: { mode: selectedMode } });
+    }, 200);
   };
 
   useEffect(() => {
@@ -129,6 +156,43 @@ export default function Home() {
             </span>
           </div>
         </div>
+
+        {/* Email input overlay */}
+        {needsEmail && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-2xl p-8 shadow-xl max-w-md w-full mx-4"
+            >
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Enter your email to continue</h3>
+              <p className="text-sm text-slate-500 mb-5">This will be used to save your interview progress.</p>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleEmailSubmit()}
+                placeholder="you@example.com"
+                autoFocus
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5E2B]/30 focus:border-[#2B5E2B] mb-4"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setNeedsEmail(false)}
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleEmailSubmit}
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-[#2B5E2B] rounded-xl hover:bg-[#234E23] transition-colors"
+                >
+                  Continue
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </main>
 
       <style>{`
