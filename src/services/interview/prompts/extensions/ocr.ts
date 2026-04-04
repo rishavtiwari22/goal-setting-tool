@@ -19,5 +19,5 @@ export function buildOcrUserSection(screenCode: string): string {
   return `## Code Currently Visible on Candidate Screen (OCR)
 ${screenCode.trim()}
 
-The candidate is actively coding. Use this code to drive your next question — pick a pattern, decision, or structure from the code and ask about the reasoning behind it. Connect it to a JD skill. Do NOT ask them to write, present, or read code aloud.`;
+The candidate is actively coding. Use this code to drive your next question — pick a pattern, decision, or structure from the code and ask about the reasoning behind it. Connect it to a JD skill. Do NOT ask them to write code.`;
 }
