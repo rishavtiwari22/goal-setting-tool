@@ -204,6 +204,7 @@ export function useSinglePromptInterview({
   const isCompletedRef = useRef(false);
   const hasStartedRef = useRef(false);
   const currentQuestionRef = useRef('');
+  const screenCodeRef = useRef(screenCode);
 
   // Stable refs for callbacks used inside setInterval / async closures
   const endInterviewRef = useRef<() => Promise<void>>(() => Promise.resolve());
@@ -217,6 +218,7 @@ export function useSinglePromptInterview({
   useEffect(() => { onStreamChunkRef.current = onStreamChunk; }, [onStreamChunk]);
   useEffect(() => { onStreamCompleteRef.current = onStreamComplete; }, [onStreamComplete]);
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+  useEffect(() => { screenCodeRef.current = screenCode; }, [screenCode]);
 
   // ── End interview ──────────────────────────────────────────────────────────
 
@@ -481,7 +483,7 @@ export function useSinglePromptInterview({
           timeRemainingRef.current,
           (sessionRef.current?.interviewTime ?? 10) * 60,
           configRef.current?.mode ?? 'practice',
-          screenCode,
+          screenCodeRef.current,
         );
 
         let fullResponse = '';
