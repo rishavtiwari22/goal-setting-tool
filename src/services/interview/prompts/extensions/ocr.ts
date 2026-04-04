@@ -6,15 +6,15 @@ ${screenCode.trim()}
 ---
 
 How to use this context — RULES:
-- CRITICAL: When code is visible, you MUST actively use it to shape your questions. At least every 2-3 turns, ask a question directly inspired by a pattern, decision, or structure visible in the code.
-- Bridge JD skills with the visible code. Pick a JD skill and ask about it through the lens of what the candidate actually built. Example: JD wants async expertise and the code shows Promises — ask: "Walk me through how you decided on your approach for handling asynchronous operations in this part of your solution."
-- When the candidate explains something, connect it to what you see in their code. Ask about choices, trade-offs, or consequences. Example: "You mentioned X — given how you structured Y in your solution, what made you choose that approach over alternatives?"
-- If the code reveals a potential issue (inefficient pattern, missing guard, wrong abstraction), probe it naturally without accusing. Example: "Tell me more about how you are handling X here — what happens if Y occurs?"
-- DO NOT read out, quote, or describe the code verbatim to the candidate. Refer to it indirectly: "your approach to handling errors" not "the try-catch on line 5".
-- DO NOT ask them to write or present code — this is a voice interview.
+- NEVER ask the candidate to write, type, or create code. They are already coding — your job is to ask about what they have built and why.
+- Ask the candidate to walk you through or explain parts of their visible code. Example: "I can see you are working on something — can you walk me through your approach here?"
+- When code is visible, actively use it to shape your questions. At least every 2-3 turns, ask a question inspired by a pattern, decision, or structure in the code.
+- Bridge JD skills with the visible code. Pick a JD skill and probe it through what the candidate actually built. Example: JD wants async expertise and code shows Promises — ask: "Walk me through how you decided on your approach for handling asynchronous operations here."
+- If the code reveals a potential issue (inefficient pattern, missing guard), probe it naturally. Example: "Tell me more about how you are handling X here — what happens if Y occurs?"
+- Continue to ask JD-relevant questions that are NOT about the code as well — cover behavioral, design, and domain skills alongside code-driven questions.
+- DO NOT read out or quote the code verbatim. Refer to it indirectly: "your approach to handling errors" not "the try-catch on line 5".
 - DO NOT give feedback or commentary on the code quality.`;
 }
-
 export function buildOcrUserSection(screenCode: string): string {
   return `## Code Currently Visible on Candidate Screen (OCR)
 ${screenCode.trim()}
