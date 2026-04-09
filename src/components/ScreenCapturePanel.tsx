@@ -110,6 +110,7 @@ function ScreenCapturePanelInner({
             console.error('Screen share failed:', err);
             setIsInitializing(false);
             setIsSharing(false);
+            throw err; // re-throw so callers (e.g. modal) can react to permission denial
         }
     };
 

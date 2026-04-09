@@ -265,7 +265,7 @@ export function useSinglePromptInterview({
         { role: 'user', content: humanMessage },
       ];
       const raw = await chatCompletion(evalMsgs);
-      const cleaned = raw.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+      const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
 
       let result: InterviewResult;
       try {
@@ -486,6 +486,12 @@ export function useSinglePromptInterview({
         if (!framework) throw new Error('Framework not loaded');
 
         const recent = recentMessagesRef.current.slice(-RECENT_WINDOW);
+        console.log('[ScreenShare] Building msgs with:', {
+          ocrEnabled: configRef.current?.ocrEnabled,
+          isScreenSharing: isScreenSharingRef.current,
+          askCount: screenShareAskCountRef.current
+        });
+
         const msgs = buildInterviewerMessages(
           framework,
           rollingSummaryRef.current,
@@ -508,13 +514,16 @@ export function useSinglePromptInterview({
           fullResponse += chunk;
           const displayChunk = chunk
             .replace(/\[INTERVIEW_OVER\]/gi, '')
-            .replace(/\[REQUEST_SCREEN_SHARE\]/gi, '');
+            .replace(/\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]/gi, '')
+            .replace(/REQUEST[_\s-]*SCREEN[_\s-]*SHARE/gi, '');
+
           if (displayChunk && onStreamChunkRef.current) onStreamChunkRef.current(displayChunk);
 
           setMessages(prev => {
             const displayText = fullResponse
               .replace(/\[INTERVIEW_OVER\]/gi, '')
-              .replace(/\[REQUEST_SCREEN_SHARE\]/gi, '')
+              .replace(/\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]/gi, '')
+              .replace(/REQUEST[_\s-]*SCREEN[_\s-]*SHARE/gi, '')
               .trim();
             const existing = prev.find(m => m.id === questionId);
             if (existing) {
@@ -537,15 +546,23 @@ export function useSinglePromptInterview({
         if (onStreamCompleteRef.current) onStreamCompleteRef.current();
 
         const hasEndToken = /\[INTERVIEW_OVER\]/i.test(fullResponse);
-        const hasRequestShareToken = /\[REQUEST_SCREEN_SHARE\]/i.test(fullResponse);
+        // Robust token matching that handles potential LLM variations in spacing or casing
+        const hasRequestShareToken = /\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]/i.test(fullResponse) ||
+          /REQUEST[_\s-]*SCREEN[_\s-]*SHARE/i.test(fullResponse);
+
         const cleanedResponse = fullResponse
           .replace(/\[INTERVIEW_OVER\]/gi, '')
-          .replace(/\[REQUEST_SCREEN_SHARE\]/gi, '')
+          .replace(/\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]/gi, '')
+          .replace(/REQUEST[_\s-]*SCREEN[_\s-]*SHARE/gi, '')
           .trim();
+
+        console.log('[ScreenShare] LLM raw response:', fullResponse);
+        console.log('[ScreenShare] hasRequestShareToken:', hasRequestShareToken, 'askCount:', screenShareAskCountRef.current);
 
         // If LLM requested screen share, fire the callback (UI shows modal).
         // Allow up to 2 asks per session — counter is managed here.
         if (hasRequestShareToken && screenShareAskCountRef.current < 2) {
+          console.log('[ScreenShare] Firing onRequestScreenShare callback');
           screenShareAskCountRef.current += 1;
           onRequestScreenShareRef.current?.();
         }

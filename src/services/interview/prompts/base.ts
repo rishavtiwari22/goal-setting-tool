@@ -5,7 +5,7 @@ export const VOICE_ONLY_RULES = `## Voice Platform Rules
 - Never ask the candidate to write, type, or create new code, queries, diagrams, or other technical artifacts during the interview. All questions must be answerable through spoken explanation alone.
 - EXCEPTION: If the candidate is sharing their screen and code is already visible, you MAY ask them to verbally walk through, explain, or discuss the reasoning behind code they have already written. This is a spoken explanation, not a request to write new code.`;
 
-export const FORMAT_RULES = `Respond ONLY with your next message. Plain text only — no internal commentary, no labels, no markdown, no emojis, no asterisks, no bullet points, no numbered lists, no bold, no special formatting.`;
+export const FORMAT_RULES = `Respond ONLY with your next message. Plain text only — no internal commentary, no labels, no markdown, no emojis, no asterisks, no bullet points, no numbered lists, no bold, no special formatting (unless a system control token in square brackets like [INTERVIEW_OVER] or [REQUEST_SCREEN_SHARE] is explicitly requested).`;
 
 export const SESSION_COMPLETION_RULES = `## Session Completion
 - CRITICAL: When you decide the session is completely finished and are sending your final closing message, you MUST include the token [INTERVIEW_OVER] at the very end of your message.

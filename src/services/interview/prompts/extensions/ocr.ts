@@ -45,23 +45,42 @@ You have ALREADY asked the candidate to share their screen TWICE during this ses
   }
 
   if (askCount === 1) {
-    return `## Screen Share Status
-The candidate has the option to share their screen, but they are NOT currently sharing.
-You have already asked them ONCE to share their screen and they declined or ignored. You are allowed ONE more attempt — but only at the right moment.
-- WHEN to make the second (final) ask: ONLY when the candidate is talking about a specific project of theirs and you genuinely need to see the actual code from that project to ask a meaningful technical question. Do NOT ask again for general/conceptual code questions.
-- HOW to ask the second time: be firmer and clearly explain that this is a technical interview and seeing their actual project code helps you ask better, more relevant questions. Example: "Since this is a technical interview and I'd like to dig deeper into the project you mentioned, could you share your screen so I can see the actual code? It will help me ask more meaningful questions about your work."
-- After this second ask, append [REQUEST_SCREEN_SHARE] at the END of your message (it will be stripped before TTS).
-- After this second attempt, regardless of outcome, NEVER ask again.
-- For all other questions, continue normally without asking for screen share.`;
+    return `## Screen Share Status — CRITICAL
+The candidate opted in to screen sharing but is NOT currently sharing. You already asked them ONCE and they declined or ignored. You have ONE final attempt remaining.
+
+ABSOLUTE RULES (still in effect):
+1. NEVER ask the candidate to write, type, paste, or describe code line-by-line.
+2. NEVER ask code-specific implementation questions while screen share is off.
+3. You CAN ask about: background, projects at a high level, technical concepts, design decisions, trade-offs, behavioral questions, JD skills.
+
+SECOND (FINAL) REQUEST:
+- WHEN: ONLY when the candidate is talking about a specific project of theirs and you genuinely need to see the actual code from that project for a meaningful technical question.
+- HOW: be firmer and clearly explain this is a technical interview where seeing their actual project code helps you ask better questions. Example: "Since this is a technical interview and I'd like to dig deeper into the project you mentioned, could you share your screen so I can see the actual code? It will help me ask more meaningful questions about your work."
+- At the END of that message, append exactly this token: [REQUEST_SCREEN_SHARE]
+- The token must be in literal square brackets, exactly as [REQUEST_SCREEN_SHARE]. Without it, no screen-share prompt will appear.
+- After this second attempt, regardless of outcome, NEVER request screen share again — but still NEVER ask them to type code.`;
   }
 
-  return `## Screen Share Status
-The candidate has the option to share their screen, but they are NOT currently sharing.
-- For most questions, continue with regular JD-based questions.
-- WHEN to ask for screen share: ONLY when the candidate is describing a specific project of theirs (something they have built or worked on), and you want to see the ACTUAL CODE from that project to ask deeper, more grounded questions. Do NOT ask for screen share to discuss general concepts, hypothetical code, or things the candidate is not currently talking about.
-- HOW to ask: politely connect the request to the specific project they mentioned. Example: "That sounds like an interesting project — would you mind sharing your screen so I can take a look at the code? It will help me ask more specific questions about how you built it."
-- At the END of that same message, append the special control token [REQUEST_SCREEN_SHARE] (do not say it out loud, the system will strip it).
-- Then STOP — wait for them to actually share before asking your code question.
-- You may ask for screen share UP TO TWO TIMES total in the entire session. If they decline both times, never ask again.
-- Do NOT emit the token if you are happy with non-code questions for the current topic.`;
+  return `## Screen Share Status — CRITICAL
+The candidate opted in to screen sharing but has NOT started sharing yet. This means you currently CANNOT see any of their code.
+
+ABSOLUTE RULES while screen share is OFF:
+1. NEVER ask the candidate to write, type, paste, or describe code line-by-line. This is a voice interview — there is no way for them to share code with you except through screen share.
+2. NEVER ask code-specific or implementation-specific questions like "walk me through your code", "what does line X do", "show me how you implemented Y", "what's the syntax you used".
+3. You CAN ask about: their background, projects at a high level, technical concepts, design decisions, trade-offs, behavioral questions, JD skills, past experience.
+4. The MOMENT you want to dive into the actual code of a specific project they have built — STOP and request screen share instead. You cannot ask code questions blind.
+
+WHEN TO REQUEST SCREEN SHARE — BE PROACTIVE:
+- The MOMENT the candidate mentions ANY specific project they have built or worked on (e.g. "I built X", "I worked on a Y app", "my project was Z"), your VERY NEXT response should request screen share. Do not wait for them to describe it more — ask for screen share right after their first mention.
+- Also request if you feel the next natural question would be code-specific (implementation, structure, patterns) and you need to SEE the code first.
+- The whole point of having OCR enabled is that you USE it. Do not just keep asking verbal questions when the candidate has clearly mentioned a project you could look at.
+
+HOW TO REQUEST SCREEN SHARE:
+1. Politely link the request to the specific project they just mentioned. Example: "That sounds like an interesting project — would you mind sharing your screen so I can take a look at the code with you? It will help me ask more specific questions about how you built it."
+2. At the very END of that same message, append exactly this control token: [REQUEST_SCREEN_SHARE]
+3. The token is in literal square brackets. Type it exactly as [REQUEST_SCREEN_SHARE]. The system will strip it before TTS so the candidate never hears it.
+4. WITHOUT this token, the candidate will NOT see the share-screen prompt. The token is the ONLY way to trigger screen sharing.
+5. After requesting, STOP. Do NOT also ask a code question in the same message. Wait for them to share, then ask the code question on the next turn.
+
+You may request screen share UP TO TWO TIMES in the entire session. If declined both times, fall back permanently to non-code questions only.`;
 }
