@@ -4,6 +4,7 @@ import { ocrService } from '../services/ocr/ocrService';
 
 export interface ScreenCapturePanelHandle {
     stopSharing: () => void;
+    startSharing: () => Promise<void>;
 }
 
 interface ScreenCapturePanelProps {
@@ -109,6 +110,7 @@ function ScreenCapturePanelInner({
             console.error('Screen share failed:', err);
             setIsInitializing(false);
             setIsSharing(false);
+            throw err; // re-throw so callers (e.g. modal) can react to permission denial
         }
     };
 
@@ -137,6 +139,7 @@ function ScreenCapturePanelInner({
 
     useImperativeHandle(ref, () => ({
         stopSharing: stopScreenShare,
+        startSharing: startScreenShare,
     }));
 
     const startOCRProcessing = () => {
@@ -187,11 +190,15 @@ function ScreenCapturePanelInner({
                     lastRawOcrText.current = cleanText;
                     setCapturedContent(cleanText);
 
+                    // Pass RAW OCR text to interviewer LLM immediately for real-time questions.
+                    // No waiting for LLM cleaning — the interviewer model can handle messy OCR.
+                    if (onCaptureComplete) onCaptureComplete(cleanText);
+
+                    // Run LLM cleanup in parallel — purely for the front-end display (refined code panel).
                     setIsRefining(true);
                     ocrService.processOcrWithLlm(cleanText)
                         .then(refined => {
                             setRefinedCode(refined);
-                            if (onCaptureComplete) onCaptureComplete(refined);
                         })
                         .catch(err => console.error('Refinement failed:', err))
                         .finally(() => setIsRefining(false));

@@ -7,6 +7,7 @@ import {
   getMentorOpeningSystemPrompt,
   buildOcrSystemSection,
   buildOcrUserSection,
+  buildOcrRequestScreenShareSection,
 } from './prompts';
 
 export interface ChatMessage {
@@ -69,7 +70,7 @@ export function buildOpeningMessages(
 
   const userContent = mode === 'mentor'
     ? `Start the learning session with a warm greeting and ask the student to share their background and experience relevant to the ${framework.role} role.`
-    : `Generate a warm, professional opening question for a ${framework.role} interview. Ask them to tell you about their background and experience relevant to this role.`;
+    : `Generate a warm, professional opening question for a ${framework.role} interview. Ask the candidate to tell you about their background, their years of experience, and their specific tech stack expertise relevant to this role.`;
 
   return [
     { role: 'system', content: systemPrompt },
@@ -90,6 +91,9 @@ export function buildInterviewerMessages(
   totalSeconds: number,
   mode: InterviewMode = 'practice',
   screenCode?: string,
+  ocrEnabled?: boolean,
+  isScreenSharing?: boolean,
+  screenShareAskCount?: number,
 ): ChatMessage[] {
   const redFlags = framework.red_flags_to_probe.join(', ') || 'none identified';
   const elapsedMin = Math.floor((totalSeconds - timeRemainingSeconds) / 60);
@@ -99,12 +103,17 @@ export function buildInterviewerMessages(
   const timeContext = `- Total duration: ${totalMin} minutes\n- Time elapsed: ${elapsedMin} minute(s)\n- Time remaining: ${remainingMin} minute(s)\n- Adjust pacing based on time remaining to ensure coverage before the session ends.`;
   const frameworkJson = JSON.stringify(framework, null, 2);
 
-  const hasScreenCode = screenCode && screenCode.trim().length > 20;
+  const hasScreenCode = screenCode && screenCode.trim().length > 20 && isScreenSharing;
   const ocrSystemSection = hasScreenCode ? '\n\n' + buildOcrSystemSection(screenCode!) : '';
 
+  // If OCR is enabled but candidate is NOT sharing → tell LLM how to request screen share
+  const requestShareSection = (ocrEnabled && !isScreenSharing)
+    ? '\n\n' + buildOcrRequestScreenShareSection(screenShareAskCount ?? 0)
+    : '';
+
   const systemPrompt = mode === 'mentor'
-    ? getMentorSystemPrompt(framework.role, frameworkJson, timeContext) + ocrSystemSection
-    : getInterviewerSystemPrompt(framework.role, frameworkJson, timeContext, redFlags) + ocrSystemSection;
+    ? getMentorSystemPrompt(framework.role, frameworkJson, timeContext) + ocrSystemSection + requestShareSection
+    : getInterviewerSystemPrompt(framework.role, frameworkJson, timeContext, redFlags) + ocrSystemSection + requestShareSection;
 
   const recentConversation = recentMessages
     .map(m => `${m.role === 'interviewer' ? 'Interviewer' : 'Candidate'}: ${m.content}`)
@@ -112,9 +121,26 @@ export function buildInterviewerMessages(
 
   const ocrUserSection = hasScreenCode ? '\n\n' + buildOcrUserSection(screenCode!) : '';
 
-  const closingInstruction = mode === 'mentor'
+  // When OCR is enabled but candidate isn't sharing, append a forceful reminder at the very end
+  // (LLMs follow end-of-prompt instructions much more strictly than mid-prompt rules)
+  const screenShareReminder = (ocrEnabled && !isScreenSharing && (screenShareAskCount ?? 0) < 2)
+    ? `
+
+REMINDER (CRITICAL): The candidate has opted into screen sharing but has NOT started yet. If your next question is about a SPECIFIC PROJECT the candidate has mentioned or built (e.g. "walk me through your project", "tell me about your code", "how did you structure it") — you MUST first request screen share. Do this by:
+1. Asking them politely to share their screen so you can look at the code together.
+2. Appending the literal token [REQUEST_SCREEN_SHARE] at the END of your message.
+3. NOT asking the code question itself in this same message — wait for them to share.
+The system will strip the token before TTS. WITHOUT this token, no screen-share modal will appear. ${screenShareAskCount === 1 ? 'You have already asked once and they declined — this is your FINAL allowed attempt.' : 'This is your first allowed attempt.'}`
+    : `
+
+REMINDER: You have already requested screen share twice and it was declined, or it is not enabled. 
+- DO NOT request screen share again. 
+- DO NOT append the [REQUEST_SCREEN_SHARE] token.
+- Focus entirely on the JD skills and high-level project discussions via voice only.`;
+
+  const closingInstruction = (mode === 'mentor'
     ? 'Based on the conversation so far, provide brief feedback on the student\'s last response and ask your next question. Be encouraging and teach when needed.'
-    : 'Based on the conversation so far, what is your next interviewer message? Probe uncovered skills, follow up on anything interesting or vague, and keep the conversation natural.';
+    : 'Based on the conversation so far, what is your next interviewer message? Probe uncovered skills, follow up on anything interesting or vague, and keep the conversation natural. If the candidate mentions a specific technical implementation, ask them to explain the trade-offs they made.') + screenShareReminder;
 
   const userPrompt = [
     '## Conversation Summary (context)',
@@ -158,6 +184,8 @@ export function buildSummarizationMessages(
     {
       role: 'user',
       content: `You are summarizing an ongoing interview for a ${roleName} position.
+      
+IMPORTANT: Pay close attention to the candidate's self-reported experience level (years of experience, seniority, specific tech stack expertise). Ensure this is clearly captured in the summary so the next turn can be tailored appropriately.
 
 ## Existing Summary (if any)
 ${existingSummary || 'None yet.'}
@@ -169,6 +197,8 @@ ${messagesText}
 ${skillsList.join(', ')}
 
 Produce an updated summary in this format:
+
+**Candidate Profile:** [Years of experience, seniority level, core tech stack]
 
 **Skills Assessed:**
 - [Skill Name]: [Demonstrated / Partial / Not Yet Covered] — key evidence: "quote or paraphrase"
