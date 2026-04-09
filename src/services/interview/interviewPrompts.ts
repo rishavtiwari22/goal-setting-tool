@@ -7,6 +7,7 @@ import {
   getMentorOpeningSystemPrompt,
   buildOcrSystemSection,
   buildOcrUserSection,
+  buildOcrRequestScreenShareSection,
 } from './prompts';
 
 export interface ChatMessage {
@@ -90,6 +91,9 @@ export function buildInterviewerMessages(
   totalSeconds: number,
   mode: InterviewMode = 'practice',
   screenCode?: string,
+  ocrEnabled?: boolean,
+  isScreenSharing?: boolean,
+  screenShareAskCount?: number,
 ): ChatMessage[] {
   const redFlags = framework.red_flags_to_probe.join(', ') || 'none identified';
   const elapsedMin = Math.floor((totalSeconds - timeRemainingSeconds) / 60);
@@ -99,12 +103,17 @@ export function buildInterviewerMessages(
   const timeContext = `- Total duration: ${totalMin} minutes\n- Time elapsed: ${elapsedMin} minute(s)\n- Time remaining: ${remainingMin} minute(s)\n- Adjust pacing based on time remaining to ensure coverage before the session ends.`;
   const frameworkJson = JSON.stringify(framework, null, 2);
 
-  const hasScreenCode = screenCode && screenCode.trim().length > 20;
+  const hasScreenCode = screenCode && screenCode.trim().length > 20 && isScreenSharing;
   const ocrSystemSection = hasScreenCode ? '\n\n' + buildOcrSystemSection(screenCode!) : '';
 
+  // If OCR is enabled but candidate is NOT sharing → tell LLM how to request screen share
+  const requestShareSection = (ocrEnabled && !isScreenSharing)
+    ? '\n\n' + buildOcrRequestScreenShareSection(screenShareAskCount ?? 0)
+    : '';
+
   const systemPrompt = mode === 'mentor'
-    ? getMentorSystemPrompt(framework.role, frameworkJson, timeContext) + ocrSystemSection
-    : getInterviewerSystemPrompt(framework.role, frameworkJson, timeContext, redFlags) + ocrSystemSection;
+    ? getMentorSystemPrompt(framework.role, frameworkJson, timeContext) + ocrSystemSection + requestShareSection
+    : getInterviewerSystemPrompt(framework.role, frameworkJson, timeContext, redFlags) + ocrSystemSection + requestShareSection;
 
   const recentConversation = recentMessages
     .map(m => `${m.role === 'interviewer' ? 'Interviewer' : 'Candidate'}: ${m.content}`)

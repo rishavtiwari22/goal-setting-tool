@@ -48,7 +48,9 @@ export default function Interview() {
   );
   const captionScrollRef = useRef<HTMLDivElement>(null);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [showScreenShareModal, setShowScreenShareModal] = useState(false);
   const screenCapturePanelRef = useRef<ScreenCapturePanelHandle>(null);
+  const pendingFollowUpAfterShareRef = useRef(false);
   const [loadingTextIndex, setLoadingTextIndex] = useState(0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -285,6 +287,12 @@ export default function Interview() {
     },
     screenCode: config?.ocrEnabled ? (ocrText || undefined) : undefined,
     readyToStart: guideDismissed,
+    isScreenSharing,
+    onRequestScreenShare: () => {
+      // LLM emitted [REQUEST_SCREEN_SHARE] — show modal asking candidate to share
+      pendingFollowUpAfterShareRef.current = true;
+      setShowScreenShareModal(true);
+    },
   });
 
   // Keep submitAnswer in a ref so async closures always have the latest version
@@ -648,7 +656,53 @@ export default function Interview() {
 
   return (
     <div className="max-w-screen w-full h-screen flex flex-col bg-[#FBFAF8]">
-      
+
+      {/* Screen Share Request Modal — shown when LLM emits [REQUEST_SCREEN_SHARE] */}
+      {showScreenShareModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
+                <PictureInPicture2 className="h-6 w-6 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Share your screen</h3>
+                <p className="text-sm text-gray-500">Zoe wants to look at your code</p>
+              </div>
+            </div>
+            <p className="mb-6 text-sm leading-relaxed text-gray-700">
+              The interviewer would like to see what you've been working on, so she can ask deeper questions about your code. Sharing your screen is optional — you can decline and continue with the interview.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowScreenShareModal(false);
+                  pendingFollowUpAfterShareRef.current = false;
+                }}
+                className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-all hover:bg-gray-50 active:scale-95"
+              >
+                Not now
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await screenCapturePanelRef.current?.startSharing();
+                    // Modal will close + follow-up triggers via onShareStatusChange
+                  } catch (e) {
+                    console.error('Failed to start sharing:', e);
+                    setShowScreenShareModal(false);
+                    pendingFollowUpAfterShareRef.current = false;
+                  }
+                }}
+                className="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
+              >
+                Share screen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col flex-1 relative overflow-hidden">
         <div
           className="flex flex-col items-center justify-center flex-1 w-full px-4 md:px-6 lg:px-8 relative"
@@ -759,6 +813,18 @@ export default function Interview() {
                     setIsScreenSharing(sharing);
                     if (sharing && isPiPSupported && !isPiPOpen) openPiP();
                     if (!sharing && isPiPOpen) closePiP();
+
+                    // If LLM had requested screen share and candidate just started sharing,
+                    // wait ~3s for OCR to capture, then auto-prompt LLM to ask its code question.
+                    if (sharing && pendingFollowUpAfterShareRef.current) {
+                      pendingFollowUpAfterShareRef.current = false;
+                      setShowScreenShareModal(false);
+                      setTimeout(() => {
+                        if (submitAnswerRef.current) {
+                          submitAnswerRef.current("I've shared my screen — you can see my code now.");
+                        }
+                      }, 3000);
+                    }
                   }}
                 />
               </div>
