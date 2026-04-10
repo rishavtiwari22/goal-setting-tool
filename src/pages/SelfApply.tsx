@@ -11,12 +11,12 @@ import { getJobs } from "../services/api/serverApi";
 import { classifyTechnicalRole } from "../services/api/deepseekApi";
 import { getEmailFromJWT } from "../utils/jwt";
 import type { Job } from "../models/job";
-import type { InterviewMode } from "../services/interview/interviewEngine";
+import type { InterviewMode, MentorProfile } from "../services/interview/interviewEngine";
 import {
   ChevronLeft,
   Plus,
-  Laptop,
-  Sparkles,
+  GraduationCap,
+  BrainCircuit,
   Code2,
   Terminal,
   Globe,
@@ -28,7 +28,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 
-type Step = "job_selection" | "ocr_choice" | "speakerandmiccheck";
+type Step = "mentor_profile" | "job_selection" | "ocr_choice" | "speakerandmiccheck";
 
 const getJobIcon = (title: string) => {
   const t = title.toLowerCase();
@@ -44,8 +44,12 @@ export default function SelfApply() {
   const [searchParams] = useSearchParams();
 
   const mode: InterviewMode = (location.state as any)?.mode ?? 'practice';
+  const preselectedMentorProfile: MentorProfile | null = (location.state as any)?.mentorProfile ?? null;
 
-  const [step, setStep] = useState<Step>("job_selection");
+  const [mentorProfile, setMentorProfile] = useState<MentorProfile | null>(preselectedMentorProfile);
+  const [step, setStep] = useState<Step>(
+    mode === 'mentor' && !preselectedMentorProfile ? "mentor_profile" : "job_selection"
+  );
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [isClassifying, setIsClassifying] = useState(false);
@@ -145,6 +149,11 @@ export default function SelfApply() {
     setStep("speakerandmiccheck");
   };
 
+  const handleMentorProfileSelect = (profile: MentorProfile) => {
+    setMentorProfile(profile);
+    setStep("job_selection");
+  };
+
   const handleBack = () => {
     if (step === "speakerandmiccheck") {
       if (mode === 'practice' && isTechnicalRole) {
@@ -154,6 +163,12 @@ export default function SelfApply() {
       }
     } else if (step === "ocr_choice") {
       setStep("job_selection");
+    } else if (step === "job_selection") {
+      if (mode === 'mentor') {
+        setStep("mentor_profile");
+      } else {
+        navigate("/");
+      }
     } else {
       navigate("/");
     }
@@ -168,6 +183,12 @@ export default function SelfApply() {
       toast.error("Please select a job role first");
       return;
     }
+    if (mode === 'mentor' && !mentorProfile) {
+      toast.error("Please select a mentor type");
+      return;
+    }
+
+    const selectedMentorProfile = mode === 'mentor' ? (mentorProfile ?? 'communication') : undefined;
 
     try {
       let interviewConfig;
@@ -186,6 +207,7 @@ export default function SelfApply() {
             ...(customJobData.soft_skills || [])
           ],
           mode,
+          mentorProfile: selectedMentorProfile,
           ocrEnabled,
         };
       } else {
@@ -204,6 +226,7 @@ export default function SelfApply() {
             ...(selectedJob.soft_skills || [])
           ],
           mode,
+          mentorProfile: selectedMentorProfile,
           ocrEnabled,
         };
       }
@@ -235,6 +258,42 @@ export default function SelfApply() {
 
         <div className="flex-1 flex flex-col items-center justify-center">
 
+          {/* ── Mentor Profile Selection ── */}
+          {step === "mentor_profile" && (
+            <div className="w-full max-w-5xl flex flex-col items-center">
+              <div className="mb-6 shrink-0">
+                <img src="/assets/glassadjustment.webp" alt="Zoe" className="w-28 h-28 md:w-36 md:h-36 object-contain mx-auto" />
+              </div>
+
+              <h2 className="text-2xl font-black text-center mb-3 text-gray-900 tracking-tight custom-fade-in">
+                Choose your mentor style
+              </h2>
+              <p className="text-slate-500 text-sm font-medium text-center mb-8 max-w-2xl">
+                Pick the type of mentoring you want first. You can choose either communication coaching or a Socratic technical deep-dive.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                <InterviewCard
+                  icon={<GraduationCap className="text-[#2B5E2B]" size={26} />}
+                  title="Communication Mentor"
+                  description="Focus on interview communication: structure, clarity, confidence, and concise storytelling in your spoken answers."
+                  estimatedTime="10-30 mins"
+                  onClick={() => handleMentorProfileSelect('communication')}
+                  isSelected={mentorProfile === 'communication'}
+                />
+
+                <InterviewCard
+                  icon={<BrainCircuit className="text-[#2B5E2B]" size={26} />}
+                  title="Socratic Mentor"
+                  description="Focus on technical depth. Get guided through follow-up questions, hints, and concept-by-concept probing."
+                  estimatedTime="10-30 mins"
+                  onClick={() => handleMentorProfileSelect('socratic')}
+                  isSelected={mentorProfile === 'socratic'}
+                />
+              </div>
+            </div>
+          )}
+
           {/* ── Job Selection ── */}
           {step === "job_selection" && (
             <div className="w-full max-w-6xl flex flex-col items-center">
@@ -243,7 +302,9 @@ export default function SelfApply() {
               </div>
 
               <h2 className="text-2xl font-black text-center mb-10 text-gray-900 tracking-tight custom-fade-in">
-                {mode === 'mentor' ? 'Select a topic to learn' : 'Select a job role to practice'}
+                {mode === 'mentor'
+                  ? `Select a topic to learn (${mentorProfile === 'socratic' ? 'Socratic Mentor' : 'Communication Mentor'})`
+                  : 'Select a job role to practice'}
               </h2>
 
               {isClassifying ? (

@@ -165,6 +165,7 @@ function createInitialSession(config: InterviewConfig, sessionId: string): Inter
     examinationPoints: config.examinationPoints,
     status: 'ongoing',
     mode: config.mode ?? 'practice',
+    mentorProfile: config.mentorProfile,
     consecutiveIrrelevantCount: 0,
     currentTopicFollowupCount: 0,
     discussedProjects: [],
@@ -388,7 +389,11 @@ export function useSinglePromptInterview({
       frameworkRef.current = framework;
 
       // Generate opening question (non-streaming)
-      const openingMsgs = buildOpeningMessages(framework, configRef.current?.mode ?? 'practice');
+      const openingMsgs = buildOpeningMessages(
+        framework,
+        configRef.current?.mode ?? 'practice',
+        configRef.current?.mentorProfile,
+      );
       const openingQuestion = await chatCompletion(openingMsgs);
 
       // Add to internal message history
@@ -500,6 +505,7 @@ export function useSinglePromptInterview({
           timeRemainingRef.current,
           (sessionRef.current?.interviewTime ?? 10) * 60,
           configRef.current?.mode ?? 'practice',
+          configRef.current?.mentorProfile,
           screenCodeRef.current,
           configRef.current?.ocrEnabled,
           isScreenSharingRef.current,
