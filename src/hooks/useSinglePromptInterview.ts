@@ -34,6 +34,10 @@ interface UseInterviewProps {
   mode?: InterviewConfig['mode'];
   /** When false, delays starting the interview until set to true (e.g. after onboarding guide) */
   readyToStart?: boolean;
+  /** Whether the candidate is currently sharing their screen */
+  isScreenSharing?: boolean;
+  /** Called when the LLM emits the [REQUEST_SCREEN_SHARE] control token */
+  onRequestScreenShare?: () => void;
 }
 
 const RECENT_WINDOW = 3;
@@ -183,6 +187,8 @@ export function useSinglePromptInterview({
   onStreamComplete,
   screenCode,
   readyToStart = true,
+  isScreenSharing = false,
+  onRequestScreenShare,
 }: UseInterviewProps) {
   // Don't cache config mode here - use ref to always get latest value
   const [messages, setMessages] = useState<Message[]>([]);
@@ -206,12 +212,15 @@ export function useSinglePromptInterview({
   const hasStartedRef = useRef(false);
   const currentQuestionRef = useRef('');
   const screenCodeRef = useRef(screenCode);
+  const isScreenSharingRef = useRef(isScreenSharing);
+  const screenShareAskCountRef = useRef(0);
 
   // Stable refs for callbacks used inside setInterval / async closures
   const endInterviewRef = useRef<() => Promise<void>>(() => Promise.resolve());
   const onStreamChunkRef = useRef(onStreamChunk);
   const onStreamCompleteRef = useRef(onStreamComplete);
   const onCompleteRef = useRef(onComplete);
+  const onRequestScreenShareRef = useRef(onRequestScreenShare);
 
   // Keep refs in sync with latest values
   useEffect(() => { configRef.current = config; }, [config]);
@@ -220,6 +229,8 @@ export function useSinglePromptInterview({
   useEffect(() => { onStreamCompleteRef.current = onStreamComplete; }, [onStreamComplete]);
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
   useEffect(() => { screenCodeRef.current = screenCode; }, [screenCode]);
+  useEffect(() => { isScreenSharingRef.current = isScreenSharing; }, [isScreenSharing]);
+  useEffect(() => { onRequestScreenShareRef.current = onRequestScreenShare; }, [onRequestScreenShare]);
 
   // ── End interview ──────────────────────────────────────────────────────────
 
@@ -255,7 +266,7 @@ export function useSinglePromptInterview({
         { role: 'user', content: humanMessage },
       ];
       const raw = await chatCompletion(evalMsgs);
-      const cleaned = raw.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+      const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
 
       let result: InterviewResult;
       try {
@@ -480,6 +491,12 @@ export function useSinglePromptInterview({
         if (!framework) throw new Error('Framework not loaded');
 
         const recent = recentMessagesRef.current.slice(-RECENT_WINDOW);
+        console.log('[ScreenShare] Building msgs with:', {
+          ocrEnabled: configRef.current?.ocrEnabled,
+          isScreenSharing: isScreenSharingRef.current,
+          askCount: screenShareAskCountRef.current
+        });
+
         const msgs = buildInterviewerMessages(
           framework,
           rollingSummaryRef.current,
@@ -490,6 +507,9 @@ export function useSinglePromptInterview({
           configRef.current?.mode ?? 'practice',
           configRef.current?.mentorProfile,
           screenCodeRef.current,
+          configRef.current?.ocrEnabled,
+          isScreenSharingRef.current,
+          screenShareAskCountRef.current,
         );
 
         let fullResponse = '';
@@ -498,11 +518,19 @@ export function useSinglePromptInterview({
         // Stream interviewer response
         for await (const chunk of chatCompletionStream(msgs)) {
           fullResponse += chunk;
-          const displayChunk = chunk.replace(/\[INTERVIEW_OVER\]/gi, '');
+          const displayChunk = chunk
+            .replace(/\[INTERVIEW_OVER\]/gi, '')
+            .replace(/\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]/gi, '')
+            .replace(/REQUEST[_\s-]*SCREEN[_\s-]*SHARE/gi, '');
+
           if (displayChunk && onStreamChunkRef.current) onStreamChunkRef.current(displayChunk);
 
           setMessages(prev => {
-            const displayText = fullResponse.replace(/\[INTERVIEW_OVER\]/gi, '').trim();
+            const displayText = fullResponse
+              .replace(/\[INTERVIEW_OVER\]/gi, '')
+              .replace(/\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]/gi, '')
+              .replace(/REQUEST[_\s-]*SCREEN[_\s-]*SHARE/gi, '')
+              .trim();
             const existing = prev.find(m => m.id === questionId);
             if (existing) {
               return prev.map(m =>
@@ -524,7 +552,26 @@ export function useSinglePromptInterview({
         if (onStreamCompleteRef.current) onStreamCompleteRef.current();
 
         const hasEndToken = /\[INTERVIEW_OVER\]/i.test(fullResponse);
-        const cleanedResponse = fullResponse.replace(/\[INTERVIEW_OVER\]/gi, '').trim();
+        // Robust token matching that handles potential LLM variations in spacing or casing
+        const hasRequestShareToken = /\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]/i.test(fullResponse) ||
+          /REQUEST[_\s-]*SCREEN[_\s-]*SHARE/i.test(fullResponse);
+
+        const cleanedResponse = fullResponse
+          .replace(/\[INTERVIEW_OVER\]/gi, '')
+          .replace(/\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]/gi, '')
+          .replace(/REQUEST[_\s-]*SCREEN[_\s-]*SHARE/gi, '')
+          .trim();
+
+        console.log('[ScreenShare] LLM raw response:', fullResponse);
+        console.log('[ScreenShare] hasRequestShareToken:', hasRequestShareToken, 'askCount:', screenShareAskCountRef.current);
+
+        // If LLM requested screen share, fire the callback (UI shows modal).
+        // Allow up to 2 asks per session — counter is managed here.
+        if (hasRequestShareToken && screenShareAskCountRef.current < 2) {
+          console.log('[ScreenShare] Firing onRequestScreenShare callback');
+          screenShareAskCountRef.current += 1;
+          onRequestScreenShareRef.current?.();
+        }
 
         setCurrentQuestion(cleanedResponse);
 

@@ -117,7 +117,7 @@ ${POOR_INPUT_HANDLING}
 
 ${VOICE_ONLY_RULES}
 
-${FORMAT_RULES} The ONLY exception is the [INTERVIEW_OVER] token when concluding.`;
+${FORMAT_RULES} The ONLY allowed exceptions are the [INTERVIEW_OVER] token when concluding and the [REQUEST_SCREEN_SHARE] token when you need to see the student's screen.`;
 }
 
 export function getMentorOpeningSystemPrompt(role: string, frameworkJson: string): string {
