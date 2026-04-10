@@ -108,6 +108,7 @@ export default function Interview() {
               difficulty: recoveredSession.difficulty,
               examinationPoints: recoveredSession.examinationPoints,
               mode: recoveredSession.mode ?? 'practice',
+              mentorProfile: recoveredSession.mentorProfile,
             };
             setConfig(interviewConfig);
             setIsInitializing(false);
@@ -163,6 +164,7 @@ export default function Interview() {
             difficulty: session.difficulty,
             examinationPoints: session.examinationPoints,
             mode: session.mode ?? 'practice',
+            mentorProfile: session.mentorProfile,
           };
           setConfig(interviewConfig);
           setIsInitializing(false);

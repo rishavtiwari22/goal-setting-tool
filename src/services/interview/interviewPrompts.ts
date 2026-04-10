@@ -1,10 +1,12 @@
 import type { SkillsFramework } from '../../types/interviewTypes';
-import type { InterviewMode } from './interviewEngine';
+import type { InterviewMode, MentorProfile } from './interviewEngine';
 import {
   getInterviewerSystemPrompt,
   getInterviewerOpeningSystemPrompt,
   getMentorSystemPrompt,
   getMentorOpeningSystemPrompt,
+  getSocraticMentorSystemPrompt,
+  getSocraticMentorOpeningSystemPrompt,
   buildOcrSystemSection,
   buildOcrUserSection,
 } from './prompts';
@@ -12,6 +14,10 @@ import {
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
+}
+
+function shouldUseSocraticMentor(mode: InterviewMode, mentorProfile?: MentorProfile): boolean {
+  return mode === 'mentor' && mentorProfile === 'socratic';
 }
 
 // ─────────────────────────────────────────────
@@ -60,15 +66,21 @@ Return this exact JSON structure:
 export function buildOpeningMessages(
   framework: SkillsFramework,
   mode: InterviewMode = 'practice',
+  mentorProfile?: MentorProfile,
 ): ChatMessage[] {
   const frameworkJson = JSON.stringify(framework, null, 2);
+  const isSocraticMentor = shouldUseSocraticMentor(mode, mentorProfile);
 
   const systemPrompt = mode === 'mentor'
-    ? getMentorOpeningSystemPrompt(framework.role, frameworkJson)
+    ? isSocraticMentor
+      ? getSocraticMentorOpeningSystemPrompt(framework.role, frameworkJson)
+      : getMentorOpeningSystemPrompt(framework.role, frameworkJson)
     : getInterviewerOpeningSystemPrompt(framework.role, frameworkJson);
 
   const userContent = mode === 'mentor'
-    ? `Start the learning session with a warm greeting and ask the student to share their background and experience relevant to the ${framework.role} role.`
+    ? isSocraticMentor
+      ? `Start the Socratic technical mentoring session with a warm greeting and ask the student to share their background and one technical topic they want to strengthen for the ${framework.role} role.`
+      : `Start the learning session with a warm greeting and ask the student to share their background and experience relevant to the ${framework.role} role.`
     : `Generate a warm, professional opening question for a ${framework.role} interview. Ask them to tell you about their background and experience relevant to this role.`;
 
   return [
@@ -89,12 +101,14 @@ export function buildInterviewerMessages(
   timeRemainingSeconds: number,
   totalSeconds: number,
   mode: InterviewMode = 'practice',
+  mentorProfile?: MentorProfile,
   screenCode?: string,
 ): ChatMessage[] {
   const redFlags = framework.red_flags_to_probe.join(', ') || 'none identified';
   const elapsedMin = Math.floor((totalSeconds - timeRemainingSeconds) / 60);
   const remainingMin = Math.floor(timeRemainingSeconds / 60);
   const totalMin = Math.floor(totalSeconds / 60);
+  const isSocraticMentor = shouldUseSocraticMentor(mode, mentorProfile);
 
   const timeContext = `- Total duration: ${totalMin} minutes\n- Time elapsed: ${elapsedMin} minute(s)\n- Time remaining: ${remainingMin} minute(s)\n- Adjust pacing based on time remaining to ensure coverage before the session ends.`;
   const frameworkJson = JSON.stringify(framework, null, 2);
@@ -103,7 +117,9 @@ export function buildInterviewerMessages(
   const ocrSystemSection = hasScreenCode ? '\n\n' + buildOcrSystemSection(screenCode!) : '';
 
   const systemPrompt = mode === 'mentor'
-    ? getMentorSystemPrompt(framework.role, frameworkJson, timeContext) + ocrSystemSection
+    ? isSocraticMentor
+      ? getSocraticMentorSystemPrompt(framework.role, frameworkJson, timeContext) + ocrSystemSection
+      : getMentorSystemPrompt(framework.role, frameworkJson, timeContext) + ocrSystemSection
     : getInterviewerSystemPrompt(framework.role, frameworkJson, timeContext, redFlags) + ocrSystemSection;
 
   const recentConversation = recentMessages
@@ -113,7 +129,9 @@ export function buildInterviewerMessages(
   const ocrUserSection = hasScreenCode ? '\n\n' + buildOcrUserSection(screenCode!) : '';
 
   const closingInstruction = mode === 'mentor'
-    ? 'Based on the conversation so far, provide brief feedback on the student\'s last response and ask your next question. Be encouraging and teach when needed.'
+    ? isSocraticMentor
+      ? 'Based on the conversation so far, provide brief feedback on the student\'s last response and ask your next Socratic technical question. Be encouraging, use hints when needed, and keep it to one question.'
+      : 'Based on the conversation so far, provide brief feedback on the student\'s last response and ask your next question. Be encouraging and teach when needed.'
     : 'Based on the conversation so far, what is your next interviewer message? Probe uncovered skills, follow up on anything interesting or vague, and keep the conversation natural.';
 
   const userPrompt = [
