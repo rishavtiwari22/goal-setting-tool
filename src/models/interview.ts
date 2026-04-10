@@ -63,6 +63,12 @@ export interface InterviewSession {
   currentProjectQuestionCount: number;      // Technical questions on current project (reset on new project)
   mode?: InterviewMode;                      // Session mode: 'practice' or 'mentor'
   mentorProfile?: MentorProfile;             // Mentor persona: communication or socratic
+
+  // Mentor-mode only: topics the mentor parked silently during the session.
+  // Sourced from [PARKED: ...] markers in raw assistant responses (stripped
+  // from display + TTS). Used by the post-session evaluator to compile a
+  // "topics to study" list, framed positively to the candidate.
+  parkedTopics?: string[];
 }
 
 export interface InterviewResult {
@@ -74,6 +80,10 @@ export interface InterviewResult {
   elapsedTime: number;
   topStrengths?: Array<{ name: string; description: string }>;
   improvementAreas?: Array<{ name: string; description: string }>;
+  // Mentor-mode only: derived from parked topics + answer-quality patterns,
+  // framed as "things to study to ace your next interview" — never as a
+  // failure list.
+  topicsToStudy?: Array<{ name: string; description: string }>;
 }
 
 // export interface AnalyzeAnswerResponse {

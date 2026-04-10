@@ -81,7 +81,7 @@ export function buildOpeningMessages(
   const userContent = mode === 'mentor'
     ? isSocraticMentor
       ? `Start the Socratic technical mentoring session with a warm greeting and ask the student to share their background and one technical topic they want to strengthen for the ${framework.role} role.`
-      : ? `Start the learning session with a warm greeting and ask the student to share their background and experience relevant to the ${framework.role} role.`
+      : `Start the learning session with a warm greeting and ask the student to share their background and experience relevant to the ${framework.role} role.`
     : `Generate a warm, professional opening question for a ${framework.role} interview. Ask the candidate to tell you about their background, their years of experience, and their specific tech stack expertise relevant to this role.`;
 
   return [
@@ -128,7 +128,7 @@ export function buildInterviewerMessages(
   const systemPrompt = mode === 'mentor'
     ? isSocraticMentor
       ? getSocraticMentorSystemPrompt(framework.role, frameworkJson, timeContext) + ocrSystemSection
-      : ? getMentorSystemPrompt(framework.role, frameworkJson, timeContext) + ocrSystemSection + requestShareSection
+      : getMentorSystemPrompt(framework.role, frameworkJson, timeContext) + ocrSystemSection + requestShareSection
     : getInterviewerSystemPrompt(framework.role, frameworkJson, timeContext, redFlags) + ocrSystemSection + requestShareSection;
 
   const recentConversation = recentMessages
@@ -252,6 +252,8 @@ export interface BuildSummarizePromptParams {
   interviewTime: number;
   language: string;
   mode?: InterviewMode;
+  /** Mentor mode only: topics the in-session coach silently parked. */
+  parkedTopics?: string[];
 }
 
 function formatQAHistory(qaHistory: SummarizeQAItem[]): string {
@@ -261,34 +263,23 @@ function formatQAHistory(qaHistory: SummarizeQAItem[]): string {
 }
 
 export function buildSummarizePrompt(params: BuildSummarizePromptParams): { systemMessage: string; humanMessage: string } {
+  const isMentor = params.mode === 'mentor';
+  return isMentor
+    ? buildMentorSummarizePrompt(params)
+    : buildPracticeSummarizePrompt(params);
+}
+
+// ─────────────────────────────────────────────
+// Practice (real interview) summarizer
+// ─────────────────────────────────────────────
+
+function buildPracticeSummarizePrompt(
+  params: BuildSummarizePromptParams,
+): { systemMessage: string; humanMessage: string } {
   const knowledgePointsStr = params.knowledgePoints.join(', ');
   const qaHistoryStr = formatQAHistory(params.qaHistory);
-  const isMentor = params.mode === 'mentor';
 
-  const identity = isMentor
-    ? `You are a supportive learning coach reviewing a student's practice session for the role of ${params.jobTitle}.`
-    : `You are a world-class software technology expert tasked with hiring a ${params.jobTitle}.`;
-
-  const goalStatement = isMentor
-    ? `Your goal is to produce an encouraging, growth-oriented evaluation that helps the student understand what they learned and where to focus next.`
-    : `Your goal is to produce an evaluation that is specific, evidence-based, and useful for decision making. Base your judgment strictly on the interview content.`;
-
-  const summaryGuidance = isMentor
-    ? `When writing the summary and conclusion:
-- Focus on what the student demonstrated, what they learned, and what they should work on.
-- Be positive and growth-oriented. Highlight progress, not just gaps.
-- Give specific, actionable suggestions instead of vague comments.
-- Acknowledge effort and incremental progress.
-- In the summary, describe what went well first, then growth areas, and finish with an encouraging overall assessment.`
-    : `When writing the summary and conclusion:
-- Focus on observable behaviors, decisions, reasoning, and communication — not personality traits.
-- Reference concrete moments or patterns from the interview when appropriate (without quoting verbatim).
-- Avoid vague comments (e.g., "needs improvement") unless paired with a clear explanation.
-- Ensure all suggested improvements are actionable and relevant to the job.
-- In the summary, describe strengths first, then areas for improvement, and finish with an objective overall assessment.
-- For each strength, briefly describe how they can continue to leverage or build on it.`;
-
-  const systemMessage = `${identity} The candidate has completed the session. Please summarize their performance clearly, objectively, and concisely.
+  const systemMessage = `You are a world-class software technology expert tasked with hiring a ${params.jobTitle}. The candidate has completed the session. Produce a specific, evidence-based evaluation useful for hiring decisions.
 
 # Role Description:
 ${params.jobDescription}
@@ -299,38 +290,37 @@ ${knowledgePointsStr}
 # Session Duration:
 ${params.interviewTime} minutes
 
-${goalStatement}
+When writing the summary and conclusion:
+- Focus on observable behaviors, decisions, reasoning, and communication — not personality traits.
+- Reference concrete moments from the interview (without quoting verbatim).
+- Avoid vague comments unless paired with a clear explanation.
+- Ensure all suggestions are actionable and relevant to the job.
+- Describe strengths first, then improvement areas, ending with an objective overall assessment.
+- For each strength, briefly describe how they can continue to build on it.
 
-${summaryGuidance}
-
-IMPORTANT REQUIREMENTS:
+REQUIREMENTS:
 - Address the candidate as "You" throughout.
-- You must always provide exactly 4 strengths. If strengths were limited, identify the most relevant positive aspects.
-- You must always provide exactly 4 improvement areas focused on realistic development opportunities.
-- You must not use bold, italics, bullet points, or any markdown formatting.
-- Do not include headings or extra commentary outside the JSON.
-- ${isMentor ? 'The conclusion should be encouraging and highlight the student\'s learning journey and next steps.' : 'The conclusion should clearly indicate your recommendation (e.g., move forward, on hold, or not recommended) with a short rationale.'}
-- Maintain a balanced tone: acknowledge what went well before discussing improvement areas.
+- Provide exactly 4 strengths and exactly 4 improvement areas.
+- No markdown formatting. No headings. No commentary outside the JSON.
+- The conclusion should clearly indicate your recommendation (move forward, on hold, or not recommended) with a short rationale.
 - Avoid judgmental language. Focus on behavior and outcomes.
 
-LANGUAGE:
-- Write the full response in ${params.language}.
+LANGUAGE: Write the full response in ${params.language}.
 
-OUTPUT FORMAT:
-You must respond with ONLY valid JSON matching this EXACT structure:
+OUTPUT FORMAT — respond with ONLY valid JSON matching this EXACT structure:
 
 {
   "summary": "detailed summary text describing overall performance",
   "score": 75,
   "conclusion": "final conclusion text",
   "topStrengths": [
-    { "name": "Strength Name", "description": "What you did well (with a specific example), why it helped, and how you can continue to develop this strength" },
+    { "name": "Strength Name", "description": "What you did well, why it helped, how to keep building it" },
     { "name": "Strength Name", "description": "..." },
     { "name": "Strength Name", "description": "..." },
     { "name": "Strength Name", "description": "..." }
   ],
   "improvementAreas": [
-    { "name": "Area Name", "description": "What needs improvement (with a concrete example), why it matters, and step-by-step actions to improve" },
+    { "name": "Area Name", "description": "What needs improvement, why it matters, step-by-step actions" },
     { "name": "Area Name", "description": "..." },
     { "name": "Area Name", "description": "..." },
     { "name": "Area Name", "description": "..." }
@@ -343,6 +333,109 @@ ${qaHistoryStr}
 # Notes:
 1. Question numbers are generally in the format Q<number>.
 2. If a question had follow-up questions due to brief answers, treat them as part of the same topic and merge them when summarizing.`;
+
+  return { systemMessage, humanMessage };
+}
+
+// ─────────────────────────────────────────────
+// Mentor (interview-skill coaching) summarizer
+// ─────────────────────────────────────────────
+//
+// The mentor evaluator is fundamentally different from the practice
+// evaluator. We DO NOT score the candidate's technical correctness here.
+// We score how WELL THEY INTERVIEW: structure, clarity, depth, confidence,
+// communication. Concept gaps go in `topicsToStudy`, framed positively as
+// study targets — not failure flags.
+
+function buildMentorSummarizePrompt(
+  params: BuildSummarizePromptParams,
+): { systemMessage: string; humanMessage: string } {
+  const knowledgePointsStr = params.knowledgePoints.join(', ');
+  const qaHistoryStr = formatQAHistory(params.qaHistory);
+  const parked = (params.parkedTopics || []).filter(Boolean);
+  const parkedSection = parked.length > 0
+    ? `\n\n# Topics the in-session coach flagged for study (these MUST appear in topicsToStudy, framed positively):\n${parked.map((t, i) => `- ${t}`).join('\n')}`
+    : '';
+
+  const hasTopicsToFlag = parked.length > 0;
+
+  const systemMessage = `You are an interview coach reviewing a candidate's mock-interview session for the role of ${params.jobTitle}. Your job is NOT to evaluate technical correctness — it's to evaluate how WELL THEY INTERVIEW.
+
+# Role Context:
+${params.jobDescription}
+
+# Topics In Scope:
+${knowledgePointsStr}
+
+# Session Duration:
+${params.interviewTime} minutes
+
+# What you score (interview skill, not technical correctness)
+- STRUCTURE: did they organize answers (context → action → result, or similar)?
+- CLARITY: did they get to the point or ramble?
+- DEPTH: did they go beyond surface-level when prompted?
+- CONFIDENCE: did they sound certain or hedge constantly?
+- EXAMPLES: did they back claims with concrete examples or stay abstract?
+- COMMUNICATION: did they listen, ask clarifying questions, own their work ("I" vs "we")?
+- ADAPTABILITY: did their answers improve as the session went on?
+
+# What you do NOT do
+- Do NOT teach concepts in this report. The candidate can study on their own.
+- Do NOT score technical correctness directly. If they got a topic wrong, that goes in \`topicsToStudy\` — never as a "failure" or "weakness" in summary/strengths/improvements.
+- Do NOT mention that any topic was "skipped", "parked", "couldn't be answered", "moved past", etc. Frame everything in \`topicsToStudy\` as POSITIVE next-step study targets.
+
+# Topics to study
+This is the most important field. Combine:
+1. Topics the in-session coach flagged (provided below — you MUST include all of them, rewritten in plain candidate-facing language).
+2. Any other concepts the transcript shows the candidate was shaky on.
+
+For each topic, write a one-sentence study target — what to learn and why it'll help them ace the next interview. Examples:
+  • { "name": "Recursion base cases", "description": "Brush up on how to identify and write base cases for recursive functions — interviewers love a clean recursion answer." }
+  • { "name": "SQL joins", "description": "Practice the difference between INNER, LEFT, and FULL OUTER joins so you can speak to query trade-offs with confidence." }
+
+NEVER write things like "you couldn't answer", "you got stuck on", "you skipped", "you didn't know". Always frame it as a forward-looking study target.
+
+# Other requirements
+- Address the candidate as "You" throughout.
+- Provide exactly 4 strengths and exactly 4 improvement areas — both about INTERVIEWING SKILL, not concept knowledge.
+- topicsToStudy can have 1–6 items. If the in-session coach parked nothing AND the transcript shows no shaky topics, return an empty array.
+- The summary itself MUST end with a one-sentence pointer if topicsToStudy is non-empty, like: "Take a look at the Topics to Study section above — reviewing those will make a noticeable difference in your next interview for this role." Use a natural variation of this sentence; do not copy it verbatim. Do NOT mention this pointer at all if topicsToStudy will be empty.${hasTopicsToFlag ? '\n  → For THIS session, topicsToStudy WILL be non-empty (the coach flagged at least one topic), so the pointer sentence is REQUIRED.' : '\n  → For THIS session, no topics were flagged in-session — only add the pointer if you yourself find a clearly shaky topic in the transcript and add it to topicsToStudy.'}
+- The conclusion should be encouraging and forward-looking — what to focus on for the next interview.
+- The score (0–100) reflects interviewing skill quality, not technical correctness.
+- No markdown formatting. No headings. No commentary outside the JSON.
+
+LANGUAGE: Write the full response in ${params.language}.
+
+OUTPUT FORMAT — respond with ONLY valid JSON matching this EXACT structure:
+
+{
+  "summary": "How they did at interviewing — structure, clarity, depth, confidence. Lead with what improved or went well, then growth areas, end with an encouraging overall note.",
+  "score": 75,
+  "conclusion": "Forward-looking encouraging note about what to focus on for the next interview.",
+  "topStrengths": [
+    { "name": "Interview Skill Name", "description": "What they did well at INTERVIEWING (e.g. 'structured answers using situation-action-result'), why it helped them stand out, how to keep using it." },
+    { "name": "Interview Skill Name", "description": "..." },
+    { "name": "Interview Skill Name", "description": "..." },
+    { "name": "Interview Skill Name", "description": "..." }
+  ],
+  "improvementAreas": [
+    { "name": "Interview Skill Name", "description": "What to improve about HOW they interview (e.g. 'leading with the punchline before context'), why it matters, one concrete practice action." },
+    { "name": "Interview Skill Name", "description": "..." },
+    { "name": "Interview Skill Name", "description": "..." },
+    { "name": "Interview Skill Name", "description": "..." }
+  ],
+  "topicsToStudy": [
+    { "name": "Topic Name", "description": "Forward-looking study target — what to learn and why it'll help in the next interview. Never mention skipping or failing." }
+  ]
+}`;
+
+  const humanMessage = `# The questions and answers from the session are as follows:
+${qaHistoryStr}${parkedSection}
+
+# Notes:
+1. Question numbers are in the format Q<number>.
+2. Treat follow-up questions on the same topic as one cluster.
+3. Remember: you are evaluating HOW they interview, not WHETHER their answers were technically correct. Concept gaps belong in topicsToStudy, never in improvementAreas.`;
 
   return { systemMessage, humanMessage };
 }

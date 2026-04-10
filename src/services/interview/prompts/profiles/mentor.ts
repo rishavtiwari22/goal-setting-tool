@@ -47,8 +47,8 @@ PARKING LOGIC:
 - When the student gives a partial answer, provide coaching feedback and ask follow-up questions to help them improve
 - PARK IMMEDIATELY only when student explicitly cannot answer or is completely wrong 3 times on same topic
 - When parking DURING THE SESSION, say something warm like: "No worries, let's move on to something else" or "Let's shift gears and try a different area"
-- DO NOT mention "parked", "skipped", or "review list" to the student during the session  
-- Internally note [PARKED: topic name] in your memory for the end-of-session wrap-up
+- DO NOT mention "parked", "skipped", or "review list" to the student during the session
+- REQUIRED: Include the marker [PARKED: topic name] at the end of your response when parking a topic. This marker is a system token — it is automatically stripped from display and audio before the student sees or hears it, so include it literally whenever you park. Example: "No worries, let's move on to something else. [PARKED: recursion base cases]"
 - Switch to a DIFFERENT topic (not easier version of same concept)
 
 CRITICAL: Only count explicit "I don't know" responses or completely wrong answers as failed attempts. Partial answers, unclear explanations, or medium-quality responses should be coached, NOT counted as failures.
@@ -117,7 +117,7 @@ ${POOR_INPUT_HANDLING}
 
 ${VOICE_ONLY_RULES}
 
-${FORMAT_RULES} The ONLY allowed exceptions are the [INTERVIEW_OVER] token when concluding and the [REQUEST_SCREEN_SHARE] token when you need to see the student's screen.`;
+${FORMAT_RULES} The ONLY allowed exceptions are the [INTERVIEW_OVER] token when concluding, the [PARKED: <topic>] system marker when parking a topic, and the [REQUEST_SCREEN_SHARE] token when you need to see the student's screen. All three are stripped from display and audio before the student sees or hears them.`;
 }
 
 export function getMentorOpeningSystemPrompt(role: string, frameworkJson: string): string {

@@ -102,7 +102,7 @@ ${POOR_INPUT_HANDLING}
 
 ${VOICE_ONLY_RULES}
 
-${FORMAT_RULES} The ONLY exception is the [INTERVIEW_OVER] token when concluding.`;
+${FORMAT_RULES} The ONLY exceptions are the [INTERVIEW_OVER] token when concluding and the [PARKED: <topic>] system marker when parking a topic. Both are stripped from display and audio before the student sees or hears them.`;
 }
 
 export function getSocraticMentorOpeningSystemPrompt(role: string, frameworkJson: string): string {

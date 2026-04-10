@@ -29,6 +29,8 @@ interface TestResult {
   }[];
   topStrengths?: Array<{ name: string; description: string }>;
   improvementAreas?: Array<{ name: string; description: string }>;
+  topicsToStudy?: Array<{ name: string; description: string }>;
+  mode?: 'practice' | 'mentor';
   created_at: string;
   updated_at: string;
 }
@@ -463,6 +465,44 @@ export const TestResults: React.FC<TestResultsProps> = ({
             {displayData.mainSummary}
           </p>
         </div>
+
+        {/* Topics to Study — mentor mode only, shown prominently above strengths/improvements */}
+        {testResult.mode === 'mentor' &&
+          Array.isArray(testResult.topicsToStudy) &&
+          testResult.topicsToStudy.length > 0 && (
+          <div className="bg-gradient-to-br from-indigo-50 to-white shadow-none rounded-xl border-2 border-indigo-200 p-6 hover:shadow-sm transition-all duration-300 mb-6 min-w-0">
+            <div className="flex items-center gap-3 mb-3 min-w-0">
+              <img
+                src="/assets/assessment.png"
+                alt=""
+                className="w-10 h-10 md:w-12 md:h-12 shrink-0 object-contain"
+              />
+              <div className="min-w-0">
+                <h2 className="text-base md:text-lg font-bold text-gray-900 break-words">
+                  Topics to Study
+                </h2>
+                <p className="text-xs md:text-sm text-gray-600">
+                  Review these to perform stronger in your next interview for this role
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+              {testResult.topicsToStudy.map((topic, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-lg p-3 border border-indigo-200 min-w-0"
+                >
+                  <p className="font-bold text-gray-900 mb-1 text-sm md:text-base break-words">
+                    {topic.name.replace(/\*/g, '').trim()}
+                  </p>
+                  <p className="text-xs md:text-sm text-gray-700 leading-relaxed break-words">
+                    {topic.description.replace(/\*/g, '').trim()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Top Strengths and Improvement Areas - Side by Side */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 min-w-0">

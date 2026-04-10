@@ -43,6 +43,118 @@ interface UseInterviewProps {
 const RECENT_WINDOW = 3;
 const SUMMARIZE_START_AFTER = 2; // Start summarizing after 2nd answer
 
+// ── System-marker handling (PARKED + INTERVIEW_OVER) ─────────────────────────
+//
+// Mentor prompt emits `[PARKED: <topic>]` when it silently moves the candidate
+// off a topic. INTERVIEW_OVER is the existing end-of-session token. Both must
+// be:
+//   • stripped from text shown in the chat UI
+//   • stripped from chunks fed to TTS so the candidate never hears them
+//   • (PARKED only) collected into session.parkedTopics for the post-session
+//     evaluator to compile a "topics to study" list
+//
+// Tricky bit: tokens may be split across streaming chunks (e.g. one chunk
+// ends with "[PARK", the next starts with "ED: foo]"). A naive per-chunk
+// regex never matches. We buffer any chunk text starting with '[' until we
+// see a matching ']' (or the stream ends), then decide whether to strip.
+const PARKED_RE = /\[PARKED:\s*([^\]]+?)\s*\]/gi;
+const INTERVIEW_OVER_RE = /\[INTERVIEW_OVER\]/gi;
+const REQUEST_SHARE_RE = /\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]/gi;
+const REQUEST_SHARE_BARE_RE = /REQUEST[_\s-]*SCREEN[_\s-]*SHARE/gi;
+// Non-global single-shot tests (avoid statefulness from /g flag)
+const PARKED_TEST = /^\[PARKED:\s*[^\]]+\]$/i;
+const INTERVIEW_OVER_TEST = /^\[INTERVIEW_OVER\]$/i;
+const REQUEST_SHARE_TEST = /^\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]$/i;
+
+function stripParkedMarkers(s: string): string {
+  return s.replace(PARKED_RE, '');
+}
+
+function stripAllMarkers(s: string): string {
+  return s
+    .replace(PARKED_RE, '')
+    .replace(INTERVIEW_OVER_RE, '')
+    .replace(REQUEST_SHARE_RE, '')
+    .replace(REQUEST_SHARE_BARE_RE, '');
+}
+
+function extractParkedTopics(s: string): string[] {
+  const out: string[] = [];
+  let m: RegExpExecArray | null;
+  const re = new RegExp(PARKED_RE.source, PARKED_RE.flags);
+  while ((m = re.exec(s)) !== null) {
+    const topic = m[1]?.trim();
+    if (topic) out.push(topic);
+  }
+  return out;
+}
+
+/**
+ * Streaming-safe marker stripper. Holds back any pending `[...]` segment
+ * until it can decide whether to drop it (matches PARKED/INTERVIEW_OVER) or
+ * pass it through.
+ *
+ * Usage:
+ *   const s = makeMarkerStripper();
+ *   for await (const chunk of stream) {
+ *     const safe = s.push(chunk);
+ *     if (safe) emit(safe);
+ *   }
+ *   const tail = s.flush();
+ *   if (tail) emit(tail);
+ */
+function makeMarkerStripper() {
+  let pending = '';
+
+  function push(chunk: string): string {
+    pending += chunk;
+    let output = '';
+
+    while (true) {
+      const openIdx = pending.indexOf('[');
+      if (openIdx === -1) {
+        // No open bracket anywhere — emit it all
+        output += pending;
+        pending = '';
+        return output;
+      }
+
+      // Emit everything before the '['
+      output += pending.slice(0, openIdx);
+      pending = pending.slice(openIdx);
+
+      const closeIdx = pending.indexOf(']');
+      if (closeIdx === -1) {
+        // Incomplete bracket — hold and wait for more chunks
+        return output;
+      }
+
+      const segment = pending.slice(0, closeIdx + 1);
+      pending = pending.slice(closeIdx + 1);
+
+      // If it's a known system marker, drop it; otherwise pass through
+      if (
+        PARKED_TEST.test(segment) ||
+        INTERVIEW_OVER_TEST.test(segment) ||
+        REQUEST_SHARE_TEST.test(segment)
+      ) {
+        // drop
+      } else {
+        output += segment;
+      }
+    }
+  }
+
+  function flush(): string {
+    // End of stream — strip any remaining markers and emit the rest
+    const out = stripAllMarkers(pending);
+    pending = '';
+    return out;
+  }
+
+  return { push, flush };
+}
+
 // ── LLM client (reuses existing fetch infra) ──────────────────────────────────
 
 async function chatCompletion(messages: ChatMessage[]): Promise<string> {
@@ -260,6 +372,7 @@ export function useSinglePromptInterview({
         interviewTime: Math.floor(((session.interviewTime * 60) - timeRemainingRef.current) / 60),
         language: session.language || 'English',
         mode: configRef.current?.mode ?? 'practice',
+        parkedTopics: session.parkedTopics,
       });
       const evalMsgs: ChatMessage[] = [
         { role: 'system', content: systemMessage },
@@ -280,8 +393,15 @@ export function useSinglePromptInterview({
           elapsedTime: (session.interviewTime * 60) - timeRemainingRef.current,
           topStrengths: Array.isArray(parsed.topStrengths) ? parsed.topStrengths : [],
           improvementAreas: Array.isArray(parsed.improvementAreas) ? parsed.improvementAreas : [],
+          topicsToStudy: Array.isArray(parsed.topicsToStudy) ? parsed.topicsToStudy : undefined,
         };
       } catch {
+        // Fallback: build a minimal topicsToStudy from parkedTopics directly
+        // so the candidate still gets value if the LLM call fails.
+        const fallbackTopics = (session.parkedTopics || []).map((t) => ({
+          name: t,
+          description: `Brush up on ${t} — reviewing this will help you give a stronger answer next time.`,
+        }));
         result = {
           summary: rollingSummaryRef.current || 'Interview completed.',
           score: 0,
@@ -291,6 +411,7 @@ export function useSinglePromptInterview({
           elapsedTime: (session.interviewTime * 60) - timeRemainingRef.current,
           topStrengths: [],
           improvementAreas: [],
+          topicsToStudy: fallbackTopics.length > 0 ? fallbackTopics : undefined,
         };
       }
 
@@ -515,22 +636,20 @@ export function useSinglePromptInterview({
         let fullResponse = '';
         const questionId = `q_${Date.now()}`;
 
-        // Stream interviewer response
+        // Streaming-safe marker stripper: holds back any [...] segment that
+        // arrives split across chunks until we can decide to drop or pass it.
+        // Used for chunks fed to onStreamChunk (caption + TTS pipelines).
+        const stripper = makeMarkerStripper();
+
         for await (const chunk of chatCompletionStream(msgs)) {
           fullResponse += chunk;
-          const displayChunk = chunk
-            .replace(/\[INTERVIEW_OVER\]/gi, '')
-            .replace(/\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]/gi, '')
-            .replace(/REQUEST[_\s-]*SCREEN[_\s-]*SHARE/gi, '');
-
+          const displayChunk = stripper.push(chunk);
           if (displayChunk && onStreamChunkRef.current) onStreamChunkRef.current(displayChunk);
 
+          // Message bubble update — operates on the accumulated fullResponse
+          // so it always renders the cleanly-stripped current text.
           setMessages(prev => {
-            const displayText = fullResponse
-              .replace(/\[INTERVIEW_OVER\]/gi, '')
-              .replace(/\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]/gi, '')
-              .replace(/REQUEST[_\s-]*SCREEN[_\s-]*SHARE/gi, '')
-              .trim();
+            const displayText = stripAllMarkers(fullResponse).trim();
             const existing = prev.find(m => m.id === questionId);
             if (existing) {
               return prev.map(m =>
@@ -549,26 +668,34 @@ export function useSinglePromptInterview({
           });
         }
 
+        // Flush any pending text from the stripper buffer (e.g. an incomplete
+        // bracket the model never closed — strip it as a precaution then emit)
+        const tail = stripper.flush();
+        if (tail && onStreamChunkRef.current) onStreamChunkRef.current(tail);
+
         if (onStreamCompleteRef.current) onStreamCompleteRef.current();
 
+        // Capture parked topics from the raw response BEFORE stripping
+        if (sessionRef.current) {
+          const parked = extractParkedTopics(fullResponse);
+          if (parked.length > 0) {
+            sessionRef.current.parkedTopics = [
+              ...(sessionRef.current.parkedTopics || []),
+              ...parked,
+            ];
+          }
+        }
+
         const hasEndToken = /\[INTERVIEW_OVER\]/i.test(fullResponse);
-        // Robust token matching that handles potential LLM variations in spacing or casing
+        // Robust token matching that handles potential LLM variations
         const hasRequestShareToken = /\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]/i.test(fullResponse) ||
           /REQUEST[_\s-]*SCREEN[_\s-]*SHARE/i.test(fullResponse);
 
-        const cleanedResponse = fullResponse
-          .replace(/\[INTERVIEW_OVER\]/gi, '')
-          .replace(/\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]/gi, '')
-          .replace(/REQUEST[_\s-]*SCREEN[_\s-]*SHARE/gi, '')
-          .trim();
-
-        console.log('[ScreenShare] LLM raw response:', fullResponse);
-        console.log('[ScreenShare] hasRequestShareToken:', hasRequestShareToken, 'askCount:', screenShareAskCountRef.current);
+        const cleanedResponse = stripAllMarkers(fullResponse).trim();
 
         // If LLM requested screen share, fire the callback (UI shows modal).
         // Allow up to 2 asks per session — counter is managed here.
         if (hasRequestShareToken && screenShareAskCountRef.current < 2) {
-          console.log('[ScreenShare] Firing onRequestScreenShare callback');
           screenShareAskCountRef.current += 1;
           onRequestScreenShareRef.current?.();
         }
