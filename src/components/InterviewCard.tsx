@@ -28,7 +28,7 @@ const InterviewCard: React.FC<InterviewCardProps> = ({
         onClick={onClick}
         className={`
           group relative p-6 rounded-xl border transition-all duration-300 cursor-pointer 
-          flex flex-col min-h-60 md:h-65 bg-white
+          flex flex-col h-72 md:min-h-60 md:h-65 bg-white overflow-hidden
           ${isSelected ? "border-[#2B5E2B] ring-2 ring-[#E6F6EF] shadow-sm -translate-y-1" : "border-gray-200 shadow-none hover:shadow-sm hover:border-[#2B5E2B] hover:-translate-y-1"}
           ${comingSoon ? "opacity-80 cursor-not-allowed hover:translate-y-0 hover:shadow-none" : ""}
           ${className}
@@ -54,11 +54,7 @@ const InterviewCard: React.FC<InterviewCardProps> = ({
         </div>
 
         {/* Description */}
-        <p className="text-slate-500 text-sm leading-relaxed font-medium overflow-hidden flex-1" style={{
-          display: '-webkit-box',
-          WebkitLineClamp: 4,
-          WebkitBoxOrient: 'vertical',
-        }}>
+        <p className="custom-scrollbar text-slate-500 text-sm leading-relaxed font-medium flex-1 min-h-0 overflow-y-auto pr-1">
           {description}
         </p>
 

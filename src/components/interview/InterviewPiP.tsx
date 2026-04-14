@@ -135,7 +135,7 @@ export function InterviewPiP({
     <div
       style={{
         width: "100%",
-        height: "100vh",
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         backgroundColor: "#1a1a2e",

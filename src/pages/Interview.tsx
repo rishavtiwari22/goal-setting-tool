@@ -403,7 +403,12 @@ export default function Interview() {
   }, [config, onboarding.isActive, guideDismissed]);
 
   // ── Document PiP ──
-  const { isPiPOpen, isSupported: isPiPSupported, openPiP, closePiP, pipRootRef } = useDocumentPiP();
+  const { isPiPOpen, isSupported: isPiPSupported, openPiP, closePiP } = useDocumentPiP();
+  const screenMonitorPanelClassName =
+    "fixed right-4 top-0 w-[360px] h-[28rem] rounded-2xl border border-gray-200 bg-white/95 p-4 shadow-xl backdrop-blur-md z-50 flex flex-col";
+  const miniViewClassName = isPiPOpen
+    ? "fixed right-4 bottom-4 w-[360px] h-[320px] rounded-3xl overflow-hidden shadow-2xl z-50"
+    : "hidden";
 
   const handleToggleCaptions = useCallback(() => setShowChatMessage(prev => !prev), []);
 
@@ -621,28 +626,6 @@ export default function Interview() {
     closePiP();
   }, [closePiP]);
 
-  // Mirror-render: keep PiP content in sync with interview state
-  useEffect(() => {
-    if (!isPiPOpen || !pipRootRef.current) return;
-    pipRootRef.current.render(
-      <InterviewPiP
-        interviewerName="Zoe"
-        remainingTime={remainingTime}
-        currentlySpokenText={fullCaption}
-        showCaptions={showChatMessage}
-        isTtsActive={isTtsActive}
-        isActuallyPlaying={isActuallyPlaying}
-        isListening={isListening}
-        isLoading={isLoading}
-        onMicClick={handleMicClick}
-        onToggleCaptions={handleToggleCaptions}
-        onEndCall={handleEndCall}
-        onStopSharing={() => screenCapturePanelRef.current?.stopSharing()}
-        onMaximize={handleMaximize}
-      />
-    );
-  });
-
   // Close PiP when interview completes
   useEffect(() => {
     if (isCompleted && isPiPOpen) closePiP();
@@ -705,7 +688,27 @@ export default function Interview() {
         </div>
       )}
 
-      <div className="flex flex-col flex-1 relative overflow-hidden">
+      {isPiPOpen && isScreenSharing && !isCompleted && (
+        <div className={miniViewClassName}>
+          <InterviewPiP
+            interviewerName="Zoe"
+            remainingTime={remainingTime}
+            currentlySpokenText={fullCaption}
+            showCaptions={showChatMessage}
+            isTtsActive={isTtsActive}
+            isActuallyPlaying={isActuallyPlaying}
+            isListening={isListening}
+            isLoading={isLoading}
+            onMicClick={handleMicClick}
+            onToggleCaptions={handleToggleCaptions}
+            onEndCall={handleEndCall}
+            onStopSharing={() => screenCapturePanelRef.current?.stopSharing()}
+            onMaximize={handleMaximize}
+          />
+        </div>
+      )}
+
+      <div className="flex flex-col flex-1 relative overflow-y-auto">
         <div
           className="flex flex-col items-center justify-center flex-1 w-full px-4 md:px-6 lg:px-8 relative"
           style={{
@@ -807,10 +810,11 @@ export default function Interview() {
 
             {/* Screen Share / OCR Button — only shown when user opted in */}
             {config?.ocrEnabled && (
-              <div data-guide="screenshare-button" className="contents">
+              <div data-guide="screenshare-button" className="relative flex items-center justify-center">
                 <ScreenCapturePanel
                   ref={screenCapturePanelRef}
                   onCaptureComplete={(text) => setOcrText(text)}
+                  panelClassName={screenMonitorPanelClassName}
                   onShareStatusChange={(sharing) => {
                     setIsScreenSharing(sharing);
                     if (sharing && isPiPSupported && !isPiPOpen) openPiP();
