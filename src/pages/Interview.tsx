@@ -94,7 +94,7 @@ export default function Interview() {
     const initializeInterview = async () => {
       const configStr = sessionStorage.getItem("interviewConfig");
       const isInvited = sessionStorage.getItem("isInvited") === "true";
-      
+
       if (!configStr && !sessionId) {
         const storedEmail = localStorage.getItem("studentEmail");
         if (storedEmail) {
@@ -134,7 +134,7 @@ export default function Interview() {
           setConfig(interviewConfig);
           setIsInitializing(false);
           forceEndRef.current = false;
-          
+
           if (isInvited) {
             const invitationId = sessionStorage.getItem("invitationId");
             if (invitationId) {
@@ -147,49 +147,49 @@ export default function Interview() {
             }
           }
         } else if (sessionId) {
-        let session = loadInterviewSessionBySessionId(sessionId);
-        if (!session) {
-          const storedEmail = localStorage.getItem("studentEmail");
-          if (storedEmail) {
-            const { recoverSessionFromFirebase } = await import("../services/storage/interviewStorage");
-            session = await recoverSessionFromFirebase(storedEmail, sessionId);
+          let session = loadInterviewSessionBySessionId(sessionId);
+          if (!session) {
+            const storedEmail = localStorage.getItem("studentEmail");
+            if (storedEmail) {
+              const { recoverSessionFromFirebase } = await import("../services/storage/interviewStorage");
+              session = await recoverSessionFromFirebase(storedEmail, sessionId);
+            }
           }
-        }
-        if (session) {
-          const interviewConfig: InterviewConfig = {
-            userId: session.userId,
-            jobId: session.jobId,
-            jobTitle: session.jobTitle,
-            jobDescription: session.jobDescription,
-            interviewTime: session.interviewTime,
-            language: session.language,
-            difficulty: session.difficulty,
-            examinationPoints: session.examinationPoints,
-            mode: session.mode ?? 'practice',
-            mentorProfile: session.mentorProfile,
-          };
-          setConfig(interviewConfig);
-          setIsInitializing(false);
-          forceEndRef.current = false;
-        } else {
-          toast.error("Session not found");
-          if (isInvited) {
-            navigate("/");
+          if (session) {
+            const interviewConfig: InterviewConfig = {
+              userId: session.userId,
+              jobId: session.jobId,
+              jobTitle: session.jobTitle,
+              jobDescription: session.jobDescription,
+              interviewTime: session.interviewTime,
+              language: session.language,
+              difficulty: session.difficulty,
+              examinationPoints: session.examinationPoints,
+              mode: session.mode ?? 'practice',
+              mentorProfile: session.mentorProfile,
+            };
+            setConfig(interviewConfig);
+            setIsInitializing(false);
+            forceEndRef.current = false;
           } else {
-            navigate("/selfapply");
+            toast.error("Session not found");
+            if (isInvited) {
+              navigate("/");
+            } else {
+              navigate("/selfapply");
+            }
           }
         }
+      } catch (error) {
+        console.error("Error parsing interview config:", error);
+        toast.error("Invalid interview configuration");
+        const isInvited = sessionStorage.getItem("isInvited") === "true";
+        if (isInvited) {
+          navigate("/");
+        } else {
+          navigate("/selfapply");
+        }
       }
-    } catch (error) {
-      console.error("Error parsing interview config:", error);
-      toast.error("Invalid interview configuration");
-      const isInvited = sessionStorage.getItem("isInvited") === "true";
-      if (isInvited) {
-        navigate("/");
-      } else {
-        navigate("/selfapply");
-      }
-    }
     };
 
     initializeInterview();
@@ -230,10 +230,10 @@ export default function Interview() {
   } = usePiper(
     isSpeechOutputEnabled
       ? {
-          voiceModelUrl: "/models/Indian_accent_1.onnx",
-          voiceConfigUrl: "/models/Indian_accent_1.json",
-          warmupText: "hello",
-        }
+        voiceModelUrl: "/models/en_US-hfc_female-medium.onnx",
+        voiceConfigUrl: "/models/en_US-hfc_female-medium.onnx.json",
+        warmupText: "hello",
+      }
       : null
   );
 
@@ -743,9 +743,8 @@ export default function Interview() {
           {/* Caption Container */}
           {!isFirstLoad && (
             <div
-              className={`transition-opacity duration-300 w-full max-w-2xl lg:max-w-3xl mx-auto px-4 mt-4 md:mt-6 ${
-                showChatMessage && fullCaption ? 'opacity-100' : 'opacity-0'
-              }`}
+              className={`transition-opacity duration-300 w-full max-w-2xl lg:max-w-3xl mx-auto px-4 mt-4 md:mt-6 ${showChatMessage && fullCaption ? 'opacity-100' : 'opacity-0'
+                }`}
               style={{ minHeight: "80px" }}
             >
               {showChatMessage && fullCaption && (
@@ -763,9 +762,8 @@ export default function Interview() {
 
           {/* Control Buttons */}
           <div
-            className={`flex gap-3 md:gap-4 lg:gap-6 justify-center items-center mt-6 md:mt-10 lg:mt-16 mb-6 md:mb-8 ${
-              config && !isCompleted ? "visible" : "invisible"
-            }`}
+            className={`flex gap-3 md:gap-4 lg:gap-6 justify-center items-center mt-6 md:mt-10 lg:mt-16 mb-6 md:mb-8 ${config && !isCompleted ? "visible" : "invisible"
+              }`}
           >
             {/* Microphone Button */}
             <div data-guide="mic-button" className="relative flex items-center justify-center">
@@ -837,17 +835,15 @@ export default function Interview() {
               <button
                 aria-label={isPiPOpen ? "Close Mini View" : "Open Mini View"}
                 onClick={isPiPOpen ? closePiP : openPiP}
-                className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all shrink-0 border flex items-center justify-center group ${
-                  isPiPOpen
+                className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all shrink-0 border flex items-center justify-center group ${isPiPOpen
                     ? "bg-blue-50 border-blue-300"
                     : "bg-white border-gray-200"
-                }`}
+                  }`}
               >
-                <PictureInPicture2 className={`w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 transition-colors ${
-                  isPiPOpen
+                <PictureInPicture2 className={`w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 transition-colors ${isPiPOpen
                     ? "text-blue-600"
                     : "text-gray-600 group-hover:text-gray-900"
-                }`} />
+                  }`} />
               </button>
             )}
 
