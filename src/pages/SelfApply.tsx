@@ -47,7 +47,7 @@ export default function SelfApply() {
   const [customJobData, setCustomJobData] = useState<{ job_title: string; job_description: string; technical_skills: string[]; soft_skills: string[] } | null>(null);
   const pageStartTime = useRef<number>(Date.now());
   const jobSelectionStartTime = useRef<number>(Date.now());
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState({
     email: "",
     selectedJobId: undefined,
     jobTitle: "",
