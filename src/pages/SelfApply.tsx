@@ -38,6 +38,26 @@ const getJobIcon = (title: string) => {
   return <Code2 className="text-[#2B5E2B]" size={26} />;
 };
 
+const isLikelyTechnicalRole = (text: string) => {
+  const t = text.toLowerCase();
+  return [
+    'javascript',
+    'typescript',
+    'react',
+    'node',
+    'frontend',
+    'backend',
+    'full stack',
+    'developer',
+    'engineer',
+    'coding',
+    'programming',
+    'api',
+    'sql',
+    'python',
+  ].some((keyword) => t.includes(keyword));
+};
+
 export default function SelfApply() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -137,8 +157,17 @@ export default function SelfApply() {
         setStep("speakerandmiccheck");
       }
     } catch {
-      // On classification failure, skip OCR choice
-      setStep("speakerandmiccheck");
+      // Fail-safe: technical roles should still get OCR choice even if classifier fails.
+      const fallbackText = custom
+        ? `${custom.job_title}\n${custom.job_description}`
+        : (() => {
+            const job = jobs.find(j => j.job_id === jobId);
+            return job ? `${job.job_title}\n${job.job_description}` : '';
+          })();
+
+      const likelyTechnical = isLikelyTechnicalRole(fallbackText);
+      setIsTechnicalRole(likelyTechnical);
+      setStep(likelyTechnical ? "ocr_choice" : "speakerandmiccheck");
     } finally {
       setIsClassifying(false);
     }
@@ -245,18 +274,30 @@ export default function SelfApply() {
     <div className="h-screen bg-[#FBFAF8] flex flex-col font-sans overflow-hidden relative">
       <Header />
 
-      <main className="flex-1 flex flex-col px-12 py-6 relative overflow-y-auto md:overflow-hidden">
+      <main className={`flex-1 flex flex-col px-12 py-6 relative overflow-y-auto ${step === "job_selection" || step === "ocr_choice" || step === "speakerandmiccheck" ? "md:overflow-y-auto" : "md:overflow-hidden"}`}>
         <div className={`shrink-0 w-full ${step === "speakerandmiccheck" ? "max-w-4xl mx-auto" : "max-w-6xl mx-auto"}`}>
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-1 text-gray-400 hover:text-black transition-all group py-2"
-          >
-            <ChevronLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
-            <span className="text-[14px] font-black tracking-[0.2em]">Back</span>
-          </button>
+          <div className="flex items-center justify-between gap-3 py-2">
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-1 text-gray-400 hover:text-black transition-all group"
+            >
+              <ChevronLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
+              <span className="text-[14px] font-black tracking-[0.2em]">Back</span>
+            </button>
+
+            {step === "job_selection" && !loadingJobs && !isClassifying && (
+              <Button
+                onClick={() => setIsCreateJobModalOpen(true)}
+                className="ml-auto bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-black px-4 h-10 rounded-lg shadow-sm transition-all hover:scale-[1.01] active:scale-95 flex items-center gap-2 border-b-2 border-[#1a3a1b]"
+              >
+                <Plus size={14} />
+                <span className="text-xs md:text-sm">Create Custom Interview</span>
+              </Button>
+            )}
+          </div>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center">
+        <div className={`flex-1 min-h-0 w-full flex flex-col items-center ${step === "job_selection" || step === "ocr_choice" || step === "speakerandmiccheck" ? "justify-start" : "justify-center"}`}>
 
           {/* ── Mentor Profile Selection ── */}
           {step === "mentor_profile" && (
@@ -296,7 +337,7 @@ export default function SelfApply() {
 
           {/* ── Job Selection ── */}
           {step === "job_selection" && (
-            <div className="w-full max-w-6xl flex flex-col items-center">
+            <div className="w-full max-w-6xl flex flex-col items-center flex-1 min-h-0">
               <div className="mb-6 shrink-0">
                 <img src="/assets/glassadjustment.webp" alt="Zoe" className="w-28 h-28 md:w-36 md:h-36 object-contain mx-auto" />
               </div>
@@ -336,18 +377,6 @@ export default function SelfApply() {
                   </div>
 
                   <div className="text-center space-y-3 opacity-0 custom-fade-in pb-12" style={{ animationDelay: '600ms', animationFillMode: 'forwards' }}>
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                      Can't find a role?
-                    </h3>
-                    <div className="flex justify-center">
-                      <Button
-                        onClick={() => setIsCreateJobModalOpen(true)}
-                        className="bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-black px-6 h-12 rounded-lg shadow-sm transition-all hover:scale-[1.01] active:scale-95 flex items-center gap-2 border-b-2 border-[#1a3a1b]"
-                      >
-                        <Plus size={16} />
-                        <span className="text-sm">Create Custom Interview</span>
-                      </Button>
-                    </div>
                     <div className="flex justify-center pt-4 px-4">
                       <Badge className="px-3 md:px-4 py-2 font-bold text-[#007AFF] rounded-lg md:rounded-xl bg-[#EBF5FF] border border-[#D1E9FF] text-[9px] md:text-[10px] uppercase tracking-wide shadow-none flex items-center gap-2">
                         <Info size={12} className="md:hidden" />

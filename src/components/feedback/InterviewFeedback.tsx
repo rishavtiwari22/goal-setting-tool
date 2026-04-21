@@ -10,8 +10,8 @@ interface InterviewFeedbackProps {
 }
 
 export function InterviewFeedback({ onSubmit }: InterviewFeedbackProps) {
-  const [questionRelevance, setQuestionRelevance] = useState<number | null>(5);
-  const [referralLikelihood, setReferralLikelihood] = useState<number | null>(5);
+  const [questionRelevance, setQuestionRelevance] = useState<number | null>(null);
+  const [referralLikelihood, setReferralLikelihood] = useState<number | null>(null);
 
   const isComplete = questionRelevance !== null && referralLikelihood !== null;
 
