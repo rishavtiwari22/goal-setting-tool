@@ -63,6 +63,7 @@ export default function Interview() {
   const shouldResumeAfterTTSRef = useRef(false);
   const prevHasPendingSpeechRef = useRef(false);
   const submitAnswerRef = useRef<((text: string) => void) | null>(null);
+  const listeningStartTimeRef = useRef<number>(0);
 
   const loadingTexts = [
     "Getting things ready for you...",
@@ -241,9 +242,11 @@ export default function Interview() {
   const isActuallyPlaying = isPlaying;
 
   // Buffer chunks from LLM stream and speak complete sentences
+  // Splits on terminal punctuation + commas for faster perceived TTS start
+  // (matches Voice_assistant_demo's working-on-mobile chunking).
   const processBufferForTTS = useCallback(() => {
     const buffer = audioBufferRef.current;
-    const sentenceEndings = /[.!?]\s|[।॥]/;
+    const sentenceEndings = /[.!?]\s|[।॥]|,\s/;
     const match = buffer.match(sentenceEndings);
     if (match && match.index !== undefined) {
       const splitIndex = match.index + match[0].length;
@@ -278,12 +281,16 @@ export default function Interview() {
       // Accumulate full caption for scrollable display
       setFullCaption(prev => prev + chunk);
     },
-    onStreamComplete: () => {
+    onStreamComplete: async () => {
       if (isSpeechOutputEnabled && audioBufferRef.current.trim()) {
         const finalChunk = audioBufferRef.current.trim();
         audioBufferRef.current = "";
         setSpokenCaption(finalChunk);
-        speak(finalChunk).catch((err) => console.error("TTS Error:", err));
+        try {
+          await speak(finalChunk);
+        } catch (err) {
+          console.error("TTS Error:", err);
+        }
       }
       audioBufferRef.current = "";
     },
@@ -318,6 +325,13 @@ export default function Interview() {
     resetTranscript,
   } = useSpeechToText({ lang: "en-US", continuous: true, silenceTimeout: 1500 });
 
+  // Track when mic actually started listening (for duration guard below)
+  useEffect(() => {
+    if (isListening) {
+      listeningStartTimeRef.current = Date.now();
+    }
+  }, [isListening]);
+
   // When TTS becomes active: always flag mic to resume after, and stop it if currently running
   useEffect(() => {
     if (isTtsActive) {
@@ -328,12 +342,22 @@ export default function Interview() {
     }
   }, [isTtsActive, isListening, stopListening]);
 
-  // Auto-resume mic after TTS finishes
+  // Auto-resume mic after TTS finishes (debounced + LLM-complete gated).
+  // Why: `hasPendingSpeech` bounces 0→1→0 between sentences as the LLM streams
+  // tokens and TTS finishes each sentence before the next arrives. Without
+  // guards, mic starts/stops repeatedly during Zoe's reply, capturing
+  // fragments and causing the mobile "skips through questions" bug.
+  // Guards: (1) only resume when LLM stream is done (isLoading=false)
+  //         (2) debounce 500ms to confirm no more sentences are coming
   useEffect(() => {
     const hadPending = prevHasPendingSpeechRef.current;
     prevHasPendingSpeechRef.current = hasPendingSpeech;
 
-    if (hadPending && !hasPendingSpeech && !isPlaying && shouldResumeAfterTTSRef.current) {
+    if (!(hadPending && !hasPendingSpeech && !isPlaying && shouldResumeAfterTTSRef.current)) return;
+    // Don't resume while LLM is still streaming — more sentences may come
+    if (isLoading) return;
+
+    const t = setTimeout(() => {
       if (pendingSessionRef.current) {
         pendingSessionRef.current = null;
         navigate("/results");
@@ -342,16 +366,35 @@ export default function Interview() {
       if (!isCompleted && !forceEndRef.current) {
         shouldResumeAfterTTSRef.current = false;
         resetTranscript();
-        setTimeout(() => startListening(), 350);
+        startListening();
       }
-    }
-  }, [hasPendingSpeech, isPlaying, isCompleted, navigate, resetTranscript, startListening]);
+    }, 500);
 
-  // Auto-submit when silence detected (mic stopped with transcript present)
+    return () => clearTimeout(t);
+  }, [hasPendingSpeech, isPlaying, isLoading, isCompleted, navigate, resetTranscript, startListening]);
+
+  // Auto-submit when silence detected (mic stopped with transcript present).
+  // Guards:
+  //  • Don't submit while TTS is active or LLM is still producing — that's Zoe's turn
+  //  • If user listened <2s AND text <20 chars, mobile likely stopped prematurely;
+  //    restart mic instead of submitting partial text
+  //  • 500ms debounce lets mobile recognition settle before submitting
   useEffect(() => {
     if (isListening) return;
     const combined = (transcript + " " + interimTranscript).trim();
     if (!combined) return;
+
+    // Don't auto-submit during Zoe's turn (thinking or speaking)
+    if (isTtsActive || isLoading) return;
+
+    // Mobile premature-stop guard: if mic barely ran, restart instead of submit
+    const listenedMs = Date.now() - listeningStartTimeRef.current;
+    if (listenedMs < 2000 && combined.length < 20) {
+      setTimeout(() => {
+        if (!isTtsActive) startListening();
+      }, 200);
+      return;
+    }
 
     if (combined.length < 3) {
       resetTranscript();
@@ -367,7 +410,7 @@ export default function Interview() {
         resetTranscript();
         submitAnswerRef.current(text);
       }
-    }, 50);
+    }, 500);
 
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps

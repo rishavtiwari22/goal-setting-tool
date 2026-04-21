@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import DeviceTester from "@/components/DeviceTester";
 import CreateJobModal from "@/components/CreateJobModal";
 import InterviewCard from "@/components/InterviewCard";
-import { DEFAULT_PIPER_BACKEND, preparePiperVoice } from "../lib/piper";
 import { getJobs } from "../services/api/serverApi";
 import { classifyTechnicalRole } from "../services/api/deepseekApi";
 import { getEmailFromJWT } from "../utils/jwt";
@@ -75,7 +74,6 @@ export default function SelfApply() {
   const [isClassifying, setIsClassifying] = useState(false);
   const [ocrEnabled, setOcrEnabled] = useState(false);
   const [isTechnicalRole, setIsTechnicalRole] = useState(false);
-  const voiceReadyRef = useRef(false);
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -95,22 +93,6 @@ export default function SelfApply() {
       // Fallback: use email from localStorage (bypass mode)
       const storedEmail = localStorage.getItem("studentEmail");
       if (storedEmail) setUserId(storedEmail);
-    }
-
-    const prepareVoiceWhenIdle = () => {
-      if (!voiceReadyRef.current) {
-        preparePiperVoice(() => {}, DEFAULT_PIPER_BACKEND)
-          .then(() => { voiceReadyRef.current = true; })
-          .catch((e) => { console.log("Background voice preparation failed:", e); });
-      }
-    };
-
-    if ('requestIdleCallback' in window) {
-      const idleCallbackId = requestIdleCallback(prepareVoiceWhenIdle, { timeout: 5000 });
-      return () => cancelIdleCallback(idleCallbackId);
-    } else {
-      const timeoutId = setTimeout(prepareVoiceWhenIdle, 2000);
-      return () => clearTimeout(timeoutId);
     }
   }, []);
 

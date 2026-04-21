@@ -11,12 +11,11 @@
     "test:lambda": "node test-lambda.js"
   },
   "dependencies": {
-    "@mintplex-labs/piper-tts-web": "^1.0.4",
     "@ricky0123/vad-web": "^0.0.30",
     "@vitejs/plugin-react": "^4.7.0",
     "firebase": "^11.1.0",
     "framer-motion": "^12.23.26",
-    "onnxruntime-web": "^1.18.0",
+    "onnxruntime-web": "^1.23.2",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-icons": "^5.5.0",
