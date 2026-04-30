@@ -77,34 +77,36 @@ export const useSpeechToText = (options: UseSpeechToTextOptions = { lang: 'en-US
 
         // Fired when the engine returns text
         recognition.onresult = (event: SpeechRecognitionEvent) => {
-            let finalTranscripts = '';
+            // Rebuild full transcript from ALL results to avoid mobile duplication.
+            // On mobile Chrome, continuous mode can fire overlapping isFinal results
+            // for the same utterance — naively appending causes repeated words.
+            // Also filter by confidence >= 0.7 to drop low-quality mobile fragments.
+            let allFinal = '';
             let currentInterim = '';
-            let hasInterim = false;
 
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                const transcriptChunk = event.results[i][0].transcript;
-
-                if (event.results[i].isFinal) {
-                    finalTranscripts = transcriptChunk;
+            for (let i = 0; i < event.results.length; i++) {
+                const result = event.results[i];
+                const alt = result[0];
+                if (result.isFinal) {
+                    if (alt.confidence >= 0.7) {
+                        allFinal += alt.transcript + ' ';
+                    }
                 } else {
-                    currentInterim += transcriptChunk;
-                    hasInterim = true;
+                    currentInterim += alt.transcript;
                 }
             }
 
             if (options.silenceTimeout) {
                 if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-                // Active speech (interim results): full silence timeout
-                // Browser finalized a phrase (isFinal only): short timeout since pause already detected
-                const timeout = hasInterim ? options.silenceTimeout : 300;
+                // Use full silence timeout consistently. The old 300ms isFinal-only
+                // timeout was mobile-hostile: mobile Chrome finalizes per-phrase, so
+                // a 300ms stop happened after barely 1-2 words.
                 silenceTimerRef.current = setTimeout(() => {
                     recognition.stop();
-                }, timeout);
+                }, options.silenceTimeout);
             }
 
-            if (finalTranscripts) {
-                setTranscript(prev => prev + ' ' + finalTranscripts);
-            }
+            setTranscript(allFinal.trim());
             setInterimTranscript(currentInterim);
         };
 
@@ -118,6 +120,9 @@ export const useSpeechToText = (options: UseSpeechToTextOptions = { lang: 'en-US
         // Fired when the microphone starts
         recognition.onstart = () => {
             setIsListening(true);
+            // Clear any leftover transcript so new session starts clean
+            setTranscript('');
+            setInterimTranscript('');
         };
 
         // Fired when the microphone stops

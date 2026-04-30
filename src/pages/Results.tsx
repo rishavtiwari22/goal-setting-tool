@@ -322,6 +322,8 @@ export default function Results() {
     })),
     topStrengths: session.result?.topStrengths || [],
     improvementAreas: session.result?.improvementAreas || [],
+    topicsToStudy: session.result?.topicsToStudy || [],
+    mode: session.mode,
     created_at: session.startTime,
     updated_at: session.endTime || new Date().toISOString(),
   };

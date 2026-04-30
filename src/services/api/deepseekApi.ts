@@ -1,6 +1,37 @@
 import { DecisionResponse, FeedbackResponse } from '../../models/interview';
 import { ENV } from '../../utils/env';
 
+export async function classifyTechnicalRole(jdText: string): Promise<boolean> {
+  try {
+    const response = await fetch(ENV.CHAT_API_URL(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: ENV.HUGGINGFACE_MODEL() || 'tgi',
+        messages: [
+          { role: 'system', content: 'You are a classifier. Answer with only "yes" or "no".' },
+          { role: 'user', content: `Is this job description for a technical role that requires coding or software engineering skills?\n\n${jdText.slice(0, 600)}\n\nAnswer yes or no.` },
+        ],
+        stream: false,
+        temperature: 0.1,
+        max_tokens: 200,
+      }),
+    });
+    if (!response.ok) return false;
+    const text = await response.text();
+    const lines = text.split('\n');
+    const jsonLine = lines.find(l => { const t = l.trim(); return t.startsWith('{') && !t.includes('statusCode'); }) || text;
+    const data = JSON.parse(jsonLine.trim());
+    const content = (data.choices?.[0]?.message?.content || '').trim().toLowerCase();
+    // If model returns empty content, assume technical (safe default — shows OCR choice which user can skip)
+    if (!content) return true;
+    return content.includes('yes');
+  } catch {
+    // On any error, assume technical so we don't silently skip the OCR choice
+    return true;
+  }
+}
+
 const CHAT_API_URL = ENV.CHAT_API_URL();
 
 async function* streamResponse(response: Response): AsyncGenerator<string> {

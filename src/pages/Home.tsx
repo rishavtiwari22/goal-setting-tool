@@ -1,16 +1,18 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { getEmailFromJWT, isValidJWTFormat } from "../utils/jwt";
 import { motion } from "framer-motion";
-import { Briefcase, BrainCircuit, FileText, Info } from "lucide-react";
+import { Briefcase, BrainCircuit, GraduationCap, FileText, Info } from "lucide-react";
 import Header from "@/components/Header";
 import HomeInterviewCard from "@/components/HomeInterviewcard";
+import type { InterviewMode } from "../services/interview/interviewEngine";
 
 export default function Home() {
-  const resumeBuddyUrl =
-    "https://api-testing.d3s88q50fgekpa.amplifyapp.com/dashboard/resumes";
+  const resumeBuddyUrl = "https://api-testing.d3s88q50fgekpa.amplifyapp.com/dashboard/resumes";
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [email, setEmail] = useState(localStorage.getItem("studentEmail") || "");
+  const [needsEmail, setNeedsEmail] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -21,39 +23,47 @@ export default function Home() {
     description: string;
     estimatedTime: string;
     comingSoon: boolean;
+    mode?: InterviewMode;
     ctaLabel?: string;
   }[] = [
     {
-      id: "1-1-interview",
-      icon: <Briefcase className="w-6 h-6 text-[rgb(0,107,32)]" />,
-      title: "1:1 Interview",
-      description:
-        "Test your knowledge, and practice your communication skills with an AI assistant.",
-      estimatedTime: "5-10 mins",
+      id: "practice-interview",
+      icon: <Briefcase className="w-6 h-6 text-[#2B5E2B]" />,
+      title: "Practice Interview",
+      description: "Simulate a real interview. Get evaluated on your answers, communication, and technical depth.",
+      estimatedTime: "10-30 mins",
       comingSoon: false,
+      mode: "practice",
     },
     {
       id: "resume-buddy",
       icon: <FileText className="w-6 h-6 text-[rgb(0,107,32)]" />,
       title: "ResumeBuddy",
-      description:
-        "Create a professional resume tailored to your dream job with AI assistance.",
+      description: "Create a professional resume tailored to your dream job with AI assistance.",
       estimatedTime: "5-10 mins",
       comingSoon: false,
       ctaLabel: "Build Resume",
     },
     {
+      id: "mentor-session",
+      icon: <GraduationCap className="w-6 h-6 text-[#2B5E2B]" />,
+      title: "Mentor Guided Session",
+      description: "Learn at your own pace with an AI mentor who teaches, hints, and guides you through concepts.",
+      estimatedTime: "10-30 mins",
+      comingSoon: false,
+      mode: "mentor",
+    },
+    {
       id: "flowchart",
-      icon: <BrainCircuit className="w-6 h-6 text-[rgb(0,107,32)]" />,
+      icon: <BrainCircuit className="w-6 h-6 text-[#2B5E2B]" />,
       title: "Critical Thinking with Flowchart",
-      description:
-        "Design flowcharts to test your problem-solving, algorithm, and process-thinking skills",
+      description: "Design flowcharts to test your problem-solving, algorithm, and process-thinking skills.",
       estimatedTime: "15-20 mins",
       comingSoon: true,
     },
   ];
 
-  const handleCardClick = (id: string, isComingSoon: boolean) => {
+  const handleCardClick = (id: string, isComingSoon: boolean, mode?: InterviewMode) => {
     if (id === "resume-buddy") {
       const token = localStorage.getItem("studentToken");
       const urlWithToken = token ? `${resumeBuddyUrl}?token=${token}` : resumeBuddyUrl;
@@ -65,11 +75,36 @@ export default function Home() {
       toast.info("This module is coming soon!");
       return;
     }
-    setSelectedType(id);
+
     const token = searchParams.get("token") || searchParams.get("jwt");
+    const storedEmail = localStorage.getItem("studentEmail");
+
+    // If no token and no email stored, prompt for email first
+    if (!token && !storedEmail) {
+      setNeedsEmail(true);
+      setSelectedType(id);
+      return;
+    }
+
+    setSelectedType(id);
     setTimeout(() => {
-      navigate(token ? `/selfapply?token=${token}` : "/selfapply");
+      navigate(token ? `/selfapply?token=${token}` : "/selfapply", { state: { mode } });
     }, 300);
+  };
+
+  const handleEmailSubmit = () => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || !trimmed.includes("@")) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    localStorage.setItem("studentEmail", trimmed);
+    setNeedsEmail(false);
+
+    const selectedMode = interviewTypes.find(t => t.id === selectedType)?.mode;
+    setTimeout(() => {
+      navigate("/selfapply", { state: { mode: selectedMode } });
+    }, 200);
   };
 
   useEffect(() => {
@@ -87,7 +122,6 @@ export default function Home() {
   }, [searchParams]);
 
   return (
-    // min-h-screen allows the page to grow, overflow-y-auto enables scrolling
     <div className="min-h-screen w-full bg-[#FBFAF8] flex flex-col font-sans overflow-y-auto">
 
       <Header />
@@ -111,7 +145,6 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Stacked cards (1 column) for the new horizontal-row design */}
         <div className="grid grid-cols-1 gap-4 w-full text-left max-w-2xl">
           {interviewTypes.map((type, index) => (
             <motion.div
@@ -126,7 +159,7 @@ export default function Home() {
                 description={type.description}
                 estimatedTime={type.estimatedTime}
                 ctaLabel={type.ctaLabel}
-                onClick={() => handleCardClick(type.id, type.comingSoon)}
+                onClick={() => handleCardClick(type.id, type.comingSoon, type.mode)}
                 isSelected={selectedType === type.id}
                 comingSoon={type.comingSoon}
               />
@@ -134,7 +167,6 @@ export default function Home() {
           ))}
         </div>
 
-        {/* System Hint */}
         <div className="mt-12 mx-auto pb-6">
           <div className="px-5 py-3 bg-[rgb(204,253,209)] rounded-full shadow-none inline-flex items-center gap-2">
             <Info className="w-4 h-4 shrink-0 text-[rgb(204,253,209)] bg-[rgb(0,107,12)] rounded-full" />
@@ -143,6 +175,43 @@ export default function Home() {
             </span>
           </div>
         </div>
+
+        {/* Email input overlay */}
+        {needsEmail && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-2xl p-8 shadow-xl max-w-md w-full mx-4"
+            >
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Enter your email to continue</h3>
+              <p className="text-sm text-slate-500 mb-5">This will be used to save your interview progress.</p>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleEmailSubmit()}
+                placeholder="you@example.com"
+                autoFocus
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5E2B]/30 focus:border-[#2B5E2B] mb-4"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setNeedsEmail(false)}
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleEmailSubmit}
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-[#2B5E2B] rounded-xl hover:bg-[#234E23] transition-colors"
+                >
+                  Continue
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </main>
 
       <style>{`

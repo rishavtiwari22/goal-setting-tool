@@ -1,16 +1,25 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useImperativeHandle, forwardRef } from 'react';
 import { Monitor, Play, Square, Scan } from 'lucide-react';
 import { ocrService } from '../services/ocr/ocrService';
 
-interface ScreenCapturePanelProps {
-    onCaptureComplete?: (text: string) => void;
-    className?: string;
+export interface ScreenCapturePanelHandle {
+    stopSharing: () => void;
+    startSharing: () => Promise<void>;
 }
 
-const ScreenCapturePanel: React.FC<ScreenCapturePanelProps> = ({
+interface ScreenCapturePanelProps {
+    onCaptureComplete?: (text: string) => void;
+    onShareStatusChange?: (isSharing: boolean) => void;
+    className?: string;
+    panelClassName?: string;
+}
+
+function ScreenCapturePanelInner({
     onCaptureComplete,
+    onShareStatusChange,
     className = '',
-}) => {
+    panelClassName = 'fixed right-4 top-0 w-72 h-[22rem] rounded-2xl border border-gray-200 bg-white/95 p-4 shadow-xl backdrop-blur-md z-50 flex flex-col',
+}: ScreenCapturePanelProps, ref: React.ForwardedRef<ScreenCapturePanelHandle>) {
     const [isSharing, setIsSharing] = useState(false);
     const [capturedContent, setCapturedContent] = useState('');
     const [refinedCode, setRefinedCode] = useState('');
@@ -90,6 +99,7 @@ const ScreenCapturePanel: React.FC<ScreenCapturePanelProps> = ({
             setIsSharing(true);
             setIsInitializing(false);
             setShowPanel(true);
+            onShareStatusChange?.(true);
 
             addTrackedTimeout(() => startOCRProcessing(), 2000);
 
@@ -102,6 +112,7 @@ const ScreenCapturePanel: React.FC<ScreenCapturePanelProps> = ({
             console.error('Screen share failed:', err);
             setIsInitializing(false);
             setIsSharing(false);
+            throw err; // re-throw so callers (e.g. modal) can react to permission denial
         }
     };
 
@@ -125,7 +136,13 @@ const ScreenCapturePanel: React.FC<ScreenCapturePanelProps> = ({
         setCapturedContent('');
         setRefinedCode('');
         lastRawOcrText.current = '';
+        onShareStatusChange?.(false);
     };
+
+    useImperativeHandle(ref, () => ({
+        stopSharing: stopScreenShare,
+        startSharing: startScreenShare,
+    }));
 
     const startOCRProcessing = () => {
         if (ocrIntervalRef.current) clearInterval(ocrIntervalRef.current);
@@ -175,11 +192,15 @@ const ScreenCapturePanel: React.FC<ScreenCapturePanelProps> = ({
                     lastRawOcrText.current = cleanText;
                     setCapturedContent(cleanText);
 
+                    // Pass RAW OCR text to interviewer LLM immediately for real-time questions.
+                    // No waiting for LLM cleaning — the interviewer model can handle messy OCR.
+                    if (onCaptureComplete) onCaptureComplete(cleanText);
+
+                    // Run LLM cleanup in parallel — purely for the front-end display (refined code panel).
                     setIsRefining(true);
                     ocrService.processOcrWithLlm(cleanText)
                         .then(refined => {
                             setRefinedCode(refined);
-                            if (onCaptureComplete) onCaptureComplete(refined);
                         })
                         .catch(err => console.error('Refinement failed:', err))
                         .finally(() => setIsRefining(false));
@@ -227,7 +248,7 @@ const ScreenCapturePanel: React.FC<ScreenCapturePanelProps> = ({
 
             {/* Side panel — fixed to right edge of screen */}
             {isSharing && showPanel && (
-                <div className="fixed right-4 top-20 w-72 rounded-2xl border border-gray-200 bg-white/95 p-4 shadow-xl backdrop-blur-md z-50">
+                <div className={panelClassName}>
                     {/* Header */}
                     <div className="mb-3 flex items-center justify-between">
                         <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Screen Monitor</span>
@@ -247,7 +268,7 @@ const ScreenCapturePanel: React.FC<ScreenCapturePanelProps> = ({
                             autoPlay
                             muted
                             playsInline
-                            className="h-auto max-h-44 w-full object-contain"
+                            className="h-auto max-h-28 w-full object-contain"
                             style={{ border: '2px solid #10b981' }}
                         />
                         {(isProcessing || isRefining) && (
@@ -261,9 +282,9 @@ const ScreenCapturePanel: React.FC<ScreenCapturePanelProps> = ({
                     </div>
 
                     {/* Refined Code (LLM Output) */}
-                    <div className="flex flex-col gap-1 mb-2">
+                    <div className="flex flex-1 min-h-0 flex-col gap-1 mb-2">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 ml-1">Refined Code</span>
-                        <div className="max-h-48 overflow-y-auto rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 font-mono custom-scrollbar">
+                        <div className="h-full min-h-0 overflow-y-auto rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 font-mono custom-scrollbar">
                             <pre className="whitespace-pre-wrap text-[11px] leading-relaxed text-emerald-900">
                                 {refinedCode || (isRefining ? 'Refining detected text...' : 'Awaiting code detection...')}
                             </pre>
@@ -307,6 +328,7 @@ const ScreenCapturePanel: React.FC<ScreenCapturePanelProps> = ({
             `}</style>
         </div>
     );
-};
+}
 
+const ScreenCapturePanel = forwardRef(ScreenCapturePanelInner);
 export default ScreenCapturePanel;

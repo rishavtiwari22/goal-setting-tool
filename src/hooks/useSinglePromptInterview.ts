@@ -31,10 +31,129 @@ interface UseInterviewProps {
   onStreamComplete?: () => void;
   onFeedback?: (feedback: string) => void;
   screenCode?: string;
+  mode?: InterviewConfig['mode'];
+  /** When false, delays starting the interview until set to true (e.g. after onboarding guide) */
+  readyToStart?: boolean;
+  /** Whether the candidate is currently sharing their screen */
+  isScreenSharing?: boolean;
+  /** Called when the LLM emits the [REQUEST_SCREEN_SHARE] control token */
+  onRequestScreenShare?: () => void;
 }
 
-const RECENT_WINDOW = 6;
-const SUMMARIZE_EVERY = 7;
+const RECENT_WINDOW = 3;
+const SUMMARIZE_START_AFTER = 2; // Start summarizing after 2nd answer
+
+// ── System-marker handling (PARKED + INTERVIEW_OVER) ─────────────────────────
+//
+// Mentor prompt emits `[PARKED: <topic>]` when it silently moves the candidate
+// off a topic. INTERVIEW_OVER is the existing end-of-session token. Both must
+// be:
+//   • stripped from text shown in the chat UI
+//   • stripped from chunks fed to TTS so the candidate never hears them
+//   • (PARKED only) collected into session.parkedTopics for the post-session
+//     evaluator to compile a "topics to study" list
+//
+// Tricky bit: tokens may be split across streaming chunks (e.g. one chunk
+// ends with "[PARK", the next starts with "ED: foo]"). A naive per-chunk
+// regex never matches. We buffer any chunk text starting with '[' until we
+// see a matching ']' (or the stream ends), then decide whether to strip.
+const PARKED_RE = /\[PARKED:\s*([^\]]+?)\s*\]/gi;
+const INTERVIEW_OVER_RE = /\[INTERVIEW_OVER\]/gi;
+const REQUEST_SHARE_RE = /\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]/gi;
+const REQUEST_SHARE_BARE_RE = /REQUEST[_\s-]*SCREEN[_\s-]*SHARE/gi;
+// Non-global single-shot tests (avoid statefulness from /g flag)
+const PARKED_TEST = /^\[PARKED:\s*[^\]]+\]$/i;
+const INTERVIEW_OVER_TEST = /^\[INTERVIEW_OVER\]$/i;
+const REQUEST_SHARE_TEST = /^\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]$/i;
+
+function stripParkedMarkers(s: string): string {
+  return s.replace(PARKED_RE, '');
+}
+
+function stripAllMarkers(s: string): string {
+  return s
+    .replace(PARKED_RE, '')
+    .replace(INTERVIEW_OVER_RE, '')
+    .replace(REQUEST_SHARE_RE, '')
+    .replace(REQUEST_SHARE_BARE_RE, '');
+}
+
+function extractParkedTopics(s: string): string[] {
+  const out: string[] = [];
+  let m: RegExpExecArray | null;
+  const re = new RegExp(PARKED_RE.source, PARKED_RE.flags);
+  while ((m = re.exec(s)) !== null) {
+    const topic = m[1]?.trim();
+    if (topic) out.push(topic);
+  }
+  return out;
+}
+
+/**
+ * Streaming-safe marker stripper. Holds back any pending `[...]` segment
+ * until it can decide whether to drop it (matches PARKED/INTERVIEW_OVER) or
+ * pass it through.
+ *
+ * Usage:
+ *   const s = makeMarkerStripper();
+ *   for await (const chunk of stream) {
+ *     const safe = s.push(chunk);
+ *     if (safe) emit(safe);
+ *   }
+ *   const tail = s.flush();
+ *   if (tail) emit(tail);
+ */
+function makeMarkerStripper() {
+  let pending = '';
+
+  function push(chunk: string): string {
+    pending += chunk;
+    let output = '';
+
+    while (true) {
+      const openIdx = pending.indexOf('[');
+      if (openIdx === -1) {
+        // No open bracket anywhere — emit it all
+        output += pending;
+        pending = '';
+        return output;
+      }
+
+      // Emit everything before the '['
+      output += pending.slice(0, openIdx);
+      pending = pending.slice(openIdx);
+
+      const closeIdx = pending.indexOf(']');
+      if (closeIdx === -1) {
+        // Incomplete bracket — hold and wait for more chunks
+        return output;
+      }
+
+      const segment = pending.slice(0, closeIdx + 1);
+      pending = pending.slice(closeIdx + 1);
+
+      // If it's a known system marker, drop it; otherwise pass through
+      if (
+        PARKED_TEST.test(segment) ||
+        INTERVIEW_OVER_TEST.test(segment) ||
+        REQUEST_SHARE_TEST.test(segment)
+      ) {
+        // drop
+      } else {
+        output += segment;
+      }
+    }
+  }
+
+  function flush(): string {
+    // End of stream — strip any remaining markers and emit the rest
+    const out = stripAllMarkers(pending);
+    pending = '';
+    return out;
+  }
+
+  return { push, flush };
+}
 
 // ── LLM client (reuses existing fetch infra) ──────────────────────────────────
 
@@ -157,6 +276,8 @@ function createInitialSession(config: InterviewConfig, sessionId: string): Inter
     difficulty: config.difficulty,
     examinationPoints: config.examinationPoints,
     status: 'ongoing',
+    mode: config.mode ?? 'practice',
+    mentorProfile: config.mentorProfile,
     consecutiveIrrelevantCount: 0,
     currentTopicFollowupCount: 0,
     discussedProjects: [],
@@ -177,7 +298,11 @@ export function useSinglePromptInterview({
   onStreamChunk,
   onStreamComplete,
   screenCode,
+  readyToStart = true,
+  isScreenSharing = false,
+  onRequestScreenShare,
 }: UseInterviewProps) {
+  // Don't cache config mode here - use ref to always get latest value
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
@@ -186,6 +311,7 @@ export function useSinglePromptInterview({
   const [sessionId, setSessionId] = useState(initialSessionId || '');
 
   // Internal refs — not causing re-renders
+  const configRef = useRef<InterviewConfig | null>(config);
   const frameworkRef = useRef<SkillsFramework | null>(null);
   const recentMessagesRef = useRef<{ role: 'interviewer' | 'candidate'; content: string }[]>([]);
   const archivedRef = useRef<{ role: 'interviewer' | 'candidate'; content: string }[]>([]);
@@ -197,18 +323,26 @@ export function useSinglePromptInterview({
   const isCompletedRef = useRef(false);
   const hasStartedRef = useRef(false);
   const currentQuestionRef = useRef('');
+  const screenCodeRef = useRef(screenCode);
+  const isScreenSharingRef = useRef(isScreenSharing);
+  const screenShareAskCountRef = useRef(0);
 
   // Stable refs for callbacks used inside setInterval / async closures
   const endInterviewRef = useRef<() => Promise<void>>(() => Promise.resolve());
   const onStreamChunkRef = useRef(onStreamChunk);
   const onStreamCompleteRef = useRef(onStreamComplete);
   const onCompleteRef = useRef(onComplete);
+  const onRequestScreenShareRef = useRef(onRequestScreenShare);
 
   // Keep refs in sync with latest values
+  useEffect(() => { configRef.current = config; }, [config]);
   useEffect(() => { currentQuestionRef.current = currentQuestion; }, [currentQuestion]);
   useEffect(() => { onStreamChunkRef.current = onStreamChunk; }, [onStreamChunk]);
   useEffect(() => { onStreamCompleteRef.current = onStreamComplete; }, [onStreamComplete]);
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+  useEffect(() => { screenCodeRef.current = screenCode; }, [screenCode]);
+  useEffect(() => { isScreenSharingRef.current = isScreenSharing; }, [isScreenSharing]);
+  useEffect(() => { onRequestScreenShareRef.current = onRequestScreenShare; }, [onRequestScreenShare]);
 
   // ── End interview ──────────────────────────────────────────────────────────
 
@@ -237,13 +371,15 @@ export function useSinglePromptInterview({
         qaHistory: session.qaHistory.filter(qa => qa.answer),
         interviewTime: Math.floor(((session.interviewTime * 60) - timeRemainingRef.current) / 60),
         language: session.language || 'English',
+        mode: configRef.current?.mode ?? 'practice',
+        parkedTopics: session.parkedTopics,
       });
       const evalMsgs: ChatMessage[] = [
         { role: 'system', content: systemMessage },
         { role: 'user', content: humanMessage },
       ];
       const raw = await chatCompletion(evalMsgs);
-      const cleaned = raw.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+      const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
 
       let result: InterviewResult;
       try {
@@ -257,8 +393,15 @@ export function useSinglePromptInterview({
           elapsedTime: (session.interviewTime * 60) - timeRemainingRef.current,
           topStrengths: Array.isArray(parsed.topStrengths) ? parsed.topStrengths : [],
           improvementAreas: Array.isArray(parsed.improvementAreas) ? parsed.improvementAreas : [],
+          topicsToStudy: Array.isArray(parsed.topicsToStudy) ? parsed.topicsToStudy : undefined,
         };
       } catch {
+        // Fallback: build a minimal topicsToStudy from parkedTopics directly
+        // so the candidate still gets value if the LLM call fails.
+        const fallbackTopics = (session.parkedTopics || []).map((t) => ({
+          name: t,
+          description: `Brush up on ${t} — reviewing this will help you give a stronger answer next time.`,
+        }));
         result = {
           summary: rollingSummaryRef.current || 'Interview completed.',
           score: 0,
@@ -268,6 +411,7 @@ export function useSinglePromptInterview({
           elapsedTime: (session.interviewTime * 60) - timeRemainingRef.current,
           topStrengths: [],
           improvementAreas: [],
+          topicsToStudy: fallbackTopics.length > 0 ? fallbackTopics : undefined,
         };
       }
 
@@ -292,30 +436,44 @@ export function useSinglePromptInterview({
     await endInterviewRef.current();
   }, []);
 
-  // ── Rolling summarization ──────────────────────────────────────────────────
+  // ── Rolling summarization (async, non-blocking) ────────────────────────────
 
-  const runSummarization = useCallback(async () => {
-    const toCompress = archivedRef.current;
+  const isSummarizingRef = useRef(false);
+
+  const runSummarization = useCallback(() => {
+    if (isSummarizingRef.current) return;
+    const toCompress = [...archivedRef.current];
     if (toCompress.length === 0 || !frameworkRef.current) return;
+
+    // Clear archived immediately so new messages don't get re-summarized
+    archivedRef.current = [];
+    isSummarizingRef.current = true;
 
     const skillsList = [
       ...frameworkRef.current.must_have_skills.map(s => s.skill),
       ...frameworkRef.current.nice_to_have_skills.map(s => s.skill),
     ];
 
-    try {
-      const msgs = buildSummarizationMessages(
-        frameworkRef.current.role,
-        rollingSummaryRef.current,
-        toCompress,
-        skillsList,
-      );
-      const summary = await chatCompletion(msgs);
-      rollingSummaryRef.current = summary;
-      archivedRef.current = [];
-    } catch (err) {
-      console.error('Summarization failed:', err);
-    }
+    const msgs = buildSummarizationMessages(
+      frameworkRef.current.role,
+      rollingSummaryRef.current,
+      toCompress,
+      skillsList,
+    );
+
+    // Fire-and-forget: runs in background, updates summary when ready
+    chatCompletion(msgs)
+      .then(summary => {
+        rollingSummaryRef.current = summary;
+      })
+      .catch(err => {
+        console.error('Summarization failed:', err);
+        // Put messages back so they can be retried next cycle
+        archivedRef.current = [...toCompress, ...archivedRef.current];
+      })
+      .finally(() => {
+        isSummarizingRef.current = false;
+      });
   }, []);
 
   // ── Start interview ────────────────────────────────────────────────────────
@@ -352,7 +510,11 @@ export function useSinglePromptInterview({
       frameworkRef.current = framework;
 
       // Generate opening question (non-streaming)
-      const openingMsgs = buildOpeningMessages(framework);
+      const openingMsgs = buildOpeningMessages(
+        framework,
+        configRef.current?.mode ?? 'practice',
+        configRef.current?.mentorProfile,
+      );
       const openingQuestion = await chatCompletion(openingMsgs);
 
       // Add to internal message history
@@ -387,7 +549,7 @@ export function useSinglePromptInterview({
   // ── On config load ─────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!config || hasStartedRef.current) return;
+    if (!config || !readyToStart || hasStartedRef.current) return;
     hasStartedRef.current = true;
 
     const newSessionId = initialSessionId || crypto.randomUUID();
@@ -418,7 +580,7 @@ export function useSinglePromptInterview({
         timerRef.current = null;
       }
     };
-  }, [config]);
+  }, [config, readyToStart]);
 
   // ── Submit answer ──────────────────────────────────────────────────────────
 
@@ -450,6 +612,12 @@ export function useSinglePromptInterview({
         if (!framework) throw new Error('Framework not loaded');
 
         const recent = recentMessagesRef.current.slice(-RECENT_WINDOW);
+        console.log('[ScreenShare] Building msgs with:', {
+          ocrEnabled: configRef.current?.ocrEnabled,
+          isScreenSharing: isScreenSharingRef.current,
+          askCount: screenShareAskCountRef.current
+        });
+
         const msgs = buildInterviewerMessages(
           framework,
           rollingSummaryRef.current,
@@ -457,20 +625,31 @@ export function useSinglePromptInterview({
           answer,
           timeRemainingRef.current,
           (sessionRef.current?.interviewTime ?? 10) * 60,
-          screenCode,
+          configRef.current?.mode ?? 'practice',
+          configRef.current?.mentorProfile,
+          screenCodeRef.current,
+          configRef.current?.ocrEnabled,
+          isScreenSharingRef.current,
+          screenShareAskCountRef.current,
         );
 
         let fullResponse = '';
         const questionId = `q_${Date.now()}`;
 
-        // Stream interviewer response
+        // Streaming-safe marker stripper: holds back any [...] segment that
+        // arrives split across chunks until we can decide to drop or pass it.
+        // Used for chunks fed to onStreamChunk (caption + TTS pipelines).
+        const stripper = makeMarkerStripper();
+
         for await (const chunk of chatCompletionStream(msgs)) {
           fullResponse += chunk;
-          const displayChunk = chunk.replace(/\[INTERVIEW_OVER\]/gi, '');
+          const displayChunk = stripper.push(chunk);
           if (displayChunk && onStreamChunkRef.current) onStreamChunkRef.current(displayChunk);
 
+          // Message bubble update — operates on the accumulated fullResponse
+          // so it always renders the cleanly-stripped current text.
           setMessages(prev => {
-            const displayText = fullResponse.replace(/\[INTERVIEW_OVER\]/gi, '').trim();
+            const displayText = stripAllMarkers(fullResponse).trim();
             const existing = prev.find(m => m.id === questionId);
             if (existing) {
               return prev.map(m =>
@@ -489,10 +668,37 @@ export function useSinglePromptInterview({
           });
         }
 
+        // Flush any pending text from the stripper buffer (e.g. an incomplete
+        // bracket the model never closed — strip it as a precaution then emit)
+        const tail = stripper.flush();
+        if (tail && onStreamChunkRef.current) onStreamChunkRef.current(tail);
+
         if (onStreamCompleteRef.current) onStreamCompleteRef.current();
 
+        // Capture parked topics from the raw response BEFORE stripping
+        if (sessionRef.current) {
+          const parked = extractParkedTopics(fullResponse);
+          if (parked.length > 0) {
+            sessionRef.current.parkedTopics = [
+              ...(sessionRef.current.parkedTopics || []),
+              ...parked,
+            ];
+          }
+        }
+
         const hasEndToken = /\[INTERVIEW_OVER\]/i.test(fullResponse);
-        const cleanedResponse = fullResponse.replace(/\[INTERVIEW_OVER\]/gi, '').trim();
+        // Robust token matching that handles potential LLM variations
+        const hasRequestShareToken = /\[\s*REQUEST[_\s-]*SCREEN[_\s-]*SHARE\s*\]/i.test(fullResponse) ||
+          /REQUEST[_\s-]*SCREEN[_\s-]*SHARE/i.test(fullResponse);
+
+        const cleanedResponse = stripAllMarkers(fullResponse).trim();
+
+        // If LLM requested screen share, fire the callback (UI shows modal).
+        // Allow up to 2 asks per session — counter is managed here.
+        if (hasRequestShareToken && screenShareAskCountRef.current < 2) {
+          screenShareAskCountRef.current += 1;
+          onRequestScreenShareRef.current?.();
+        }
 
         setCurrentQuestion(cleanedResponse);
 
@@ -526,10 +732,10 @@ export function useSinglePromptInterview({
           saveInterviewSessionBySessionId(sessionRef.current);
         }
 
-        // Periodic summarization
+        // Async summarization: every turn after the 2nd answer
         turnCountRef.current += 1;
-        if (turnCountRef.current % SUMMARIZE_EVERY === 0) {
-          runSummarization().catch(console.error);
+        if (turnCountRef.current >= SUMMARIZE_START_AFTER) {
+          runSummarization();
         }
 
         if (hasEndToken) {
