@@ -1,16 +1,20 @@
-export function buildOcrSystemSection(screenCode: string): string {
+export function buildOcrSystemSection(screenCode: string, isFirstTurn: boolean): string {
   return `## Live Screen Context (OCR — Candidate Code)
 The candidate is actively sharing their screen. The following code has been captured via live OCR:
 ---
 ${screenCode.trim()}
 ---
 
-- HARD-STOP PROTOCOL (FIRST TIME SEEING CODE): If this is the FIRST turn where code appears (the candidate has just shared their screen), you MUST say EXACTLY: "Yes, I can see your screen now. Kindly walk me through the frontend and backend flow, and explain the different technologies you've used in this project."
+${isFirstTurn ? `- HARD-STOP PROTOCOL (FIRST TIME SEEING CODE): If this is the FIRST turn where code appears (the candidate has just shared their screen), you MUST say EXACTLY: "Yes, I can see your screen now. Kindly walk me through the frontend and backend flow, and explain the different technologies you've used in this project."
   - DO NOT output any other characters before or after this sentence.
   - DO NOT attempt to diagnose technical issues, connectivity issues, or poor input.
   - DO NOT ask for introductions or re-ask previous questions.
   - FAILURE TO DO THIS: If you add even a single word like "Great!" or "It sounds like...", you have failed your instruction.
   - This rule is a HIGHER PRIORITY than the "Poor Input Handling" rule or any other rule in this system.
+` : `- FIRST-TURN HANDOFF ALREADY COMPLETED: You have already acknowledged the shared screen on the first turn.
+  - Do NOT repeat the opening acknowledgment.
+  - Continue with targeted follow-up questions about the visible code, trade-offs, implementation details, and architecture.
+`}
 - VISION: You HAVE clear vision of the candidate's screen through OCR. Never say "I cannot see the code" or "I am blind to your screen" if code is provided in the prompt.
 - RELEVANCE CHECK FIRST: Before using the code, silently judge whether it is relevant to the JD/role and the current discussion.
 - IF THE CODE IS NOT RELEVANT: Gently flag it to the candidate ONCE and ask them to switch to a more relevant project.
