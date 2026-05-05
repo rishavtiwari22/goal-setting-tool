@@ -326,6 +326,7 @@ export function useSinglePromptInterview({
   const screenCodeRef = useRef(screenCode);
   const isScreenSharingRef = useRef(isScreenSharing);
   const screenShareAskCountRef = useRef(0);
+  const screenShareFirstTurnUsedRef = useRef(false);
 
   // Stable refs for callbacks used inside setInterval / async closures
   const endInterviewRef = useRef<() => Promise<void>>(() => Promise.resolve());
@@ -343,6 +344,11 @@ export function useSinglePromptInterview({
   useEffect(() => { screenCodeRef.current = screenCode; }, [screenCode]);
   useEffect(() => { isScreenSharingRef.current = isScreenSharing; }, [isScreenSharing]);
   useEffect(() => { onRequestScreenShareRef.current = onRequestScreenShare; }, [onRequestScreenShare]);
+  useEffect(() => {
+    if (!isScreenSharing) {
+      screenShareFirstTurnUsedRef.current = false;
+    }
+  }, [isScreenSharing]);
 
   // ── End interview ──────────────────────────────────────────────────────────
 
@@ -615,8 +621,15 @@ export function useSinglePromptInterview({
         console.log('[ScreenShare] Building msgs with:', {
           ocrEnabled: configRef.current?.ocrEnabled,
           isScreenSharing: isScreenSharingRef.current,
-          askCount: screenShareAskCountRef.current
+          askCount: screenShareAskCountRef.current,
+          firstTurnUsed: screenShareFirstTurnUsedRef.current,
         });
+
+        const isFirstScreenShareTurn = Boolean(
+          configRef.current?.ocrEnabled &&
+          isScreenSharingRef.current &&
+          !screenShareFirstTurnUsedRef.current
+        );
 
         const msgs = buildInterviewerMessages(
           framework,
@@ -631,6 +644,7 @@ export function useSinglePromptInterview({
           configRef.current?.ocrEnabled,
           isScreenSharingRef.current,
           screenShareAskCountRef.current,
+          isFirstScreenShareTurn,
         );
 
         let fullResponse = '';
@@ -674,6 +688,10 @@ export function useSinglePromptInterview({
         if (tail && onStreamChunkRef.current) onStreamChunkRef.current(tail);
 
         if (onStreamCompleteRef.current) onStreamCompleteRef.current();
+
+        if (isFirstScreenShareTurn) {
+          screenShareFirstTurnUsedRef.current = true;
+        }
 
         // Capture parked topics from the raw response BEFORE stripping
         if (sessionRef.current) {

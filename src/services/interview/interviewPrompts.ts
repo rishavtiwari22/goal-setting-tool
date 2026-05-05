@@ -107,6 +107,7 @@ export function buildInterviewerMessages(
   ocrEnabled?: boolean,
   isScreenSharing?: boolean,
   screenShareAskCount?: number,
+  isFirstScreenShareTurn?: boolean,
 ): ChatMessage[] {
   const redFlags = framework.red_flags_to_probe.join(', ') || 'none identified';
   const elapsedMin = Math.floor((totalSeconds - timeRemainingSeconds) / 60);
@@ -118,7 +119,7 @@ export function buildInterviewerMessages(
   const frameworkJson = JSON.stringify(framework, null, 2);
 
   const hasScreenCode = screenCode && screenCode.trim().length > 20 && isScreenSharing;
-  const ocrSystemSection = hasScreenCode ? '\n\n' + buildOcrSystemSection(screenCode!) : '';
+  const ocrSystemSection = hasScreenCode ? '\n\n' + buildOcrSystemSection(screenCode!, Boolean(isFirstScreenShareTurn)) : '';
 
   // If OCR is enabled but candidate is NOT sharing → tell LLM how to request screen share
   const requestShareSection = (ocrEnabled && !isScreenSharing)
