@@ -8,6 +8,24 @@ import Header from "@/components/Header";
 import HomeInterviewCard from "@/components/HomeInterviewcard";
 import type { InterviewMode } from "../services/interview/interviewEngine";
 
+// base64url-encode a UTF-8 string for JWT segments.
+function b64url(input: string) {
+  return btoa(unescape(encodeURIComponent(input)))
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+}
+
+// Mint a 3-part JWT-shaped token from email so downstream services can read
+// the email out of the payload using the same decoder the rest of the app uses.
+function mintStudentTokenFromEmail(email: string) {
+  const header = b64url(JSON.stringify({ alg: "none", typ: "JWT" }));
+  const payload = b64url(
+    JSON.stringify({ email, iat: Math.floor(Date.now() / 1000) }),
+  );
+  return `${header}.${payload}.`;
+}
+
 export default function Home() {
   const resumeBuddyUrl = import.meta.env.VITE_RESUME_BUDDY_URL;
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -15,6 +33,19 @@ export default function Home() {
   const [needsEmail, setNeedsEmail] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  // URL params win, then a real token in storage, then a synthesized one
+  // from a stored email. Returns null only if we have nothing to identify
+  // the student with.
+  const resolveStudentToken = () => {
+    const fromUrl = searchParams.get("token") || searchParams.get("jwt");
+    if (fromUrl) return fromUrl;
+    const stored = localStorage.getItem("studentToken");
+    if (stored) return stored;
+    const storedEmail = localStorage.getItem("studentEmail");
+    if (storedEmail) return mintStudentTokenFromEmail(storedEmail);
+    return null;
+  };
 
   const interviewTypes: {
     id: string;
@@ -65,14 +96,17 @@ export default function Home() {
 
   const handleCardClick = (id: string, isComingSoon: boolean, mode?: InterviewMode) => {
     if (id === "resume-buddy") {
-      const token =
-        searchParams.get("token") ||
-        searchParams.get("jwt") ||
-        localStorage.getItem("studentToken");
-      const urlWithToken = token
-        ? `${resumeBuddyUrl}?token=${encodeURIComponent(token)}`
-        : resumeBuddyUrl;
-      window.open(urlWithToken, "_blank");
+      const token = resolveStudentToken();
+      if (token) {
+        window.open(
+          `${resumeBuddyUrl}?token=${encodeURIComponent(token)}`,
+          "_blank",
+        );
+        return;
+      }
+      // No token and no email — ask for email, then continue in handleEmailSubmit.
+      setNeedsEmail(true);
+      setSelectedType(id);
       return;
     }
 
@@ -105,6 +139,15 @@ export default function Home() {
     }
     localStorage.setItem("studentEmail", trimmed);
     setNeedsEmail(false);
+
+    if (selectedType === "resume-buddy") {
+      const token = mintStudentTokenFromEmail(trimmed);
+      window.open(
+        `${resumeBuddyUrl}?token=${encodeURIComponent(token)}`,
+        "_blank",
+      );
+      return;
+    }
 
     const selectedMode = interviewTypes.find(t => t.id === selectedType)?.mode;
     setTimeout(() => {
