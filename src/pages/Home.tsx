@@ -9,7 +9,7 @@ import HomeInterviewCard from "@/components/HomeInterviewcard";
 import type { InterviewMode } from "../services/interview/interviewEngine";
 
 export default function Home() {
-  const resumeBuddyUrl = "https://api-testing.d3s88q50fgekpa.amplifyapp.com/dashboard/resumes";
+  const resumeBuddyUrl = import.meta.env.VITE_RESUME_BUDDY_URL;
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [email, setEmail] = useState(localStorage.getItem("studentEmail") || "");
   const [needsEmail, setNeedsEmail] = useState(false);
