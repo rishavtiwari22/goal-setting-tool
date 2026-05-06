@@ -65,8 +65,13 @@ export default function Home() {
 
   const handleCardClick = (id: string, isComingSoon: boolean, mode?: InterviewMode) => {
     if (id === "resume-buddy") {
-      const token = localStorage.getItem("studentToken");
-      const urlWithToken = token ? `${resumeBuddyUrl}?token=${token}` : resumeBuddyUrl;
+      const token =
+        searchParams.get("token") ||
+        searchParams.get("jwt") ||
+        localStorage.getItem("studentToken");
+      const urlWithToken = token
+        ? `${resumeBuddyUrl}?token=${encodeURIComponent(token)}`
+        : resumeBuddyUrl;
       window.open(urlWithToken, "_blank");
       return;
     }
