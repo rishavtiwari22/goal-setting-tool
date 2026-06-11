@@ -15,6 +15,8 @@ import {
   saveInterviewSessionBySessionId,
   saveInterviewResult,
 } from '../services/storage/interviewStorage';
+import { enqueueSessionComplete } from '../services/sync/sessionCompleteBridge';
+import { resultGenerationStatus } from '../services/resultGenerationStatus';
 
 export interface Message {
   id: string;
@@ -321,12 +323,12 @@ export function useSinglePromptInterview({
   const timeRemainingRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isCompletedRef = useRef(false);
-  const hasStartedRef = useRef(false);
   const currentQuestionRef = useRef('');
   const screenCodeRef = useRef(screenCode);
   const isScreenSharingRef = useRef(isScreenSharing);
   const screenShareAskCountRef = useRef(0);
   const screenShareFirstTurnUsedRef = useRef(false);
+  const hasStartedInterviewRef = useRef(false);
 
   // Stable refs for callbacks used inside setInterval / async closures
   const endInterviewRef = useRef<() => Promise<void>>(() => Promise.resolve());
@@ -368,6 +370,11 @@ export function useSinglePromptInterview({
     session.status = 'completed';
     session.endTime = new Date().toISOString();
     session.remainingTime = timeRemainingRef.current;
+
+    // Signal to Results.tsx that summary + rubric LLM calls are in flight so
+    // it shows a generating state instead of immediately concluding the
+    // result is missing. setComplete fires in every exit path below.
+    resultGenerationStatus.setGenerating(session.sessionId);
 
     try {
       const { systemMessage, humanMessage } = buildSummarizePrompt({
@@ -427,6 +434,11 @@ export function useSinglePromptInterview({
     } catch (error) {
       console.error('Error generating interview results:', error);
       saveInterviewSessionBySessionId(session);
+    } finally {
+      // Flip the generating flag back so Results.tsx stops waiting and either
+      // renders the result (success path) or falls through to its fallback
+      // state (catch path).
+      resultGenerationStatus.setComplete(session.sessionId);
     }
 
     onCompleteRef.current(session);
@@ -439,8 +451,29 @@ export function useSinglePromptInterview({
 
   const handleTimeUp = useCallback(async () => {
     if (isCompletedRef.current) return;
+    try {
+      // Diagnostic log to help verify the timer hit zero and path executed
+      // in the user's environment. Remove after verification.
+      // eslint-disable-next-line no-console
+      console.debug('[timer] handleTimeUp triggered, timeRemaining=', timeRemainingRef.current);
+    } catch (e) {
+      // ignore logging failures
+    }
     await endInterviewRef.current();
   }, []);
+
+  // Defensive: if remainingTime state becomes exactly 0 for any reason,
+  // ensure the time-up flow is executed. This guards against any interval
+  // scheduling edge where the interval tick might be missed.
+  useEffect(() => {
+    if (remainingTime === 0) {
+      try {
+        // eslint-disable-next-line no-console
+        console.log('[timer] remainingTime reached 0 in state, calling handleTimeUp');
+      } catch (e) {}
+      void handleTimeUp();
+    }
+  }, [remainingTime, handleTimeUp]);
 
   // ── Rolling summarization (async, non-blocking) ────────────────────────────
 
@@ -555,8 +588,45 @@ export function useSinglePromptInterview({
   // ── On config load ─────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!config || !readyToStart || hasStartedRef.current) return;
-    hasStartedRef.current = true;
+    // Log IMMEDIATELY before any guards to see if this runs at all
+    try {
+      // eslint-disable-next-line no-console
+      console.log('[timer] useEffect ENTRY - checking conditions:', {
+        hasConfig: !!config,
+        readyToStart,
+        timerActive: !!timerRef.current,
+        configValue: config ? { userId: config.userId, jobTitle: config.jobTitle, interviewTime: config.interviewTime } : null
+      });
+    } catch (e) {}
+
+    // Check each guard condition separately and log which one blocks
+    if (!config) {
+      try {
+        // eslint-disable-next-line no-console
+        console.warn('[timer] BLOCKED: config is null/undefined');
+      } catch (e) {}
+      return;
+    }
+    if (!readyToStart) {
+      try {
+        // eslint-disable-next-line no-console
+        console.warn('[timer] BLOCKED: readyToStart is false');
+      } catch (e) {}
+      return;
+    }
+    if (timerRef.current) {
+      try {
+        // eslint-disable-next-line no-console
+        console.warn('[timer] BLOCKED: timer is already active');
+      } catch (e) {}
+      return;
+    }
+
+    // If we get here, all guards passed - proceed with initialization
+    try {
+      // eslint-disable-next-line no-console
+      console.log('[timer] PROCEEDING with initialization - all guards passed');
+    } catch (e) {}
 
     const newSessionId = initialSessionId || crypto.randomUUID();
     setSessionId(newSessionId);
@@ -570,15 +640,53 @@ export function useSinglePromptInterview({
     sessionRef.current = session;
 
     // Start countdown
+    // Diagnostic: log timer start
+    try {
+      // eslint-disable-next-line no-console
+      console.debug('[timer] started, startSeconds=', startSeconds);
+    } catch (e) {}
+
     timerRef.current = setInterval(() => {
-      timeRemainingRef.current -= 1;
-      setRemainingTime(timeRemainingRef.current);
-      if (timeRemainingRef.current <= 0) {
-        handleTimeUp();
+      if (isCompletedRef.current) {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        return;
       }
+
+      if (timeRemainingRef.current <= 1) {
+        timeRemainingRef.current = 0;
+        setRemainingTime(0);
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        try {
+          // eslint-disable-next-line no-console
+          console.debug('[timer] reached 0 in interval, calling handleTimeUp');
+        } catch (e) {}
+        void handleTimeUp();
+        return;
+      }
+
+      timeRemainingRef.current -= 1;
+      // Only log the final few seconds to avoid noise
+      if (timeRemainingRef.current <= 6) {
+        try {
+          // eslint-disable-next-line no-console
+          console.debug('[timer] tick, remaining=', timeRemainingRef.current);
+        } catch (e) {}
+      }
+      setRemainingTime(timeRemainingRef.current);
     }, 1000);
 
-    startInterview(config, newSessionId);
+    // Guard initial question bootstrap so Strict Mode double-invoke
+    // doesn't generate/send the opening prompt twice.
+    if (!hasStartedInterviewRef.current) {
+      hasStartedInterviewRef.current = true;
+      void startInterview(config, newSessionId);
+    }
 
     return () => {
       if (timerRef.current) {

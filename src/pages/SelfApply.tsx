@@ -80,7 +80,7 @@ export default function SelfApply() {
   const [customJobData, setCustomJobData] = useState<{ job_title: string; job_description: string; technical_skills: string[]; soft_skills: string[] } | null>(null);
   const [formData] = useState({
     email: "",
-    testTime: 30,
+    testTime: 15,
   });
 
   useEffect(() => {
