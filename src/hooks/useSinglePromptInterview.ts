@@ -15,7 +15,7 @@ import {
   saveInterviewSessionBySessionId,
   saveInterviewResult,
 } from '../services/storage/interviewStorage';
-import { enqueueSessionComplete } from '../services/sync/sessionCompleteBridge';
+// import { enqueueSessionComplete } from '../services/sync/sessionCompleteBridge';
 import { resultGenerationStatus } from '../services/resultGenerationStatus';
 
 export interface Message {
@@ -641,10 +641,10 @@ export function useSinglePromptInterview({
 
     // Start countdown
     // Diagnostic: log timer start
-    try {
-      // eslint-disable-next-line no-console
-      console.debug('[timer] started, startSeconds=', startSeconds);
-    } catch (e) {}
+    // try {
+    //   // eslint-disable-next-line no-console
+    //   console.debug('[timer] started, startSeconds=', startSeconds);
+    // } catch (e) {}
 
     timerRef.current = setInterval(() => {
       if (isCompletedRef.current) {
