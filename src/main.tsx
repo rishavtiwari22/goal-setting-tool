@@ -6,6 +6,7 @@ import './styles/codeHighlight.css'
 import { validateEnvironment, ENV } from './utils/env'
 import { Toaster } from '@/components/ui/sonner'
 import { initializeAnalytics } from './services/analytics'
+import { captureZuvySource } from './utils/zuvySource'
 
 declare global {
   interface Window {
@@ -16,7 +17,11 @@ declare global {
 
 try {
   validateEnvironment();
-  
+
+  // Capture which Zuvy environment we were redirected from (via document.referrer)
+  // before anything navigates — used to route Resume Buddy to the matching build.
+  captureZuvySource();
+
   // Initialize unified analytics (GA4 + Mixpanel) with delay to ensure Mixpanel is loaded
   setTimeout(() => {
     initializeAnalytics();
