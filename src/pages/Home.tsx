@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { getEmailFromJWT, isValidJWTFormat } from "../utils/jwt";
+import { getResumeBuddyUrl } from "../utils/zuvySource";
 import { motion } from "framer-motion";
 import { Briefcase, BrainCircuit, GraduationCap, FileText, Info } from "lucide-react";
 import Header from "@/components/Header";
@@ -27,7 +28,10 @@ function mintStudentTokenFromEmail(email: string) {
 }
 
 export default function Home() {
-  const resumeBuddyUrl = import.meta.env.VITE_RESUME_BUDDY_URL;
+  // Dev Zuvy users (redirected from dev.app.zuvy.org) get the dev builder;
+  // everyone else gets the prod builder. Source is detected from the referrer
+  // at startup (see utils/zuvySource).
+  const resumeBuddyUrl = getResumeBuddyUrl();
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [email, setEmail] = useState(localStorage.getItem("studentEmail") || "");
   const [needsEmail, setNeedsEmail] = useState(false);
