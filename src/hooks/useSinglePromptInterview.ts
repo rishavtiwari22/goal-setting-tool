@@ -417,11 +417,11 @@ export function useSinglePromptInterview({
         } else if (configRef.current?.mode === 'reflection' && Array.isArray(parsed.reflections)) {
           let sourceGoals: any[] = [];
           try {
-             // We can use getMonthlyRecords to find the goals, but getDailyRecord is better since we just added it.
-             const record = await dailySessionApi.getDailyRecord(todayStr);
-             sourceGoals = record?.goals || [];
-          } catch(e) {}
-          
+            // We can use getMonthlyRecords to find the goals, but getDailyRecord is better since we just added it.
+            const record = await dailySessionApi.getDailyRecord(todayStr);
+            sourceGoals = record?.goals || [];
+          } catch (e) { }
+
           // Send each reflection incrementally
           parsed.reflections.forEach((r: any, idx: number) => {
             const reflectionPayload = {
@@ -531,7 +531,7 @@ export function useSinglePromptInterview({
       try {
         // eslint-disable-next-line no-console
         console.log('[timer] remainingTime reached 0 in state, calling handleTimeUp');
-      } catch (e) {}
+      } catch (e) { }
       void handleTimeUp();
     }
   }, [remainingTime, handleTimeUp]);
@@ -596,7 +596,7 @@ export function useSinglePromptInterview({
             console.error('Error fetching today goals for reflection', e);
           }
         }
-        
+
         framework = {
           role: cfg.jobTitle,
           must_have_skills: [{ skill: contextGoals, weight: 1, evaluation_approach: 'Direct' }],
@@ -681,28 +681,28 @@ export function useSinglePromptInterview({
         timerActive: !!timerRef.current,
         configValue: config ? { userId: config.userId, jobTitle: config.jobTitle, interviewTime: config.interviewTime } : null
       });
-    } catch (e) {}
+    } catch (e) { }
 
     // Check each guard condition separately and log which one blocks
     if (!config) {
       try {
         // eslint-disable-next-line no-console
         console.warn('[timer] BLOCKED: config is null/undefined');
-      } catch (e) {}
+      } catch (e) { }
       return;
     }
     if (!readyToStart) {
       try {
         // eslint-disable-next-line no-console
         console.warn('[timer] BLOCKED: readyToStart is false');
-      } catch (e) {}
+      } catch (e) { }
       return;
     }
     if (timerRef.current) {
       try {
         // eslint-disable-next-line no-console
         console.warn('[timer] BLOCKED: timer is already active');
-      } catch (e) {}
+      } catch (e) { }
       return;
     }
 
@@ -710,7 +710,7 @@ export function useSinglePromptInterview({
     try {
       // eslint-disable-next-line no-console
       console.log('[timer] PROCEEDING with initialization - all guards passed');
-    } catch (e) {}
+    } catch (e) { }
 
     const newSessionId = initialSessionId || crypto.randomUUID();
     setSessionId(newSessionId);
@@ -749,7 +749,7 @@ export function useSinglePromptInterview({
         try {
           // eslint-disable-next-line no-console
           console.debug('[timer] reached 0 in interval, calling handleTimeUp');
-        } catch (e) {}
+        } catch (e) { }
         void handleTimeUp();
         return;
       }
@@ -760,7 +760,7 @@ export function useSinglePromptInterview({
         try {
           // eslint-disable-next-line no-console
           console.debug('[timer] tick, remaining=', timeRemainingRef.current);
-        } catch (e) {}
+        } catch (e) { }
       }
       setRemainingTime(timeRemainingRef.current);
     }, 1000);

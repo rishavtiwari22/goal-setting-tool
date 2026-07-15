@@ -23,7 +23,7 @@ export default function Results() {
   useEffect(() => {
     const loadSessionAndUserName = async () => {
       setIsLoading(true);
-      
+
       let interviewSession: InterviewSession | null = null;
 
       const sessionStr = sessionStorage.getItem("interviewSession");
@@ -77,12 +77,12 @@ export default function Results() {
 
   useEffect(() => {
     let effectiveSessionId = sessionId;
-    
+
     if (!effectiveSessionId && session) {
       effectiveSessionId = session.sessionId;
       console.log('[Results] No sessionId in URL, using sessionId from session state:', effectiveSessionId);
     }
-    
+
     if (!effectiveSessionId) {
       const sessionStr = sessionStorage.getItem("interviewSession");
       if (sessionStr) {
@@ -95,7 +95,7 @@ export default function Results() {
         }
       }
     }
-    
+
     if (!effectiveSessionId) {
       console.log('[Results] No sessionId available, skipping status check');
       return;
@@ -117,7 +117,7 @@ export default function Results() {
           hasResult: !!sessionWithResult?.result,
           resultKeys: sessionWithResult?.result ? Object.keys(sessionWithResult.result) : []
         });
-        
+
         if (sessionWithResult?.result) {
           console.log('[Results] Found result in localStorage, updating session state');
           setSession((prevSession) => {
@@ -141,7 +141,7 @@ export default function Results() {
     };
 
     checkStatus();
-    
+
     console.log('[Results] Subscribing to resultGenerationStatus');
     const unsubscribe = resultGenerationStatus.subscribe((isGenerating, currentSessionId) => {
       console.log('[Results] Subscription callback:', { isGenerating, currentSessionId, effectiveSessionId });
@@ -183,10 +183,10 @@ export default function Results() {
   }) => {
     if (!session) return;
 
-    const latestSession = sessionId 
+    const latestSession = sessionId
       ? loadInterviewSessionBySessionId(sessionId)
       : null;
-    
+
     const sessionToUpdate = latestSession || session;
 
     const updatedSession: InterviewSession = {
@@ -229,9 +229,9 @@ export default function Results() {
           }
         }
       };
-      
+
       checkForResult();
-      
+
       const unsubscribe = resultGenerationStatus.subscribe((isGenerating, currentSessionId) => {
         if (currentSessionId === sessionId && !isGenerating) {
           checkForResult();
@@ -266,14 +266,14 @@ export default function Results() {
       return (
         <div className="flex items-center justify-center min-h-screen">
           <div>
-            {(session as any)?.config?.mode === 'goal-setting' ? 'Shaping your daily goal...' :
-             (session as any)?.config?.mode === 'reflection' ? 'Reflecting on what you shared...' :
-             'Generating results...'}
+            {session?.mode === 'goal-setting' ? 'Shaping your daily goal...' :
+              session?.mode === 'reflection' ? 'Reflecting on what you shared...' :
+                'Generating results...'}
           </div>
         </div>
       );
     }
-    
+
     if (generationFailed) {
       return (
         <div className="flex flex-col items-center justify-center min-h-screen text-center p-6">
@@ -284,7 +284,7 @@ export default function Results() {
           <p className="text-gray-400 max-w-md">
             We couldn't generate the final summary for your session. The AI might have encountered an error while processing your conversation.
           </p>
-          <button 
+          <button
             onClick={() => window.location.href = '/'}
             className="mt-8 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
           >
@@ -297,9 +297,9 @@ export default function Results() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div>
-          {(session as any)?.config?.mode === 'goal-setting' ? 'Finalizing your goal...' :
-           (session as any)?.config?.mode === 'reflection' ? 'Preparing your reflection summary...' :
-           'Waiting for results...'}
+          {session?.mode === 'goal-setting' ? 'Finalizing your goal...' :
+            session?.mode === 'reflection' ? 'Preparing your reflection summary...' :
+              'Waiting for results...'}
         </div>
       </div>
     );
@@ -322,14 +322,14 @@ export default function Results() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div>
-          {(session as any)?.config?.mode === 'goal-setting' ? 'Shaping your daily goal...' :
-           (session as any)?.config?.mode === 'reflection' ? 'Reflecting on what you shared...' :
-           'Generating results...'}
+          {session?.mode === 'goal-setting' ? 'Shaping your daily goal...' :
+            session?.mode === 'reflection' ? 'Reflecting on what you shared...' :
+              'Generating results...'}
         </div>
       </div>
     );
   }
-  
+
   if (!session.result) {
     return (
       <div className="flex items-center justify-center min-h-screen">
