@@ -266,8 +266,8 @@ export default function Results() {
       return (
         <div className="flex items-center justify-center min-h-screen">
           <div>
-            {session?.config?.mode === 'goal-setting' ? 'Shaping your daily goal...' :
-             session?.config?.mode === 'reflection' ? 'Reflecting on what you shared...' :
+            {(session as any)?.config?.mode === 'goal-setting' ? 'Shaping your daily goal...' :
+             (session as any)?.config?.mode === 'reflection' ? 'Reflecting on what you shared...' :
              'Generating results...'}
           </div>
         </div>
@@ -297,8 +297,8 @@ export default function Results() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div>
-          {session?.config?.mode === 'goal-setting' ? 'Finalizing your goal...' :
-           session?.config?.mode === 'reflection' ? 'Preparing your reflection summary...' :
+          {(session as any)?.config?.mode === 'goal-setting' ? 'Finalizing your goal...' :
+           (session as any)?.config?.mode === 'reflection' ? 'Preparing your reflection summary...' :
            'Waiting for results...'}
         </div>
       </div>
@@ -322,8 +322,8 @@ export default function Results() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div>
-          {session?.config?.mode === 'goal-setting' ? 'Shaping your daily goal...' :
-           session?.config?.mode === 'reflection' ? 'Reflecting on what you shared...' :
+          {(session as any)?.config?.mode === 'goal-setting' ? 'Shaping your daily goal...' :
+           (session as any)?.config?.mode === 'reflection' ? 'Reflecting on what you shared...' :
            'Generating results...'}
         </div>
       </div>

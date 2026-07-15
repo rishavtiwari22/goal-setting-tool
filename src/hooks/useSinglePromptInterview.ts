@@ -588,7 +588,7 @@ export function useSinglePromptInterview({
         if (cfg.mode === 'reflection') {
           try {
             const todayStr = new Date().toISOString().split('T')[0];
-            const todaySession = await dailySessionApi.getDailyRecord(cfg.userId, todayStr);
+            const todaySession = await dailySessionApi.getDailyRecord(todayStr);
             if (todaySession && todaySession.goals && todaySession.goals.length > 0) {
               contextGoals = JSON.stringify(todaySession.goals, null, 2);
             }

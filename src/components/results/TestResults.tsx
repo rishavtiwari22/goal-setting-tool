@@ -30,7 +30,7 @@ interface TestResult {
   topStrengths?: Array<{ name: string; description: string }>;
   improvementAreas?: Array<{ name: string; description: string }>;
   topicsToStudy?: Array<{ name: string; description: string }>;
-  mode?: 'practice' | 'mentor';
+  mode?: string;
   created_at: string;
   updated_at: string;
 }
