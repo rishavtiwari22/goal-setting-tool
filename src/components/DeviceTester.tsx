@@ -147,7 +147,7 @@ const DeviceTester = ({
   mode = 'practice',
 }: {
   onStartInterview: () => void;
-  mode?: 'practice' | 'mentor';
+  mode?: string;
 }) => {
   const [micPermission, setMicPermission] = useState<
     "prompt" | "granted" | "denied"
