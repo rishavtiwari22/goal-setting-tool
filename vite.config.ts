@@ -61,6 +61,15 @@ export default defineConfig(({ mode }) => {
         allow: [".."],
       },
       proxy: {
+        "/__/auth": {
+          target: "https://goal-settings-c0ed9.firebaseapp.com",
+          changeOrigin: true,
+          configure: (proxy) => {
+            proxy.on('proxyRes', (proxyRes) => {
+              proxyRes.headers['Cross-Origin-Resource-Policy'] = 'cross-origin';
+            });
+          }
+        },
         "/api/deepseek": {
           target: "https://api.deepseek.com",
           changeOrigin: true,

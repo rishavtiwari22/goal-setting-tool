@@ -62,8 +62,11 @@ export default function SelfApply() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  const mode: InterviewMode = (location.state as any)?.mode ?? 'practice';
+  const initialMode: InterviewMode = (location.state as any)?.mode ?? 'practice';
+  const autoStart: boolean = (location.state as any)?.autoStart ?? false;
   const preselectedMentorProfile: MentorProfile | null = (location.state as any)?.mentorProfile ?? null;
+  const [mode, setMode] = useState<InterviewMode>(initialMode);
+  const [modalMode, setModalMode] = useState<'practice' | 'goal-setting' | 'reflection'>('practice');
 
   const [mentorProfile, setMentorProfile] = useState<MentorProfile | null>(preselectedMentorProfile);
   const [step, setStep] = useState<Step>(
@@ -96,6 +99,31 @@ export default function SelfApply() {
     }
   }, []);
 
+  useEffect(() => {
+    if (initialMode === 'goal-setting' || initialMode === 'reflection') {
+      if (autoStart) {
+        const interviewConfig = {
+          jobId: null,
+          jobTitle: initialMode === 'goal-setting' ? "Daily Goal Setting" : "End of Day Reflection",
+          jobDescription: "",
+          technicalSkills: [],
+          softSkills: [],
+          mode: initialMode,
+          mentorProfile: null,
+          ocrEnabled: false,
+          turnLimit: undefined,
+          interviewTime: 15,
+        };
+        sessionStorage.setItem("interviewConfig", JSON.stringify(interviewConfig));
+        const token = searchParams.get("token") || searchParams.get("jwt");
+        navigate(token ? `/interview?token=${token}` : "/interview", { replace: true });
+      } else {
+        setModalMode(initialMode);
+        setIsCreateJobModalOpen(true);
+      }
+    }
+  }, [initialMode, autoStart, navigate, searchParams]);
+
   const fetchJobs = async () => {
     setLoadingJobs(true);
     try {
@@ -126,9 +154,9 @@ export default function SelfApply() {
       const jd = custom
         ? `${custom.job_title}\n${custom.job_description}`
         : (() => {
-            const job = jobs.find(j => j.job_id === jobId);
-            return job ? `${job.job_title}\n${job.job_description}` : '';
-          })();
+          const job = jobs.find(j => j.job_id === jobId);
+          return job ? `${job.job_title}\n${job.job_description}` : '';
+        })();
 
       const isTechnical = await classifyTechnicalRole(jd);
       setIsTechnicalRole(isTechnical);
@@ -143,9 +171,9 @@ export default function SelfApply() {
       const fallbackText = custom
         ? `${custom.job_title}\n${custom.job_description}`
         : (() => {
-            const job = jobs.find(j => j.job_id === jobId);
-            return job ? `${job.job_title}\n${job.job_description}` : '';
-          })();
+          const job = jobs.find(j => j.job_id === jobId);
+          return job ? `${job.job_title}\n${job.job_description}` : '';
+        })();
 
       const likelyTechnical = isLikelyTechnicalRole(fallbackText);
       setIsTechnicalRole(likelyTechnical);
@@ -217,9 +245,10 @@ export default function SelfApply() {
             ...(customJobData.technical_skills || []),
             ...(customJobData.soft_skills || [])
           ],
-          mode,
+          mode: modalMode !== 'practice' ? modalMode : mode,
           mentorProfile: selectedMentorProfile,
           ocrEnabled,
+          turnLimit: undefined,
         };
       } else {
         const selectedJob = jobs.find((j) => j.job_id === selectedJobId);
@@ -267,14 +296,30 @@ export default function SelfApply() {
               <span className="text-[14px] font-black tracking-[0.2em]">Back</span>
             </button>
 
-            {step === "job_selection" && !loadingJobs && !isClassifying && (
-              <Button
-                onClick={() => setIsCreateJobModalOpen(true)}
-                className="ml-auto bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-black px-4 h-10 rounded-lg shadow-sm transition-all hover:scale-[1.01] active:scale-95 flex items-center gap-2 border-b-2 border-[#1a3a1b]"
-              >
-                <Plus size={14} />
-                <span className="text-xs md:text-sm">Create Custom Interview</span>
-              </Button>
+            {step === "job_selection" && !loadingJobs && !isClassifying && mode === 'practice' && (
+              <div className="ml-auto flex items-center gap-2">
+                <Button
+                  onClick={() => { setModalMode('goal-setting'); setIsCreateJobModalOpen(true); }}
+                  className="bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-black px-4 h-10 rounded-lg shadow-sm transition-all hover:scale-[1.01] active:scale-95 flex items-center gap-2 border-b-2 border-[#1a3a1b]"
+                >
+                  <Plus size={14} />
+                  <span className="text-xs md:text-sm">Goal Setting</span>
+                </Button>
+                <Button
+                  onClick={() => { setModalMode('reflection'); setIsCreateJobModalOpen(true); }}
+                  className="bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-black px-4 h-10 rounded-lg shadow-sm transition-all hover:scale-[1.01] active:scale-95 flex items-center gap-2 border-b-2 border-[#1a3a1b]"
+                >
+                  <Plus size={14} />
+                  <span className="text-xs md:text-sm">Reflection</span>
+                </Button>
+                <Button
+                  onClick={() => { setModalMode('practice'); setIsCreateJobModalOpen(true); }}
+                  className="bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-black px-4 h-10 rounded-lg shadow-sm transition-all hover:scale-[1.01] active:scale-95 flex items-center gap-2 border-b-2 border-[#1a3a1b]"
+                >
+                  <Plus size={14} />
+                  <span className="text-xs md:text-sm">Create Custom</span>
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -327,16 +372,32 @@ export default function SelfApply() {
               <h2 className="text-2xl font-black text-center mb-10 text-gray-900 tracking-tight custom-fade-in">
                 {mode === 'mentor'
                   ? `Select a topic to learn (${mentorProfile === 'socratic' ? 'Socratic Mentor' : 'Communication Mentor'})`
-                  : 'Select a job role to practice'}
+                  : mode === 'goal-setting'
+                    ? 'Set up your Daily Goal'
+                    : mode === 'reflection'
+                      ? 'Set up your End of Day Reflection'
+                      : 'Select a job role to practice'}
               </h2>
 
               {isClassifying ? (
                 <div className="flex flex-col items-center gap-3">
                   <Spinner className="text-[#2B5E2B]" />
-                  <p className="text-sm text-slate-500 font-medium">Analyzing role...</p>
+                  <p className="text-sm text-slate-500 font-medium">
+                    {mode === 'goal-setting' || mode === 'reflection' ? "Setting up your session..." : "Analyzing role..."}
+                  </p>
                 </div>
               ) : loadingJobs ? (
                 <Spinner className="text-[#2B5E2B]" />
+              ) : (mode === 'goal-setting' || mode === 'reflection') ? (
+                <div className="w-full flex flex-col items-center justify-center py-12">
+                  <Button
+                    onClick={() => { setModalMode(mode); setIsCreateJobModalOpen(true); }}
+                    className="bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-black px-8 py-6 rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-3 text-lg"
+                  >
+                    <Plus size={20} />
+                    <span>Enter your {mode === 'goal-setting' ? 'Goal' : 'Reflection Details'}</span>
+                  </Button>
+                </div>
               ) : (
                 <div className="w-full flex flex-col">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
@@ -363,7 +424,7 @@ export default function SelfApply() {
                       <Badge className="px-3 md:px-4 py-2 font-bold text-[#007AFF] rounded-lg md:rounded-xl bg-[#EBF5FF] border border-[#D1E9FF] text-[9px] md:text-[10px] uppercase tracking-wide shadow-none flex items-center gap-2">
                         <Info size={12} className="md:hidden" />
                         <Info size={14} className="hidden md:block" />
-                        <span className="text-center">Please note that Zoe works best on Google Chrome</span>
+                        <span className="text-center">Please note that Apex works best on Google Chrome</span>
                       </Badge>
                     </div>
                   </div>
@@ -454,6 +515,7 @@ export default function SelfApply() {
       <CreateJobModal
         isOpen={isCreateJobModalOpen}
         onClose={() => setIsCreateJobModalOpen(false)}
+        mode={modalMode}
         onSubmit={(jobData) => {
           setIsCreateJobModalOpen(false);
           handleJobSelected(null, jobData);

@@ -1,4 +1,4 @@
-export type InterviewMode = 'practice' | 'mentor';
+export type InterviewMode = 'practice' | 'mentor' | 'goal-setting' | 'reflection';
 export type MentorProfile = 'communication' | 'socratic';
 
 export interface InterviewConfig {
@@ -13,4 +13,5 @@ export interface InterviewConfig {
   mode: InterviewMode;
   mentorProfile?: MentorProfile;
   ocrEnabled?: boolean;
+  turnLimit?: number;
 }

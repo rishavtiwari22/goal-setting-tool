@@ -2,4 +2,5 @@ export { VOICE_ONLY_RULES, FORMAT_RULES, SESSION_COMPLETION_RULES, POOR_INPUT_HA
 export { getInterviewerSystemPrompt, getInterviewerOpeningSystemPrompt } from './profiles/interviewer';
 export { getMentorSystemPrompt, getMentorOpeningSystemPrompt } from './profiles/mentor';
 export { getSocraticMentorSystemPrompt, getSocraticMentorOpeningSystemPrompt } from './profiles/socraticMentor';
+export { getGoalSettingSystemPrompt, getGoalSettingOpeningSystemPrompt, getReflectionOpeningSystemPrompt } from './profiles/goalSetting';
 export { buildOcrSystemSection, buildOcrUserSection, buildOcrRequestScreenShareSection } from './extensions/ocr';

@@ -94,4 +94,8 @@ export const ENV = {
     const url = import.meta.env['VITE_GOOGLE_SHEETS_WEBHOOK_URL'];
     return url && url.trim() !== '' ? url : '';
   },
+  DAILY_RECORDS_API_URL: () => {
+    const url = import.meta.env['VITE_DAILY_RECORDS_API_URL'];
+    return url && url.trim() !== '' ? url : 'https://smart-track-4b7p.onrender.com/api/daily-records';
+  },
 };

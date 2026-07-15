@@ -4,8 +4,6 @@ import Home from "./pages/Home";
 import SelfApply from "./pages/SelfApply";
 import Interview from "./pages/Interview";
 import Results from "./pages/Results";
-import DataPolicy from "./pages/DataPolicy";
-import InvitedInterview from "./pages/InvitedInterview";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUserList from "./pages/AdminUserList";
 import AdminRecruitment from "./pages/AdminRecruitment";
@@ -14,6 +12,8 @@ import { AdminAuthGuard } from "./components/AdminAuthGuard";
 import { usePageTracking } from "./hooks/usePageTracking";
 import { AuthGuard } from "./components/AuthGuard";
 import { cleanupSyncedSessions } from "./services/storage/interviewStorage";
+import CalendarPage from "./pages/CalendarPage";
+import { AuthProvider } from "./contexts/AuthContext";
 
 function AppContent() {
   usePageTracking();
@@ -29,6 +29,14 @@ function AppContent() {
         element={
           <AuthGuard>
             <Home />
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/calendar/:date?"
+        element={
+          <AuthGuard>
+            <CalendarPage />
           </AuthGuard>
         }
       />
@@ -55,14 +63,6 @@ function AppContent() {
             <Results />
           </AuthGuard>
         }
-      />
-      <Route
-        path="/data-policy"
-        element={<DataPolicy />}
-      />
-      <Route
-        path="/interview/invited"
-        element={<InvitedInterview />}
       />
       <Route
         path="/admin"
@@ -103,7 +103,9 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </BrowserRouter>
   );
 }

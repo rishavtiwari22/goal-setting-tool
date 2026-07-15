@@ -17,6 +17,7 @@ import {
 } from '../services/storage/interviewStorage';
 // import { enqueueSessionComplete } from '../services/sync/sessionCompleteBridge';
 import { resultGenerationStatus } from '../services/resultGenerationStatus';
+import * as dailySessionApi from '../services/api/dailySessionApi';
 
 export interface Message {
   id: string;
@@ -42,7 +43,7 @@ interface UseInterviewProps {
   onRequestScreenShare?: () => void;
 }
 
-const RECENT_WINDOW = 3;
+const RECENT_WINDOW = 10;
 const SUMMARIZE_START_AFTER = 2; // Start summarizing after 2nd answer
 
 // ── System-marker handling (PARKED + INTERVIEW_OVER) ─────────────────────────
@@ -397,6 +398,66 @@ export function useSinglePromptInterview({
       let result: InterviewResult;
       try {
         const parsed = JSON.parse(cleaned);
+
+        // --- BACKEND API INTEGRATION ---
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        if (configRef.current?.mode === 'goal-setting' && Array.isArray(parsed.goals)) {
+          const payload = {
+            email: localStorage.getItem('studentEmail') || '',
+            date: todayStr,
+            goals: parsed.goals.map((g: any) => ({
+              goalId: crypto.randomUUID(),
+              description: g.conclusion || g.summary || ''
+            }))
+          };
+          dailySessionApi.saveDailyRecord(payload).then(() => {
+            window.dispatchEvent(new Event('goalSaved'));
+          }).catch(console.error);
+        } else if (configRef.current?.mode === 'reflection' && Array.isArray(parsed.reflections)) {
+          let sourceGoals: any[] = [];
+          try {
+             // We can use getMonthlyRecords to find the goals, but getDailyRecord is better since we just added it.
+             const record = await dailySessionApi.getDailyRecord(todayStr);
+             sourceGoals = record?.goals || [];
+          } catch(e) {}
+          
+          // Send each reflection incrementally
+          parsed.reflections.forEach((r: any, idx: number) => {
+            const reflectionPayload = {
+              email: localStorage.getItem('studentEmail') || '',
+              date: todayStr,
+              reflections: [{
+                goalId: sourceGoals[idx]?.goalId || sourceGoals[idx]?.id || crypto.randomUUID(),
+                assessment: (r.conclusion?.toLowerCase().includes('insufficient') ? 'insufficient' : 'sufficient') as 'sufficient' | 'insufficient',
+                reflectionText: r.summary || ''
+              }]
+            };
+            dailySessionApi.saveDailyRecord(reflectionPayload).then(() => {
+              window.dispatchEvent(new Event('goalSaved'));
+            }).catch(console.error);
+          });
+
+          // If revisions are generated alongside reflections, send them incrementally too
+          if (Array.isArray(parsed.revisions)) {
+            parsed.revisions.forEach((rev: any, idx: number) => {
+              const revisionPayload = {
+                email: localStorage.getItem('studentEmail') || '',
+                date: todayStr,
+                revisions: [{
+                  topic: rev.topic || '',
+                  sourceGoalId: rev.sourceGoalId || sourceGoals[idx]?.goalId || sourceGoals[idx]?.id || crypto.randomUUID(),
+                  reason: rev.reason || ''
+                }]
+              };
+              dailySessionApi.saveDailyRecord(revisionPayload).then(() => {
+                window.dispatchEvent(new Event('goalSaved'));
+              }).catch(console.error);
+            });
+          }
+        }
+        // -------------------------------
+
         result = {
           summary: parsed.summary || '',
           score: typeof parsed.score === 'number' ? parsed.score : 0,
@@ -520,31 +581,54 @@ export function useSinglePromptInterview({
   const startInterview = useCallback(async (cfg: InterviewConfig, sid: string) => {
     setIsLoading(true);
     try {
-      const jd = buildJDText(cfg);
-
-      // Extract skills framework from JD
-      const extractMsgs = buildExtractionMessages(jd);
-      const rawFramework = await chatCompletion(extractMsgs);
-      const cleanedFramework = rawFramework.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
-
       let framework: SkillsFramework;
-      try {
-        framework = JSON.parse(cleanedFramework);
-      } catch {
-        // Fallback framework if parsing fails
+
+      if (cfg.mode === 'goal-setting' || cfg.mode === 'reflection') {
+        let contextGoals = 'No previous goals found.';
+        if (cfg.mode === 'reflection') {
+          try {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todaySession = await dailySessionApi.getDailyRecord(cfg.userId, todayStr);
+            if (todaySession && todaySession.goals && todaySession.goals.length > 0) {
+              contextGoals = JSON.stringify(todaySession.goals, null, 2);
+            }
+          } catch (e) {
+            console.error('Error fetching today goals for reflection', e);
+          }
+        }
+        
         framework = {
           role: cfg.jobTitle,
-          must_have_skills: cfg.examinationPoints.map(s => ({
-            skill: s,
-            weight: 1,
-            evaluation_approach: 'Direct questioning',
-          })),
+          must_have_skills: [{ skill: contextGoals, weight: 1, evaluation_approach: 'Direct' }],
           nice_to_have_skills: [],
           behavioral_competencies: [],
           red_flags_to_probe: [],
-          interview_focus_areas: cfg.examinationPoints,
+          interview_focus_areas: [contextGoals],
           suggested_question_sequence: [],
-        };
+        } as any; // Cast as any because we are overloading the SkillsFramework to just pass a string payload
+      } else {
+        const jd = buildJDText(cfg);
+        const extractMsgs = buildExtractionMessages(jd);
+        const rawFramework = await chatCompletion(extractMsgs);
+        const cleanedFramework = rawFramework.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+
+        try {
+          framework = JSON.parse(cleanedFramework);
+        } catch {
+          framework = {
+            role: cfg.jobTitle,
+            must_have_skills: cfg.examinationPoints.map(s => ({
+              skill: s,
+              weight: 1,
+              evaluation_approach: 'Direct questioning',
+            })),
+            nice_to_have_skills: [],
+            behavioral_competencies: [],
+            red_flags_to_probe: [],
+            interview_focus_areas: cfg.examinationPoints,
+            suggested_question_sequence: [],
+          };
+        }
       }
       frameworkRef.current = framework;
 
@@ -864,7 +948,9 @@ export function useSinglePromptInterview({
           runSummarization();
         }
 
-        if (hasEndToken) {
+        const limitReached = configRef.current?.turnLimit && turnCountRef.current >= configRef.current.turnLimit;
+
+        if (hasEndToken || limitReached) {
           await endInterviewRef.current();
         }
       } catch (error) {

@@ -5,7 +5,7 @@ import { trackPageView } from '@/services/analytics';
 // Dynamic page titles based on routes and domain
 const getPageTitle = (pathname: string, domain: string): string => {
   const domainPrefix = getDomainPrefix(domain);
-  
+
   switch (pathname) {
     case '/':
       return `Home - ${domainPrefix}`;
@@ -24,12 +24,10 @@ const getPageTitle = (pathname: string, domain: string): string => {
 
 // Helper to get domain-specific branding
 const getDomainPrefix = (domain: string): string => {
-  if (domain.includes('zoe.zuvy.org')) {
-    return 'Zoe: Your Learning Assistant';
-  } else if (domain.includes('amplifyapp.com')) {
-    return 'AI Interview (Staging)';
+  if (domain.includes('zoe.zuvy.org') || domain.includes('amplifyapp.com')) {
+    return 'Apex - AI SMART Goal Coach';
   } else {
-    return 'AI Interview';
+    return 'Apex';
   }
 };
 
@@ -40,9 +38,9 @@ export function usePageTracking(): void {
     const fullPath = location.pathname + location.search;
     const currentDomain = window.location.hostname;
     const dynamicTitle = getPageTitle(location.pathname, currentDomain);
-    
+
     console.log('📄 Page tracking:', fullPath, '|', dynamicTitle, '| Domain:', currentDomain);
-    
+
     // Use dynamic title based on current route and domain
     trackPageView(fullPath, dynamicTitle);
   }, [location]);

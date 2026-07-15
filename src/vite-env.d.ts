@@ -1,5 +1,10 @@
 /// <reference types="vite/client" />
 
+interface Window {
+  google: any;
+  mixpanel: any;
+}
+
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string
   readonly VITE_API_TOKEN: string

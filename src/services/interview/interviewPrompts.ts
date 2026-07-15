@@ -5,6 +5,9 @@ import {
   getInterviewerOpeningSystemPrompt,
   getMentorSystemPrompt,
   getMentorOpeningSystemPrompt,
+  getGoalSettingSystemPrompt,
+  getGoalSettingOpeningSystemPrompt,
+  getReflectionOpeningSystemPrompt,
   getSocraticMentorSystemPrompt,
   getSocraticMentorOpeningSystemPrompt,
   buildOcrSystemSection,
@@ -25,22 +28,27 @@ function shouldUseSocraticMentor(mode: InterviewMode, mentorProfile?: MentorProf
 // 1. JD Skill Extraction (one-time, non-streaming)
 // ─────────────────────────────────────────────
 
-export function buildExtractionMessages(jdText: string): ChatMessage[] {
+export function buildExtractionMessages(jdText: string, mode: InterviewMode = 'practice'): ChatMessage[] {
+  const contextType = mode === 'goal-setting' ? "Previous Day Goal" : "Today's Goal";
+  const systemContent = mode === 'goal-setting'
+    ? `You are an expert mentor. Your job is to analyze a student's previous day goal and extract a structured context framework to help guide today's goal-setting conversation.
+Return ONLY a valid JSON object with no preamble, no markdown, no code fences. Raw JSON only.`
+    : `You are an expert mentor. Your job is to analyze a student's goal for today and extract a structured reflection framework for a mentoring conversation.
+Return ONLY a valid JSON object with no preamble, no markdown, no code fences. Raw JSON only.`;
+
   return [
     {
       role: 'system',
-      content: `You are an expert technical recruiter and interview designer. Your job is to analyze job descriptions and extract a structured evaluation framework for conducting interviews.
-
-Return ONLY a valid JSON object with no preamble, no markdown, no code fences. Raw JSON only.`,
+      content: systemContent,
     },
     {
       role: 'user',
-      content: `Analyze this job description and extract a skill evaluation framework.
+      content: `Analyze this student's ${contextType} and extract a framework mapped to this structure.
 
-JD:
+${contextType}:
 ${jdText}
 
-Return this exact JSON structure:
+Return this exact JSON structure (map the goal details into these fields so the system can process it):
 {
   "role": "string",
   "must_have_skills": [
@@ -72,17 +80,29 @@ export function buildOpeningMessages(
   const frameworkJson = JSON.stringify(framework, null, 2);
   const isSocraticMentor = shouldUseSocraticMentor(mode, mentorProfile);
 
-  const systemPrompt = mode === 'mentor'
-    ? isSocraticMentor
-      ? getSocraticMentorOpeningSystemPrompt(framework.role, frameworkJson)
-      : getMentorOpeningSystemPrompt(framework.role, frameworkJson)
-    : getInterviewerOpeningSystemPrompt(framework.role, frameworkJson);
+  let systemPrompt: string;
+  let userContent: string;
 
-  const userContent = mode === 'mentor'
-    ? isSocraticMentor
-      ? `Start the Socratic technical mentoring session with a warm greeting and ask the student to share their background and one technical topic they want to strengthen for the ${framework.role} role.`
-      : `Start the learning session with a warm greeting and ask the student to share their background and experience relevant to the ${framework.role} role.`
-    : `Generate a warm, professional opening question for a ${framework.role} interview. Ask the candidate to tell you about their background, their years of experience, and their specific tech stack expertise relevant to this role.`;
+  if (mode === 'goal-setting') {
+    systemPrompt = getGoalSettingOpeningSystemPrompt(framework.role, frameworkJson);
+    userContent = `Start the goal-setting session with a warm greeting. 
+If the context shows they have a previous goal, acknowledge it. If not, welcome them to their first session.
+IMPORTANT: You MUST explicitly ask them to share their specific goal for today (e.g., "What specific goal would you like to set for today?").`;
+  } else if (mode === 'reflection') {
+    systemPrompt = getReflectionOpeningSystemPrompt(framework.role, frameworkJson); // Use mentor persona
+    userContent = `Start the reflection session with a warm, supportive greeting. 
+IMPORTANT: You MUST explicitly ask the mentee to talk about the goal they set today, what they accomplished, and how it went.`;
+  } else if (mode === 'mentor') {
+    systemPrompt = isSocraticMentor
+      ? getSocraticMentorOpeningSystemPrompt(framework.role, frameworkJson)
+      : getMentorOpeningSystemPrompt(framework.role, frameworkJson);
+    userContent = isSocraticMentor
+      ? `Start the Socratic technical mentoring session with a warm greeting and ask the student to share their background and one technical topic they want to strengthen for their goal.`
+      : `Start the learning session with a warm greeting and ask the student to share their background and experience relevant to their goal.`;
+  } else {
+    systemPrompt = getInterviewerOpeningSystemPrompt(framework.role, frameworkJson);
+    userContent = `Generate a warm, supportive opening question for a reflection session. Ask the mentee to talk about what they accomplished today and how it went.`;
+  }
 
   return [
     { role: 'system', content: systemPrompt },
@@ -126,11 +146,18 @@ export function buildInterviewerMessages(
     ? '\n\n' + buildOcrRequestScreenShareSection(screenShareAskCount ?? 0)
     : '';
 
-  const systemPrompt = mode === 'mentor'
-    ? isSocraticMentor
+  let systemPrompt: string;
+  if (mode === 'goal-setting') {
+    systemPrompt = getGoalSettingSystemPrompt(framework.role, frameworkJson, timeContext);
+  } else if (mode === 'reflection') {
+    systemPrompt = getInterviewerSystemPrompt(framework.role, frameworkJson, timeContext, redFlags); // Reuse the reflection persona we built previously
+  } else if (mode === 'mentor') {
+    systemPrompt = isSocraticMentor
       ? getSocraticMentorSystemPrompt(framework.role, frameworkJson, timeContext) + ocrSystemSection
-      : getMentorSystemPrompt(framework.role, frameworkJson, timeContext) + ocrSystemSection + requestShareSection
-    : getInterviewerSystemPrompt(framework.role, frameworkJson, timeContext, redFlags) + ocrSystemSection + requestShareSection;
+      : getMentorSystemPrompt(framework.role, frameworkJson, timeContext) + ocrSystemSection + requestShareSection;
+  } else {
+    systemPrompt = getInterviewerSystemPrompt(framework.role, frameworkJson, timeContext, redFlags) + ocrSystemSection + requestShareSection;
+  }
 
   const recentConversation = recentMessages
     .map(m => `${m.role === 'interviewer' ? 'Interviewer' : 'Candidate'}: ${m.content}`)
@@ -155,11 +182,18 @@ REMINDER: You have already requested screen share twice and it was declined, or 
 - DO NOT append the [REQUEST_SCREEN_SHARE] token.
 - Focus entirely on the JD skills and high-level project discussions via voice only.`;
 
-  const closingInstruction = (mode === 'mentor'
-    ? isSocraticMentor
+  let closingInstruction: string;
+  if (mode === 'goal-setting') {
+    closingInstruction = 'Based on the conversation so far, provide brief feedback on the student\'s last response and ask your next clarifying question to sharpen their goal. Be encouraging and keep it to ONE short question.';
+  } else if (mode === 'reflection') {
+    closingInstruction = 'Based on the conversation so far, what is your next reflection question? Act like a rigorous interviewer: probe deeply into their technical or conceptual understanding to verify they ACTUALLY learned and fully completed their goal.';
+  } else if (mode === 'mentor') {
+    closingInstruction = (isSocraticMentor
       ? 'Based on the conversation so far, provide brief feedback on the student\'s last response and ask your next Socratic technical question. Be encouraging, use hints when needed, and keep it to one question.'
-      : 'Based on the conversation so far, provide brief feedback on the student\'s last response and ask your next question. Be encouraging and teach when needed.'
-    : 'Based on the conversation so far, what is your next interviewer message? Probe uncovered skills, follow up on anything interesting or vague, and keep the conversation natural. If the candidate mentions a specific technical implementation, ask them to explain the trade-offs they made.') + screenShareReminder;
+      : 'Based on the conversation so far, provide brief feedback on the student\'s last response and ask your next question. Be encouraging and teach when needed.') + screenShareReminder;
+  } else {
+    closingInstruction = 'Based on the conversation so far, what is your next reflection question? Act like a rigorous interviewer: probe deeply into their technical or conceptual understanding to verify they ACTUALLY learned and fully completed their goal.' + screenShareReminder;
+  }
 
   const userPrompt = [
     '## Conversation Summary (context)',
@@ -264,10 +298,10 @@ function formatQAHistory(qaHistory: SummarizeQAItem[]): string {
 }
 
 export function buildSummarizePrompt(params: BuildSummarizePromptParams): { systemMessage: string; humanMessage: string } {
-  const isMentor = params.mode === 'mentor';
-  return isMentor
-    ? buildMentorSummarizePrompt(params)
-    : buildPracticeSummarizePrompt(params);
+  const isPractice = !params.mode || params.mode === 'practice';
+  return isPractice
+    ? buildPracticeSummarizePrompt(params)
+    : buildMentorSummarizePrompt(params);
 }
 
 // ─────────────────────────────────────────────
@@ -277,34 +311,32 @@ export function buildSummarizePrompt(params: BuildSummarizePromptParams): { syst
 function buildPracticeSummarizePrompt(
   params: BuildSummarizePromptParams,
 ): { systemMessage: string; humanMessage: string } {
-  const knowledgePointsStr = params.knowledgePoints.join(', ');
+  const knowledgePointsStr = (params.knowledgePoints || []).join(', ');
   const qaHistoryStr = formatQAHistory(params.qaHistory);
 
-  const systemMessage = `You are a world-class software technology expert tasked with hiring a ${params.jobTitle}. The candidate has completed the session. Produce a specific, evidence-based evaluation useful for hiring decisions.
+  const systemMessage = `You are a mentor summarizing a reflection conversation with a mentee. The mentee has just finished reflecting on their daily goal. Produce a specific, evidence-based assessment of their understanding and a reflection paragraph.
 
-# Role Description:
+# Goal Description:
 ${params.jobDescription}
 
-# Knowledge Points Assessed:
+# Knowledge Points Covered:
 ${knowledgePointsStr}
 
 # Session Duration:
 ${params.interviewTime} minutes
 
 When writing the summary and conclusion:
-- Focus on observable behaviors, decisions, reasoning, and communication — not personality traits.
-- Reference concrete moments from the interview (without quoting verbatim).
-- Avoid vague comments unless paired with a clear explanation.
-- Ensure all suggestions are actionable and relevant to the job.
-- Describe strengths first, then improvement areas, ending with an objective overall assessment.
-- For each strength, briefly describe how they can continue to build on it.
+- Assess whether the student demonstrates sufficient understanding of what they set out to do.
+- Write a reflection paragraph as if summarizing the mentee's own experience, grounded in what they actually said in the conversation. Do not write a generic AI-generated summary.
+- The 'summary' field MUST contain the reflection paragraph.
+- Provide actionable feedback on what they did well and what they can improve.
 
 REQUIREMENTS:
-- Address the candidate as "You" throughout.
-- Provide exactly 4 strengths and exactly 4 improvement areas.
+- Address the mentee as "You" throughout.
+- Provide exactly 4 strengths and exactly 4 improvement areas (these can be related to their understanding and execution of the goal).
 - No markdown formatting. No headings. No commentary outside the JSON.
-- The conclusion should clearly indicate your recommendation (move forward, on hold, or not recommended) with a short rationale.
-- Avoid judgmental language. Focus on behavior and outcomes.
+- The conclusion should clearly summarize your assessment of their understanding and provide encouraging next steps.
+- Avoid judgmental language. Focus on growth and reflection.
 
 LANGUAGE: Write the full response in ${params.language}.
 
@@ -360,7 +392,74 @@ function buildMentorSummarizePrompt(
 
   const hasTopicsToFlag = parked.length > 0;
 
-  const systemMessage = `You are an interview coach reviewing a candidate's mock-interview session for the role of ${params.jobTitle}. Your job is NOT to evaluate technical correctness — it's to evaluate how WELL THEY INTERVIEW.
+  let systemMessage: string;
+
+  if (params.mode === 'goal-setting') {
+    systemMessage = `You are an expert mentor finalizing a student's daily goal-setting session.
+Your job is to read the conversation and output a finalized SMART Goal object. 
+IMPORTANT: The student may have set MULTIPLE goals during the session. You must combine all of them into this single output structure.
+
+# Finalizing the Goal(s)
+Based on the conversation, construct a clear, specific, and measurable summary of ALL goals the student committed to achieve today.
+DO NOT output an interview review. Output ONLY the Goal data.
+
+LANGUAGE: Write the full response in ${params.language}.
+
+OUTPUT FORMAT — respond with ONLY valid JSON matching this EXACT structure:
+
+{
+  "summary": "A high-level summary of the session.",
+  "conclusion": "A brief conclusion.",
+  "goals": [
+    {
+      "summary": "This should be the short, punchy Title of the goal.",
+      "conclusion": "A longer description of the goal, what they will do, and how they will do it.",
+      "status": "active",
+      "score": 100,
+      "topStrengths": [
+        { "name": "Specific", "description": "What exactly will be done?" }
+      ],
+      "improvementAreas": [
+        { "name": "Achievable", "description": "Is it realistic for one day?" }
+      ],
+      "topicsToStudy": []
+    }
+  ]
+}`;
+  } else if (params.mode === 'reflection') {
+    systemMessage = `You are an expert mentor finalizing a student's daily reflection session.
+Your job is to read the conversation and output a structured reflection assessment.
+
+# Reflection Assessment
+Based on the conversation, assess whether the student actually did and understood what they set out to do in their goals today.
+Provide a reflection paragraph grounded in what the student actually said.
+If they successfully answered follow-ups, their status is "completed". If they struggled (couldn't articulate after follow-ups) or admitted failing, their status is "abandoned" or "partially_completed".
+
+LANGUAGE: Write the full response in ${params.language}.
+
+OUTPUT FORMAT — respond with ONLY valid JSON matching this EXACT structure:
+
+{
+  "summary": "A high-level summary of the entire reflection session.",
+  "conclusion": "A brief conclusion.",
+  "reflections": [
+    {
+      "summary": "A 2-3 sentence reflection paragraph summarizing their progress and understanding for this goal.",
+      "conclusion": "An assessment of whether their understanding is sufficient or insufficient.",
+      "status": "completed", 
+      "score": 100,
+      "topStrengths": [
+        { "name": "Success", "description": "Something they achieved or understood well today." }
+      ],
+      "improvementAreas": [
+        { "name": "Challenge", "description": "A blocker or misunderstanding they faced today." }
+      ],
+      "topicsToStudy": []
+    }
+  ]
+}`;
+  } else {
+    systemMessage = `You are an interview coach reviewing a candidate's mock-interview session for the role of ${params.jobTitle}. Your job is NOT to evaluate technical correctness — it's to evaluate how WELL THEY INTERVIEW.
 
 # Role Context:
 ${params.jobDescription}
@@ -429,6 +528,7 @@ OUTPUT FORMAT — respond with ONLY valid JSON matching this EXACT structure:
     { "name": "Topic Name", "description": "Forward-looking study target — what to learn and why it'll help in the next interview. Never mention skipping or failing." }
   ]
 }`;
+  }
 
   const humanMessage = `# The questions and answers from the session are as follows:
 ${qaHistoryStr}${parkedSection}

@@ -354,7 +354,7 @@
 
 
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
     Dialog,
     DialogContent,
@@ -386,10 +386,21 @@ interface CreateJobModalProps {
     onClose: () => void;
     onSubmit: (jobData: CustomJobData) => void;
     initialData?: CustomJobData;
+    mode?: 'practice' | 'mentor' | 'goal-setting' | 'reflection';
 }
 
-export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData }: CreateJobModalProps) {
+export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData, mode }: CreateJobModalProps) {
     const [activeTab, setActiveTab] = useState<"manual" | "jd">("manual");
+
+    useEffect(() => {
+        if (isOpen) {
+            if (mode === 'goal-setting' || mode === 'reflection') {
+                setActiveTab("jd");
+            } else {
+                setActiveTab("manual");
+            }
+        }
+    }, [mode, isOpen]);
 
     // Manual tab state
     const [jobTitle, setJobTitle] = useState(initialData?.job_title || "");
@@ -427,7 +438,7 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
         e.preventDefault();
         if (!jdText.trim()) return;
         onSubmit({
-            job_title: "Custom Position",
+            job_title: mode === 'goal-setting' ? "Goal Setting Context" : mode === 'reflection' ? "Reflection Context" : "Custom Position",
             job_description: jdText.trim(),
             technical_skills: [],
             soft_skills: [],
@@ -442,7 +453,11 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
         setSoftSkills([]);
         setErrors({});
         setJdText("");
-        setActiveTab("manual");
+        if (mode !== 'goal-setting' && mode !== 'reflection') {
+            setActiveTab("manual");
+        } else {
+            setActiveTab("jd");
+        }
     };
 
     const handleJobTitleChange = (value: string) => {
@@ -478,7 +493,7 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                             <Sparkles className="h-5 w-5 text-[#386641]" />
                         </div>
                         <DialogTitle className="text-xl font-bold text-gray-900">
-                            {initialData ? "Edit Job Description" : "Create Custom Interview"}
+                            {mode === 'goal-setting' ? 'Setup Goal Setting' : mode === 'reflection' ? 'Setup Reflection' : initialData ? "Edit Job Description" : "Create Custom Interview"}
                         </DialogTitle>
                     </div>
                     <DialogClose onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -487,6 +502,7 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                 </DialogHeader>
 
                 {/* Tab switcher */}
+                {mode !== 'goal-setting' && mode !== 'reflection' && (
                 <div className="px-8 pt-5 flex gap-1 border-b border-gray-100 bg-white">
                     <button
                         type="button"
@@ -515,19 +531,20 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                         From JD
                     </button>
                 </div>
+                )}
 
                 {/* JD tab form */}
                 {activeTab === "jd" && (
                     <form onSubmit={handleJDSubmit} className="px-8 py-6 space-y-5">
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-[#386641] flex items-center gap-2">
-                                <FileText className="h-4 w-4" /> Job Description
+                                <FileText className="h-4 w-4" /> {mode === 'goal-setting' ? "Previous Day Goal" : mode === 'reflection' ? "Today's Goal" : "Job Description"}
                             </label>
                             <p className="text-xs text-gray-500">
-                                Paste the full job description. The AI will structure the interview based on it.
+                                {mode === 'goal-setting' ? "Paste your previous day goal to get started setting today's goal." : mode === 'reflection' ? "Paste the goal you worked on today to reflect on it." : "Paste the full job description. The AI will structure the interview based on it."}
                             </p>
                             <Textarea
-                                placeholder="Paste the full job description here..."
+                                placeholder={mode === 'goal-setting' ? "Paste your previous goal..." : mode === 'reflection' ? "Paste today's goal..." : "Paste the full job description here..."}
                                 value={jdText}
                                 onChange={(e) => setJdText(e.target.value)}
                                 className="min-h-52 border border-gray-200 focus:border-[#386641] rounded-lg p-3 text-base resize-none"
@@ -542,7 +559,7 @@ export default function CreateJobModal({ isOpen, onClose, onSubmit, initialData 
                                 disabled={!jdText.trim()}
                                 className="bg-[#386641] hover:bg-[#2a4d31] text-white font-bold px-6 h-12 rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
                             >
-                                Start Interview
+                                {mode === 'goal-setting' ? "Start Goal Setting" : mode === 'reflection' ? "Start Reflection" : "Start Interview"}
                             </Button>
                         </div>
                     </form>

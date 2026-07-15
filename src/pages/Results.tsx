@@ -15,6 +15,7 @@ export default function Results() {
   const [userName, setUserName] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingResult, setIsGeneratingResult] = useState(false);
+  const [generationFailed, setGenerationFailed] = useState(false);
 
   const isInvited = typeof window !== 'undefined' ? sessionStorage.getItem("isInvited") === "true" : false;
   const invitationId = typeof window !== 'undefined' ? sessionStorage.getItem("invitationId") : null;
@@ -133,7 +134,8 @@ export default function Results() {
             return prevSession;
           });
         } else {
-          console.log('[Results] No result found in localStorage yet');
+          console.log('[Results] No result found and generation is complete. Marking as failed.');
+          setGenerationFailed(true);
         }
       }
     };
@@ -263,13 +265,42 @@ export default function Results() {
     if (isGeneratingResult) {
       return (
         <div className="flex items-center justify-center min-h-screen">
-          <div>Generating results...</div>
+          <div>
+            {session?.config?.mode === 'goal-setting' ? 'Shaping your daily goal...' :
+             session?.config?.mode === 'reflection' ? 'Reflecting on what you shared...' :
+             'Generating results...'}
+          </div>
         </div>
       );
     }
+    
+    if (generationFailed) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen text-center p-6">
+          <div className="text-red-500 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          </div>
+          <h2 className="text-2xl font-semibold mb-2">Something went wrong</h2>
+          <p className="text-gray-400 max-w-md">
+            We couldn't generate the final summary for your session. The AI might have encountered an error while processing your conversation.
+          </p>
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="mt-8 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+          >
+            Return Home
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div>Waiting for results...</div>
+        <div>
+          {session?.config?.mode === 'goal-setting' ? 'Finalizing your goal...' :
+           session?.config?.mode === 'reflection' ? 'Preparing your reflection summary...' :
+           'Waiting for results...'}
+        </div>
       </div>
     );
   }
@@ -290,7 +321,11 @@ export default function Results() {
   if (!session.result && isGeneratingResult) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div>Generating results...</div>
+        <div>
+          {session?.config?.mode === 'goal-setting' ? 'Shaping your daily goal...' :
+           session?.config?.mode === 'reflection' ? 'Reflecting on what you shared...' :
+           'Generating results...'}
+        </div>
       </div>
     );
   }

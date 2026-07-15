@@ -1,5 +1,5 @@
 export type InterviewPhase = 'introduction' | 'project' | 'technical';
-export type InterviewMode = 'practice' | 'mentor';
+export type InterviewMode = 'practice' | 'mentor' | 'goal-setting' | 'reflection';
 export type MentorProfile = 'communication' | 'socratic';
 
 export interface QAHistoryItem {

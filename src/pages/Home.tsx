@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { getEmailFromJWT, isValidJWTFormat } from "../utils/jwt";
 import { getResumeBuddyUrl } from "../utils/zuvySource";
 import { motion } from "framer-motion";
-import { Briefcase, BrainCircuit, GraduationCap, FileText, Info } from "lucide-react";
+import { Briefcase, BrainCircuit, GraduationCap, FileText, Info, Calendar as CalendarIcon } from "lucide-react";
 import Header from "@/components/Header";
 import HomeInterviewCard from "@/components/HomeInterviewcard";
 import type { InterviewMode } from "../services/interview/interviewEngine";
@@ -59,46 +59,31 @@ export default function Home() {
     estimatedTime: string;
     comingSoon: boolean;
     mode?: InterviewMode;
-    ctaLabel?: string;
+    theme?: "green" | "purple";
   }[] = [
-    {
-      id: "practice-interview",
-      icon: <Briefcase className="w-6 h-6 text-[#2B5E2B]" />,
-      title: "Practice Interview",
-      description: "Simulate a real interview. Get evaluated on your answers, communication, and technical depth.",
-      estimatedTime: "10-30 mins",
-      comingSoon: false,
-      mode: "practice",
-    },
-    {
-      id: "resume-buddy",
-      icon: <FileText className="w-6 h-6 text-[rgb(0,107,32)]" />,
-      title: "ResumeBuddy",
-      description: "Create a professional resume tailored to your dream job with AI assistance.",
-      estimatedTime: "5-10 mins",
-      comingSoon: false,
-      ctaLabel: "Build Resume",
-    },
-    {
-      id: "mentor-session",
-      icon: <GraduationCap className="w-6 h-6 text-[#2B5E2B]" />,
-      title: "Mentor Guided Session",
-      description: "Learn at your own pace with an AI mentor who teaches, hints, and guides you through concepts.",
-      estimatedTime: "10-30 mins",
-      comingSoon: false,
-      mode: "mentor",
-    },
-    {
-      id: "flowchart",
-      icon: <BrainCircuit className="w-6 h-6 text-[#2B5E2B]" />,
-      title: "Critical Thinking with Flowchart",
-      description: "Design flowcharts to test your problem-solving, algorithm, and process-thinking skills.",
-      estimatedTime: "15-20 mins",
-      comingSoon: true,
-    },
-  ];
+      {
+        id: "goal-setting",
+        icon: <BrainCircuit className="w-8 h-8" />,
+        title: "Daily Goal Setting",
+        description: "Work with your AI Mentor to define a clear, specific, and measurable goal for today.",
+        estimatedTime: "10-15 mins",
+        comingSoon: false,
+        mode: "goal-setting",
+        theme: "green" as const,
+      },
+      {
+        id: "reflection",
+        icon: <GraduationCap className="w-8 h-8" />,
+        title: "End of Day Reflection",
+        description: "Review your progress, discuss blockers, and reflect on what you learned today.",
+        estimatedTime: "10-15 mins",
+        comingSoon: false,
+        mode: "reflection",
+        theme: "purple" as const,
+      },
+    ];
 
-  const handleCardClick = (id: string, isComingSoon: boolean, mode?: InterviewMode) => {
+  const handleCardClick = (id: string, isComingSoon: boolean, mode?: InterviewMode, autoStart: boolean = true) => {
     if (id === "resume-buddy") {
       const token = resolveStudentToken();
       if (token) {
@@ -131,7 +116,7 @@ export default function Home() {
 
     setSelectedType(id);
     setTimeout(() => {
-      navigate(token ? `/selfapply?token=${token}` : "/selfapply", { state: { mode } });
+      navigate(token ? `/selfapply?token=${token}` : "/selfapply", { state: { mode, autoStart } });
     }, 300);
   };
 
@@ -188,16 +173,19 @@ export default function Home() {
           />
         </motion.div>
 
-        <div className="mb-8 space-y-2">
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight px-2">
+        <div className="mb-10 space-y-3">
+          <div className="inline-block px-4 py-1.5 bg-green-100 text-green-800 rounded-full text-xs font-bold tracking-wider uppercase mb-2">
+            AI SMART Goal Coach
+          </div>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight px-2">
             What would you like to do today?
           </h2>
-          <p className="text-slate-500 text-sm font-medium max-w-xl mx-auto px-4">
-            By continuing, you agree to let us use this data to enhance learning experience.
+          <p className="text-slate-500 text-sm md:text-base font-medium max-w-xl mx-auto px-4">
+            Start your day with a clear plan, and end it with a meaningful reflection.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 w-full text-left max-w-2xl">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full text-left max-w-4xl px-4">
           {interviewTypes.map((type, index) => (
             <motion.div
               key={type.id}
@@ -210,10 +198,13 @@ export default function Home() {
                 title={type.title}
                 description={type.description}
                 estimatedTime={type.estimatedTime}
-                ctaLabel={type.ctaLabel}
-                onClick={() => handleCardClick(type.id, type.comingSoon, type.mode)}
-                isSelected={selectedType === type.id}
-                comingSoon={type.comingSoon}
+                theme={type.theme}
+                onClick={() => handleCardClick(type.id, type.comingSoon, type.mode, true)}
+                onSecondaryClick={(e) => {
+                  e.stopPropagation();
+                  handleCardClick(type.id, type.comingSoon, type.mode, false);
+                }}
+                className="w-full"
               />
             </motion.div>
           ))}
@@ -223,7 +214,7 @@ export default function Home() {
           <div className="px-5 py-3 bg-[rgb(204,253,209)] rounded-full shadow-none inline-flex items-center gap-2">
             <Info className="w-4 h-4 shrink-0 text-[rgb(204,253,209)] bg-[rgb(0,107,12)] rounded-full" />
             <span className="text-[10px] md:text-[12px] font-bold text-[rgb(0,107,12)]">
-               Please note that Zoe works best on Google Chrome
+              Please note that Apex works best on Google Chrome
             </span>
           </div>
         </div>

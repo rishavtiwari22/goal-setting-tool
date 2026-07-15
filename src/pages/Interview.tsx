@@ -67,7 +67,14 @@ export default function Interview() {
   const submitAnswerRef = useRef<((text: string) => void) | null>(null);
   const listeningStartTimeRef = useRef<number>(0);
 
-  const loadingTexts = [
+  const isMentorMode = config?.mode === 'goal-setting' || config?.mode === 'reflection';
+  const loadingTexts = isMentorMode ? [
+    "Getting things ready for you...",
+    "Reviewing what you shared...",
+    "Preparing our discussion points...",
+    "Setting up your personalized session...",
+    "Almost there, just a moment...",
+  ] : [
     "Getting things ready for you...",
     "Reviewing the job description...",
     "Preparing your interview questions...",
