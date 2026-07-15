@@ -312,6 +312,9 @@ export function useSinglePromptInterview({
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState('');
   const [sessionId, setSessionId] = useState(initialSessionId || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [pendingGoalsPayload, setPendingGoalsPayload] = useState<any | null>(null);
 
   // Internal refs — not causing re-renders
   const configRef = useRef<InterviewConfig | null>(config);
@@ -356,17 +359,35 @@ export function useSinglePromptInterview({
   // ── End interview ──────────────────────────────────────────────────────────
 
   const endInterview = useCallback(async () => {
-    if (isCompletedRef.current) return;
-    isCompletedRef.current = true;
-    setIsCompleted(true);
-
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+    if (isCompletedRef.current || isSaving) return;
+    
+    // If we have a pending payload from a previous failure, just retry the save
+    if (pendingGoalsPayload) {
+      setIsSaving(true);
+      setSaveError(null);
+      try {
+        await dailySessionApi.saveDailyRecord(pendingGoalsPayload);
+        window.dispatchEvent(new Event('goalSaved'));
+        setPendingGoalsPayload(null);
+        if (sessionRef.current) {
+          sessionRef.current.saveError = undefined;
+          sessionRef.current.pendingGoalsPayload = undefined;
+        }
+      } catch (err: any) {
+        setIsSaving(false);
+        setSaveError(err.message || 'Failed to save goals. Please try again.');
+        return; // Stop and wait for another retry
+      }
     }
 
+    setIsSaving(true);
+    setSaveError(null);
+
     const session = sessionRef.current;
-    if (!session) return;
+    if (!session) {
+      setIsSaving(false);
+      return;
+    }
 
     session.status = 'completed';
     session.endTime = new Date().toISOString();
@@ -397,63 +418,92 @@ export function useSinglePromptInterview({
 
       let result: InterviewResult;
       try {
+        console.log('[DEBUG] Raw LLM result for summary:', cleaned);
         const parsed = JSON.parse(cleaned);
+        console.log('[DEBUG] Parsed summary JSON:', parsed);
+        console.log('[DEBUG] Current mode:', configRef.current?.mode);
 
         // --- BACKEND API INTEGRATION ---
         const now = new Date();
         const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         if (configRef.current?.mode === 'goal-setting' && Array.isArray(parsed.goals)) {
+          // The backend always appends new goals to existing ones (never replaces).
+          // So we simply send the new goals from this session — the backend merges them in.
+          const newGoals = parsed.goals.map((g: any) => ({
+            goalId: crypto.randomUUID(),
+            description: g.conclusion || g.summary || ''
+          }));
+
           const payload = {
-            email: localStorage.getItem('studentEmail') || '',
+            email: ENV.DUMMY_EMAIL(),
             date: todayStr,
-            goals: parsed.goals.map((g: any) => ({
-              goalId: crypto.randomUUID(),
-              description: g.conclusion || g.summary || ''
-            }))
+            goals: newGoals
           };
-          dailySessionApi.saveDailyRecord(payload).then(() => {
+          try {
+            await dailySessionApi.saveDailyRecord(payload);
             window.dispatchEvent(new Event('goalSaved'));
-          }).catch(console.error);
+          } catch (err: any) {
+            console.error('Failed to save goals:', err);
+            setSaveError(err.message || 'Failed to save goals. Please try again.');
+            setPendingGoalsPayload(payload);
+            session.saveError = err.message || 'Failed to save goals. Please try again.';
+            session.pendingGoalsPayload = payload;
+            saveInterviewSessionBySessionId(session);
+            setIsSaving(false);
+            return; // Abort endInterview so it doesn't navigate
+          }
         } else if (configRef.current?.mode === 'reflection' && Array.isArray(parsed.reflections)) {
           let sourceGoals: any[] = [];
           try {
-            // We can use getMonthlyRecords to find the goals, but getDailyRecord is better since we just added it.
             const record = await dailySessionApi.getDailyRecord(todayStr);
-            sourceGoals = record?.goals || [];
+            sourceGoals = (record?.goals || []).map((g: any) => ({ goalId: g.goalId, description: g.description }));
           } catch (e) { }
 
-          // Send each reflection incrementally
-          parsed.reflections.forEach((r: any, idx: number) => {
+          // Send each reflection — stop immediately and surface error if any save fails
+          for (let idx = 0; idx < parsed.reflections.length; idx++) {
+            const r = parsed.reflections[idx];
             const reflectionPayload = {
-              email: localStorage.getItem('studentEmail') || '',
+              email: ENV.DUMMY_EMAIL(),
               date: todayStr,
               reflections: [{
-                goalId: sourceGoals[idx]?.goalId || sourceGoals[idx]?.id || crypto.randomUUID(),
+                goalId: sourceGoals[idx]?.goalId || crypto.randomUUID(),
                 assessment: (r.conclusion?.toLowerCase().includes('insufficient') ? 'insufficient' : 'sufficient') as 'sufficient' | 'insufficient',
                 reflectionText: r.summary || ''
               }]
             };
-            dailySessionApi.saveDailyRecord(reflectionPayload).then(() => {
+            try {
+              await dailySessionApi.saveDailyRecord(reflectionPayload);
               window.dispatchEvent(new Event('goalSaved'));
-            }).catch(console.error);
-          });
+            } catch (err: any) {
+              console.error(err);
+              setSaveError(err.message || 'Failed to save reflection. Please try again.');
+              setIsSaving(false);
+              return; // Abort — don't navigate until save succeeds
+            }
+          }
+
+          // Store parsed reflections on session so Interview.tsx can read them for the popup
+          session.reflectionResult = parsed.reflections;
 
           // If revisions are generated alongside reflections, send them incrementally too
           if (Array.isArray(parsed.revisions)) {
-            parsed.revisions.forEach((rev: any, idx: number) => {
+            for (let idx = 0; idx < parsed.revisions.length; idx++) {
+              const rev = parsed.revisions[idx];
               const revisionPayload = {
-                email: localStorage.getItem('studentEmail') || '',
+                email: ENV.DUMMY_EMAIL(),
                 date: todayStr,
                 revisions: [{
                   topic: rev.topic || '',
-                  sourceGoalId: rev.sourceGoalId || sourceGoals[idx]?.goalId || sourceGoals[idx]?.id || crypto.randomUUID(),
+                  sourceGoalId: rev.sourceGoalId || sourceGoals[idx]?.goalId || crypto.randomUUID(),
                   reason: rev.reason || ''
                 }]
               };
-              dailySessionApi.saveDailyRecord(revisionPayload).then(() => {
-                window.dispatchEvent(new Event('goalSaved'));
-              }).catch(console.error);
-            });
+              try {
+                await dailySessionApi.saveDailyRecord(revisionPayload);
+              } catch (err: any) {
+                console.error('[Revision save error — non-fatal]', err);
+              }
+            }
           }
         }
         // -------------------------------
@@ -469,7 +519,8 @@ export function useSinglePromptInterview({
           improvementAreas: Array.isArray(parsed.improvementAreas) ? parsed.improvementAreas : [],
           topicsToStudy: Array.isArray(parsed.topicsToStudy) ? parsed.topicsToStudy : undefined,
         };
-      } catch {
+      } catch (e: any) {
+        console.error('[DEBUG] Failed to parse LLM summary or process goals:', e);
         // Fallback: build a minimal topicsToStudy from parkedTopics directly
         // so the candidate still gets value if the LLM call fails.
         const fallbackTopics = (session.parkedTopics || []).map((t) => ({
@@ -496,14 +547,20 @@ export function useSinglePromptInterview({
       console.error('Error generating interview results:', error);
       saveInterviewSessionBySessionId(session);
     } finally {
-      // Flip the generating flag back so Results.tsx stops waiting and either
-      // renders the result (success path) or falls through to its fallback
-      // state (catch path).
       resultGenerationStatus.setComplete(session.sessionId);
     }
 
+    setIsSaving(false);
+    isCompletedRef.current = true;
+    setIsCompleted(true);
+    
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
     onCompleteRef.current(session);
-  }, []);
+  }, [pendingGoalsPayload, isSaving]);
 
   // Keep endInterviewRef in sync
   useEffect(() => { endInterviewRef.current = endInterview; }, [endInterview]);
@@ -585,14 +642,26 @@ export function useSinglePromptInterview({
 
       if (cfg.mode === 'goal-setting' || cfg.mode === 'reflection') {
         let contextGoals = 'No previous goals found.';
+
         if (cfg.mode === 'reflection') {
           try {
             const todayStr = new Date().toISOString().split('T')[0];
             const todaySession = await dailySessionApi.getDailyRecord(todayStr);
-            if (todaySession && todaySession.goals && todaySession.goals.length > 0) {
-              contextGoals = JSON.stringify(todaySession.goals, null, 2);
+            if (todaySession?.goals?.length > 0) {
+              // Clean MongoDB fields, format for human-readable AI context
+              const cleaned = todaySession.goals.map((g: any) => ({
+                goalId: g.goalId,
+                description: g.description,
+              }));
+              contextGoals = cleaned
+                .map((g: any, i: number) => `Goal ${i + 1}: ${g.description}`)
+                .join('\n');
+            } else {
+              // Signal to Interview.tsx that there are no goals — don't start
+              throw new Error('NO_GOALS_FOR_TODAY');
             }
-          } catch (e) {
+          } catch (e: any) {
+            if (e.message === 'NO_GOALS_FOR_TODAY') throw e;
             console.error('Error fetching today goals for reflection', e);
           }
         }
@@ -962,13 +1031,31 @@ export function useSinglePromptInterview({
     [runSummarization]
   );
 
+  const retrySave = useCallback(async () => {
+    if (!pendingGoalsPayload) return;
+    setIsLoading(true);
+    setSaveError(null);
+    try {
+      await dailySessionApi.saveDailyRecord(pendingGoalsPayload);
+      setPendingGoalsPayload(null);
+      window.dispatchEvent(new Event('goalSaved'));
+    } catch (err: any) {
+      setSaveError(err.message || 'Failed to save goals');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [pendingGoalsPayload]);
+
   return {
     messages,
     isLoading,
+    isSaving,
     isCompleted,
     remainingTime,
     submitAnswer,
     currentQuestion,
     sessionId,
+    saveError,
+    retrySave,
   };
 }

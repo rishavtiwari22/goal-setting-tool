@@ -242,7 +242,7 @@ export const usePiper = (config: PiperConfig | null) => {
     const speak = useCallback(async (text: string) => {
         if (text.trim()) {
             setPendingSpeechCount(prev => prev + 1);
-            if (!workerRef.current) {
+            if (!workerRef.current || !state.isReady) {
                 // Worker not ready yet — buffer until it initializes
                 preReadyQueueRef.current.push(text.trim());
             } else {
@@ -250,7 +250,7 @@ export const usePiper = (config: PiperConfig | null) => {
                 processSynthesisQueue();
             }
         }
-    }, [processSynthesisQueue]);
+    }, [processSynthesisQueue, state.isReady]);
 
     // Reset Logic
     const resetTTS = useCallback(() => {

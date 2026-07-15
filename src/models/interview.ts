@@ -69,6 +69,21 @@ export interface InterviewSession {
   // from display + TTS). Used by the post-session evaluator to compile a
   // "topics to study" list, framed positively to the candidate.
   parkedTopics?: string[];
+  
+  // Mentor-mode only: error handling for goal batching
+  saveError?: string;
+  pendingGoalsPayload?: any;
+
+  // Reflection-mode only: parsed reflection items from the LLM summary,
+  // stored on session so Interview.tsx can read them for the result popup.
+  reflectionResult?: Array<{
+    summary: string;
+    conclusion: string;
+    status: string;
+    score?: number;
+    topStrengths?: Array<{ name: string; description: string }>;
+    improvementAreas?: Array<{ name: string; description: string }>;
+  }>;
 }
 
 export interface InterviewResult {

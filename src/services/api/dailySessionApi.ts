@@ -125,17 +125,17 @@ export const getAllSessions = async (): Promise<DailySession[]> => {
  */
 export const getDailyRecord = async (date: string): Promise<any> => {
   try {
-    const email = localStorage.getItem('studentEmail') || '';
+    const email = ENV.DUMMY_EMAIL();
     const response = await fetch(`${ENV.DAILY_RECORDS_API_URL()}?date=${date}&email=${encodeURIComponent(email)}`);
     if (!response.ok) {
       if (response.status === 404) return null;
       throw new Error(`Failed to fetch daily record: ${response.status}`);
     }
     const json = await response.json();
-    if (json && !Array.isArray(json)) {
-      if (json.data) return json.data;
-      if (json.record) return json.record;
-    }
+    // Response shape: { success: true, data: [ record ] }  — data is an ARRAY
+    if (json?.data && Array.isArray(json.data)) return json.data[0] ?? null;
+    if (json?.data) return json.data;
+    if (json?.record) return json.record;
     return json;
   } catch (error) {
     console.error('Error fetching daily record:', error);
@@ -161,23 +161,34 @@ export const saveDailyRecord = async (payload: {
     reason: string;
   }[];
 }): Promise<any> => {
-  try {
-    const response = await fetch(ENV.DAILY_RECORDS_API_URL(), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[DailyRecord API] POST failed with status ${response.status}:`, errorText);
-      throw new Error(`Failed to save daily record: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('[DailyRecord API] Error saving daily record:', error);
-    return { success: false, error };
+  const response = await fetch(ENV.DAILY_RECORDS_API_URL(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[DailyRecord API] POST failed with status ${response.status}:`, errorText);
+    throw new Error(`Failed to save daily record: ${response.status} - ${errorText}`);
+  }
+  
+  // Invalidate cache since new data was added
+  clearRecordsCache(payload.email);
+  
+  return await response.json();
+};
+
+// Simple in-memory cache for calendar records
+let recordsCache: { [email: string]: { timestamp: number, data: any[] } } = {};
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache
+
+export const clearRecordsCache = (email?: string) => {
+  if (email) {
+    delete recordsCache[email];
+  } else {
+    recordsCache = {};
   }
 };
 
@@ -186,9 +197,16 @@ export const saveDailyRecord = async (payload: {
  * @param studentId The ID of the student
  * @param yearMonth Format: "YYYY-MM"
  */
-export const getMonthlyRecords = async (yearMonth: string): Promise<any[]> => {
+export const getMonthlyRecords = async (yearMonth: string, forceRefresh = false): Promise<any[]> => {
   try {
-    const email = localStorage.getItem('studentEmail') || '';
+    const email = ENV.DUMMY_EMAIL();
+    
+    // Return cached data if valid and not forcing a refresh
+    if (!forceRefresh && recordsCache[email] && (Date.now() - recordsCache[email].timestamp < CACHE_TTL_MS)) {
+      return recordsCache[email].data;
+    }
+
+    console.log(`[Calendar Debug] Fetching records for email: ${email}`);
     const response = await fetch(`${ENV.DAILY_RECORDS_API_URL()}?email=${encodeURIComponent(email)}`, {
       method: 'GET'
     });
@@ -197,16 +215,18 @@ export const getMonthlyRecords = async (yearMonth: string): Promise<any[]> => {
       throw new Error(`Failed to fetch monthly records: ${response.status}`);
     }
     const json = await response.json();
-    console.log("[Calendar Debug] Raw backend response stringified:", JSON.stringify(json, null, 2));
+    console.log(`[Calendar Debug] Raw backend response for ${email} stringified:`, JSON.stringify(json, null, 2));
     
     let resultRecords: any[] = [];
-    // In case the backend wraps the response in an object (e.g. { data: [...] } or { records: [...] })
     if (json && !Array.isArray(json)) {
       if (Array.isArray(json.data)) resultRecords = json.data;
       else if (Array.isArray(json.records)) resultRecords = json.records;
     } else if (Array.isArray(json)) {
       resultRecords = json;
     }
+    
+    // Update cache
+    recordsCache[email] = { timestamp: Date.now(), data: resultRecords };
     
     console.log("[Calendar Debug] Processed records array:", resultRecords);
     return resultRecords;

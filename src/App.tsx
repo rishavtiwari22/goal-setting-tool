@@ -3,12 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Home from "./pages/Home";
 import SelfApply from "./pages/SelfApply";
 import Interview from "./pages/Interview";
-import Results from "./pages/Results";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminUserList from "./pages/AdminUserList";
-import AdminRecruitment from "./pages/AdminRecruitment";
-import AdminJobs from "./pages/AdminJobs";
-import { AdminAuthGuard } from "./components/AdminAuthGuard";
+
 import { usePageTracking } from "./hooks/usePageTracking";
 import { AuthGuard } from "./components/AuthGuard";
 import { cleanupSyncedSessions } from "./services/storage/interviewStorage";
@@ -56,46 +51,7 @@ function AppContent() {
           </AuthGuard>
         }
       />
-      <Route
-        path="/results/:sessionId?"
-        element={
-          <AuthGuard>
-            <Results />
-          </AuthGuard>
-        }
-      />
-      <Route
-        path="/admin"
-        element={
-          <AdminAuthGuard>
-            <AdminDashboard />
-          </AdminAuthGuard>
-        }
-      />
-      <Route
-        path="/admin/users"
-        element={
-          <AdminAuthGuard>
-            <AdminUserList />
-          </AdminAuthGuard>
-        }
-      />
-      <Route
-        path="/admin/recruitment"
-        element={
-          <AdminAuthGuard>
-            <AdminRecruitment />
-          </AdminAuthGuard>
-        }
-      />
-      <Route
-        path="/admin/jobs"
-        element={
-          <AdminAuthGuard>
-            <AdminJobs />
-          </AdminAuthGuard>
-        }
-      />
+
     </Routes>
   );
 }

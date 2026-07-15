@@ -5,24 +5,20 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { FiSend, FiMic, FiMicOff, FiVolume2, FiVolumeX } from "react-icons/fi";
-import { Captions, CaptionsOff, MicOff, PhoneMissed, PictureInPicture2 } from "lucide-react";
+import { Captions, CaptionsOff, MicOff, PhoneMissed, X } from "lucide-react";
 import { useSinglePromptInterview } from "../hooks/useSinglePromptInterview";
 import type { InterviewConfig } from "../services/interview/interviewEngine";
 import { useSpeechToText } from "../hooks/useSpeechToText";
 import { usePiper } from "../hooks/usePiper";
 import { useScreenWakeLock } from "../hooks/useScreenWakeLock";
-import { useDocumentPiP } from "../hooks/useDocumentPiP";
+import { ReflectionResultPopup } from "@/components/ReflectionResultPopup";
 import AudioVisualizer from "@/components/AudioVisualizer";
-import ScreenCapturePanel from "@/components/ScreenCapturePanel";
-import type { ScreenCapturePanelHandle } from "@/components/ScreenCapturePanel";
-import { InterviewPiP } from "@/components/interview/InterviewPiP";
 import type { InterviewSession } from "../models/interview";
 import { loadInterviewSessionBySessionId, recoverOngoingSessionFromFirebase } from "../services/storage/interviewStorage";
 import { exportSessionToGoogleSheets } from "../services/export/googleSheetsExport";
 import { useOnboarding } from "../hooks/useOnboarding";
-import { INTERVIEW_GUIDE_STEPS, INTERVIEW_GUIDE_STEPS_OCR } from "../components/onboarding/onboardingSteps";
+import { INTERVIEW_GUIDE_STEPS } from "../components/onboarding/onboardingSteps";
 import { OnboardingOverlay } from "../components/onboarding/OnboardingOverlay";
-
 
 export default function Interview() {
   const navigate = useNavigate();
@@ -41,18 +37,14 @@ export default function Interview() {
 
   const [spokenCaption, setSpokenCaption] = useState("");
   const [fullCaption, setFullCaption] = useState("");
-  const [ocrText, setOcrText] = useState("");
+  
   // If guide was previously dismissed, interview can start immediately
   const [guideDismissed, setGuideDismissed] = useState(
     () => localStorage.getItem("zoe_guide_interview_v1") === "true"
   );
   const captionScrollRef = useRef<HTMLDivElement>(null);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [showScreenShareModal, setShowScreenShareModal] = useState(false);
-  const screenCapturePanelRef = useRef<ScreenCapturePanelHandle>(null);
-  const pendingFollowUpAfterShareRef = useRef(false);
-  const pendingScreenShareModalRef = useRef(false);
-  const pendingPiPOpenRef = useRef(false);
+  const [showEarlyExitModal, setShowEarlyExitModal] = useState(false);
+  const [reflectionResult, setReflectionResult] = useState<any[] | null>(null);
   const [loadingTextIndex, setLoadingTextIndex] = useState(0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -210,6 +202,23 @@ export default function Interview() {
       sessionStorage.setItem("interviewSession", JSON.stringify(session));
       // Fire-and-forget: export to Google Sheets (non-blocking)
       exportSessionToGoogleSheets(session).catch(console.error);
+
+      if (config?.mode === 'goal-setting') {
+        toast.success("Goal has been saved successfully!");
+        navigate("/");
+        return;
+      }
+
+      if (config?.mode === 'reflection') {
+        const items = session.reflectionResult || [{
+          summary: session.result?.summary || 'Reflection complete.',
+          conclusion: session.result?.conclusion || '',
+          status: 'completed'
+        }];
+        setReflectionResult(items);
+        return;
+      }
+
       // If TTS is enabled, store session and wait for TTS to finish (with timeout fallback)
       if (isSpeechOutputEnabled) {
         pendingSessionRef.current = session;
@@ -303,14 +312,7 @@ export default function Interview() {
       }
       audioBufferRef.current = "";
     },
-    screenCode: config?.ocrEnabled ? (ocrText || undefined) : undefined,
     readyToStart: guideDismissed,
-    isScreenSharing,
-    onRequestScreenShare: () => {
-      // LLM emitted [REQUEST_SCREEN_SHARE] — show modal asking candidate to share
-      pendingFollowUpAfterShareRef.current = true;
-      pendingScreenShareModalRef.current = true;
-    },
   });
 
   // Keep submitAnswer in a ref so async closures always have the latest version
@@ -443,7 +445,7 @@ export default function Interview() {
   // Interview only begins after guide is dismissed or was previously dismissed.
   const onboarding = useOnboarding({
     storageKey: "zoe_guide_interview_v1",
-    steps: config?.ocrEnabled ? INTERVIEW_GUIDE_STEPS_OCR : INTERVIEW_GUIDE_STEPS,
+    steps: INTERVIEW_GUIDE_STEPS,
     enabled: !!config,
   });
 
@@ -455,9 +457,7 @@ export default function Interview() {
   }, [config, onboarding.isActive, guideDismissed]);
 
   // ── Document PiP ──
-  const { isPiPOpen, isSupported: isPiPSupported, openPiP, closePiP, pipRootRef } = useDocumentPiP();
-  const screenMonitorPanelClassName =
-    "fixed right-4 top-0 w-[360px] h-[28rem] rounded-2xl border border-gray-200 bg-white/95 p-4 shadow-xl backdrop-blur-md z-50 flex flex-col";
+  // PiP has been removed as per goal-setting app requirements
 
   const handleToggleCaptions = useCallback(() => setShowChatMessage(prev => !prev), []);
 
@@ -630,23 +630,7 @@ export default function Interview() {
     }
   }, [fullCaption]);
 
-  // Wait until Zoe finishes speaking before showing the screen-share prompt.
-  useEffect(() => {
-    if (!pendingScreenShareModalRef.current) return;
-    if (isLoading || isTtsActive) return;
-
-    pendingScreenShareModalRef.current = false;
-    setShowScreenShareModal(true);
-  }, [isLoading, isTtsActive]);
-
-  // If sharing starts while the assistant is still speaking, open PiP only after speech stops.
-  useEffect(() => {
-    if (!pendingPiPOpenRef.current) return;
-    if (!isScreenSharing || !isPiPSupported || isLoading || isTtsActive || isPiPOpen) return;
-
-    pendingPiPOpenRef.current = false;
-    openPiP();
-  }, [isScreenSharing, isPiPSupported, isLoading, isTtsActive, isPiPOpen, openPiP]);
+  // Screen share logic removed
 
   const sendMessage = () => {
     if (input.trim() && submitAnswer) {
@@ -677,6 +661,11 @@ export default function Interview() {
   };
 
   const handleEndCall = () => {
+    if (isMentorMode) {
+      setShowEarlyExitModal(true);
+      return;
+    }
+    
     forceEndRef.current = true;
     setIsEndCallClicked(true);
     if (isListening) {
@@ -688,51 +677,17 @@ export default function Interview() {
     }
   };
 
-  const handleMaximize = useCallback(() => {
-    window.focus();
-    closePiP();
-  }, [closePiP]);
+  const confirmEarlyExit = () => {
+    forceEndRef.current = true;
+    setIsEndCallClicked(true);
+    if (isListening) stopListening();
+    stopTts();
+    navigate("/");
+  };
 
-  // Mirror-render: keep PiP content in sync with interview state.
-  // Renders the InterviewPiP tree into the floating window via pipRootRef.
-  // Handler functions are recreated on every parent render (closure-captures
-  // current state), so they don't need to be in deps — that would cause a
-  // re-render every parent render. Listing the props that *change content*.
-  useEffect(() => {
-    if (!isPiPOpen || !pipRootRef.current) return;
-    pipRootRef.current.render(
-      <InterviewPiP
-        interviewerName="Zoe"
-        remainingTime={remainingTime}
-        currentlySpokenText={fullCaption}
-        showCaptions={showChatMessage}
-        isTtsActive={isTtsActive}
-        isActuallyPlaying={isActuallyPlaying}
-        isListening={isListening}
-        isLoading={isLoading}
-        onMicClick={handleMicClick}
-        onToggleCaptions={handleToggleCaptions}
-        onEndCall={handleEndCall}
-        onStopSharing={() => screenCapturePanelRef.current?.stopSharing()}
-        onMaximize={handleMaximize}
-      />
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    isPiPOpen,
-    remainingTime,
-    fullCaption,
-    showChatMessage,
-    isTtsActive,
-    isActuallyPlaying,
-    isListening,
-    isLoading,
-  ]);
+  // Mirror-render for PiP removed
 
-  // Close PiP when interview completes
-  useEffect(() => {
-    if (isCompleted && isPiPOpen) closePiP();
-  }, [isCompleted, isPiPOpen, closePiP]);
+  // Close PiP removed
 
   if (!config) {
     return (
@@ -744,52 +699,6 @@ export default function Interview() {
 
   return (
     <div className="max-w-screen w-full h-screen flex flex-col bg-[#FBFAF8]">
-
-      {/* Screen Share Request Modal — shown when LLM emits [REQUEST_SCREEN_SHARE] */}
-      {showScreenShareModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
-                <PictureInPicture2 className="h-6 w-6 text-emerald-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Share your screen</h3>
-                <p className="text-sm text-gray-500">Zoe wants to look at your code</p>
-              </div>
-            </div>
-            <p className="mb-6 text-sm leading-relaxed text-gray-700">
-              The interviewer would like to see what you've been working on, so she can ask deeper questions about your code. Sharing your screen is optional — you can decline and continue with the interview.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowScreenShareModal(false);
-                  pendingFollowUpAfterShareRef.current = false;
-                }}
-                className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-all hover:bg-gray-50 active:scale-95"
-              >
-                Not now
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    await screenCapturePanelRef.current?.startSharing();
-                    // Modal will close + follow-up triggers via onShareStatusChange
-                  } catch (e) {
-                    console.error('Failed to start sharing:', e);
-                    setShowScreenShareModal(false);
-                    pendingFollowUpAfterShareRef.current = false;
-                  }
-                }}
-                className="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
-              >
-                Share screen
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="flex flex-col flex-1 relative overflow-hidden">
         <div
@@ -909,71 +818,7 @@ export default function Interview() {
               )}
             </button>
 
-            {/* Screen Share / OCR Button — only shown when user opted in */}
-            {config?.ocrEnabled && (
-              <div data-guide="screenshare-button" className="relative flex items-center justify-center">
-                <ScreenCapturePanel
-                  ref={screenCapturePanelRef}
-                  onCaptureComplete={(text) => setOcrText(text)}
-                  panelClassName={screenMonitorPanelClassName}
-                  onShareStatusChange={(sharing) => {
-                    setIsScreenSharing(sharing);
-
-                    if (sharing) {
-                      setShowScreenShareModal(false);
-                      setSpokenCaption("");
-                      setFullCaption("");
-
-                      if (isPiPSupported) {
-                        if (!isLoading && !isTtsActive && !isPiPOpen) {
-                          openPiP();
-                        } else {
-                          pendingPiPOpenRef.current = true;
-                        }
-                      }
-                    } else {
-                      pendingPiPOpenRef.current = false;
-                      if (isPiPOpen) closePiP();
-                    }
-
-                    // If LLM had requested screen share and candidate just started sharing,
-                    // wait ~3s for OCR to capture, then auto-prompt LLM to ask its code question.
-                    if (sharing && pendingFollowUpAfterShareRef.current) {
-                      pendingFollowUpAfterShareRef.current = false;
-                      setTimeout(() => {
-                        if (submitAnswerRef.current) {
-                          // Reset transient voice state so the next question TTS starts cleanly.
-                          stopListening();
-                          resetTranscript();
-                          stopTts();
-                          audioBufferRef.current = "";
-                          setSpokenCaption("");
-                          setFullCaption("");
-                          submitAnswerRef.current("I've shared my screen — you can see my code now.");
-                        }
-                      }, 3000);
-                    }
-                  }}
-                />
-              </div>
-            )}
-
-            {/* PiP Mini View Button — only shown during screen share */}
-            {isPiPSupported && isScreenSharing && !isCompleted && (
-              <button
-                aria-label={isPiPOpen ? "Close Mini View" : "Open Mini View"}
-                onClick={isPiPOpen ? closePiP : openPiP}
-                className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all shrink-0 border flex items-center justify-center group ${isPiPOpen
-                    ? "bg-blue-50 border-blue-300"
-                    : "bg-white border-gray-200"
-                  }`}
-              >
-                <PictureInPicture2 className={`w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 transition-colors ${isPiPOpen
-                    ? "text-blue-600"
-                    : "text-gray-600 group-hover:text-gray-900"
-                  }`} />
-              </button>
-            )}
+            {/* Screen Share / OCR Button removed */}
 
             {/* End Call Button */}
             <button
@@ -986,6 +831,50 @@ export default function Interview() {
             </button>
           </div>
         </div>
+        
+        {/* Early Exit Modal for Mentor Modes */}
+        {showEarlyExitModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-[2rem] p-8 md:p-10 max-w-lg w-full shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in duration-300 border border-slate-100 relative overflow-hidden">
+              <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full opacity-50 bg-red-50 pointer-events-none" />
+              <div className="z-10 relative">
+                <div className="flex items-center gap-4 text-red-600 mb-2">
+                  <div className="p-3 bg-red-50 rounded-2xl">
+                    <X size={28} />
+                  </div>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">Discard progress?</h2>
+                </div>
+                <p className="text-slate-500 font-medium leading-relaxed mt-4">
+                  If you end the session now, your progress will not be saved and you will need to start from scratch.
+                </p>
+              </div>
+              <div className="z-10 relative flex flex-col gap-3 mt-4">
+                <Button
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-6 rounded-2xl transition-all shadow-md text-lg"
+                  onClick={confirmEarlyExit}
+                >
+                  End & Discard
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 font-bold py-6 rounded-2xl transition-all text-lg"
+                  onClick={() => setShowEarlyExitModal(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reflection Completion Popup */}
+        {reflectionResult && (
+          <ReflectionResultPopup
+            items={reflectionResult}
+            onDismiss={() => navigate("/calendar")}
+            onClose={() => navigate("/calendar")}
+          />
+        )}
       </div>
 
       <style>{`

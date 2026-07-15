@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import DailyRecordModal from "@/components/DailyRecordModal";
 import { getMonthlyRecords } from "@/services/api/dailySessionApi";
+import { ENV } from "@/utils/env";
 
 export default function CalendarPage() {
   const { date: routeDate } = useParams();
@@ -17,8 +18,7 @@ export default function CalendarPage() {
   const [userId, setUserId] = useState<string>("");
 
   useEffect(() => {
-    const email = localStorage.getItem("studentEmail");
-    setUserId(email || "different.student@example.com");
+    setUserId(ENV.DUMMY_EMAIL());
   }, []);
 
   useEffect(() => {
@@ -37,6 +37,7 @@ export default function CalendarPage() {
     const yearMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}`;
     try {
       const data = await getMonthlyRecords(yearMonth);
+      console.log("[CalendarPage] Fetched records:", data);
       setRecords(data || []);
     } catch (e) {
       console.error("Failed to fetch records", e);
@@ -65,7 +66,10 @@ export default function CalendarPage() {
   const getRecordForDay = (day: number) => {
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     return records.find((r) => {
-      const recordDate = r.date.split('T')[0];
+      if (!r) return false;
+      const rDate = r.date || r.createdAt;
+      if (!rDate) return false;
+      const recordDate = typeof rDate === 'string' ? rDate.split('T')[0] : "";
       return recordDate === dateStr;
     }) || null;
   };
@@ -89,6 +93,10 @@ export default function CalendarPage() {
 
       const hasGoals = record?.goals && record.goals.length > 0;
       const hasReflections = record?.reflections && record.reflections.length > 0;
+      
+      if (record) {
+        console.log(`[CalendarPage] Day ${day} record found:`, record);
+      }
 
       // Determine dot color
       let dotColor = null;

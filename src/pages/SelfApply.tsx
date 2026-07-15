@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import DeviceTester from "@/components/DeviceTester";
 import CreateJobModal from "@/components/CreateJobModal";
 import InterviewCard from "@/components/InterviewCard";
-import { getJobs } from "../services/api/serverApi";
 import { classifyTechnicalRole } from "../services/api/deepseekApi";
 import { getEmailFromJWT } from "../utils/jwt";
 import type { Job } from "../models/job";
@@ -87,7 +86,9 @@ export default function SelfApply() {
   });
 
   useEffect(() => {
-    fetchJobs();
+    if (initialMode !== 'goal-setting' && initialMode !== 'reflection') {
+      fetchJobs();
+    }
     const storedToken = localStorage.getItem("studentToken");
     if (storedToken) {
       const email = getEmailFromJWT(storedToken);
@@ -126,16 +127,8 @@ export default function SelfApply() {
 
   const fetchJobs = async () => {
     setLoadingJobs(true);
-    try {
-      const jobsList = await getJobs();
-      setTimeout(() => {
-        setJobs(jobsList);
-        setLoadingJobs(false);
-      }, 0);
-    } catch (error) {
-      toast.error("Failed to fetch jobs");
-      setLoadingJobs(false);
-    }
+    setJobs([]);
+    setLoadingJobs(false);
   };
 
   const handleJobSelected = async (jobId: string | null, custom?: typeof customJobData) => {
