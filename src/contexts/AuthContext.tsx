@@ -15,13 +15,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // If we are in dev mode, check if we have a mocked user
     if (import.meta.env.DEV) {
       const mockEmail = localStorage.getItem("studentEmail");
-      if (mockEmail === "dev@localhost.com") {
+      if (mockEmail === "rishav@navgurukul.org") {
         // Set mock user and skip Firebase onAuthStateChanged
         setUser({
           uid: "dev-user-123",
-          email: "dev@localhost.com",
-          displayName: "Local Developer",
-          photoURL: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23646cff'/><text x='50%' y='50%' font-family='Arial' font-size='40' font-weight='bold' fill='white' text-anchor='middle' dy='.3em'>LD</text></svg>"
+          email: "rishav@navgurukul.org",
+          displayName: "Rishav Tiwari",
+          photoURL: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23646cff'/><text x='50%' y='50%' font-family='Arial' font-size='40' font-weight='bold' fill='white' text-anchor='middle' dy='.3em'>RT</text></svg>"
         } as User);
         setLoading(false);
         return;
@@ -44,12 +44,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   function signIn() {
     if (import.meta.env.DEV) {
-      localStorage.setItem("studentEmail", "dev@localhost.com");
+      localStorage.setItem("studentEmail", "rishav@navgurukul.org");
       setUser({
         uid: "dev-user-123",
-        email: "dev@localhost.com",
-        displayName: "Local Developer",
-        photoURL: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23646cff'/><text x='50%' y='50%' font-family='Arial' font-size='40' font-weight='bold' fill='white' text-anchor='middle' dy='.3em'>LD</text></svg>"
+        email: "rishav@navgurukul.org",
+        displayName: "Rishav Tiwari",
+        photoURL: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23646cff'/><text x='50%' y='50%' font-family='Arial' font-size='40' font-weight='bold' fill='white' text-anchor='middle' dy='.3em'>RT</text></svg>"
       } as User);
       return;
     }
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   function logOut() {
     localStorage.removeItem("studentEmail");
-    if (import.meta.env.DEV && user?.email === "dev@localhost.com") {
+    if (import.meta.env.DEV && user?.email === "rishav@navgurukul.org") {
       setUser(null);
       return Promise.resolve();
     }
