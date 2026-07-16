@@ -126,20 +126,21 @@ export const getAllSessions = async (): Promise<DailySession[]> => {
 export const getDailyRecord = async (date: string): Promise<any> => {
   try {
     const email = ENV.DUMMY_EMAIL();
-    const response = await fetch(`${ENV.DAILY_RECORDS_API_URL()}?date=${date}&email=${encodeURIComponent(email)}`);
+    const url = `${ENV.DAILY_RECORDS_API_URL()}?date=${date}&email=${encodeURIComponent(email)}&_t=${Date.now()}`;
+    const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) {
       if (response.status === 404) return null;
       throw new Error(`Failed to fetch daily record: ${response.status}`);
     }
     const json = await response.json();
-    // Response shape: { success: true, data: [ record ] }  — data is an ARRAY
+    if (Array.isArray(json)) return json[0] ?? null;
     if (json?.data && Array.isArray(json.data)) return json.data[0] ?? null;
     if (json?.data) return json.data;
     if (json?.record) return json.record;
     return json;
   } catch (error) {
     console.error('Error fetching daily record:', error);
-    return null;
+    throw error;
   }
 };
 
@@ -207,8 +208,10 @@ export const getMonthlyRecords = async (yearMonth: string, forceRefresh = false)
     }
 
     console.log(`[Calendar Debug] Fetching records for email: ${email}`);
-    const response = await fetch(`${ENV.DAILY_RECORDS_API_URL()}?email=${encodeURIComponent(email)}&month=${yearMonth}`, {
-      method: 'GET'
+    const url = `${ENV.DAILY_RECORDS_API_URL()}?email=${encodeURIComponent(email)}&_t=${Date.now()}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      cache: 'no-store'
     });
     if (!response.ok) {
       if (response.status === 404) return [];
@@ -221,6 +224,7 @@ export const getMonthlyRecords = async (yearMonth: string, forceRefresh = false)
     if (json && !Array.isArray(json)) {
       if (Array.isArray(json.data)) resultRecords = json.data;
       else if (Array.isArray(json.records)) resultRecords = json.records;
+      else if (json.email || json.date || json.goals || json.reflections) resultRecords = [json];
     } else if (Array.isArray(json)) {
       resultRecords = json;
     }

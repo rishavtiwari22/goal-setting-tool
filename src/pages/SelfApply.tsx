@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { ENV } from "../utils/env";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
@@ -90,15 +91,8 @@ export default function SelfApply() {
     if (initialMode !== 'goal-setting' && initialMode !== 'reflection') {
       fetchJobs();
     }
-    const storedToken = localStorage.getItem("studentToken");
-    if (storedToken) {
-      const email = getEmailFromJWT(storedToken);
-      if (email) setUserId(email);
-    } else {
-      // Fallback: use email from localStorage (bypass mode)
-      const storedEmail = localStorage.getItem("studentEmail");
-      if (storedEmail) setUserId(storedEmail);
-    }
+    // Bypass auth token reading:
+    setUserId(ENV.DUMMY_EMAIL());
   }, []);
 
   useEffect(() => {

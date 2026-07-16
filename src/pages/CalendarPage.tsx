@@ -65,12 +65,23 @@ export default function CalendarPage() {
 
   const getRecordForDay = (day: number) => {
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    return records.find((r) => {
-      if (!r) return false;
+    return records.find(r => {
       const rDate = r.date || r.createdAt;
       if (!rDate) return false;
-      const recordDate = typeof rDate === 'string' ? rDate.split('T')[0] : "";
-      return recordDate === dateStr;
+      
+      // If the string is already YYYY-MM-DD, it will match directly
+      if (rDate === dateStr) return true;
+      
+      // Otherwise, parse it as a Date object to extract YYYY-MM-DD
+      try {
+        const parsedDate = new Date(rDate);
+        if (!isNaN(parsedDate.getTime())) {
+          const formatted = `${parsedDate.getFullYear()}-${String(parsedDate.getMonth() + 1).padStart(2, "0")}-${String(parsedDate.getDate()).padStart(2, "0")}`;
+          return formatted === dateStr;
+        }
+      } catch (e) {}
+      
+      return false;
     }) || null;
   };
 

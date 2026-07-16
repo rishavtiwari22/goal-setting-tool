@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { ENV } from "../utils/env";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -7,7 +8,7 @@ export default function CalendarHeader() {
   const [initials, setInitials] = useState("U");
 
   useEffect(() => {
-    const email = localStorage.getItem("studentEmail");
+    const email = ENV.DUMMY_EMAIL();
     if (email) {
       setInitials(email.charAt(0).toUpperCase());
     }

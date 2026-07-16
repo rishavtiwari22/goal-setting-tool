@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import { ENV } from '../utils/env';
 import type { InterviewConfig } from '../services/interview/interviewEngine';
 import type { InterviewSession, InterviewResult } from '../models/interview';
@@ -427,11 +428,16 @@ export function useSinglePromptInterview({
         // --- BACKEND API INTEGRATION ---
         const now = new Date();
         const todayStr = configRef.current?.targetDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        if (configRef.current?.mode === 'goal-setting' && Array.isArray(parsed.goals)) {
+        
+        if (configRef.current?.mode === 'goal-setting') {
+          if (!Array.isArray(parsed.goals) || parsed.goals.length === 0) {
+            throw new Error("The AI failed to extract any goals from the conversation. Please try again.");
+          }
+          
           // The backend always appends new goals to existing ones (never replaces).
           // So we simply send the new goals from this session — the backend merges them in.
           const newGoals = parsed.goals.map((g: any) => ({
-            goalId: crypto.randomUUID(),
+            goalId: crypto.randomUUID ? crypto.randomUUID() : `goal_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
             description: g.conclusion || g.summary || ''
           }));
 
@@ -442,6 +448,11 @@ export function useSinglePromptInterview({
           };
           try {
             await dailySessionApi.saveDailyRecord(payload);
+            await new Promise(resolve => setTimeout(resolve, 500)); // Give DB time to write
+            const verifyRecord = await dailySessionApi.getDailyRecord(todayStr);
+            const savedGoal = (verifyRecord?.goals || []).find((g: any) => g.goalId === newGoals[0].goalId || g.description === newGoals[0].description);
+            if (!savedGoal) throw new Error("Failed to verify save: Goal not found in backend record");
+            
             window.dispatchEvent(new Event('goalSaved'));
           } catch (err: any) {
             console.error('Failed to save goals:', err);
@@ -451,9 +462,13 @@ export function useSinglePromptInterview({
             session.pendingGoalsPayload = payload;
             saveInterviewSessionBySessionId(session);
             setIsSaving(false);
-            return; // Abort endInterview so it doesn't navigate
+            resultGenerationStatus.setComplete(session.sessionId);
+            return; // Abort and do NOT call onComplete, so the user stays on the page to see the error and retry
           }
-        } else if (configRef.current?.mode === 'reflection' && Array.isArray(parsed.reflections)) {
+        } else if (configRef.current?.mode === 'reflection') {
+          if (!Array.isArray(parsed.reflections) || parsed.reflections.length === 0) {
+            throw new Error("The AI failed to extract any reflections from the conversation. Please try again.");
+          }
           let sourceGoals: any[] = [];
           try {
             const record = await dailySessionApi.getDailyRecord(todayStr);
@@ -463,23 +478,32 @@ export function useSinglePromptInterview({
           // Send each reflection — stop immediately and surface error if any save fails
           for (let idx = 0; idx < parsed.reflections.length; idx++) {
             const r = parsed.reflections[idx];
+            const targetGoalId = sourceGoals[idx]?.goalId || (crypto.randomUUID ? crypto.randomUUID() : `goal_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
             const reflectionPayload = {
               email: ENV.DUMMY_EMAIL(),
               date: todayStr,
               reflections: [{
-                goalId: sourceGoals[idx]?.goalId || crypto.randomUUID(),
+                goalId: targetGoalId,
                 assessment: (r.conclusion?.toLowerCase().includes('insufficient') ? 'insufficient' : 'sufficient') as 'sufficient' | 'insufficient',
                 reflectionText: r.summary || ''
               }]
             };
             try {
               await dailySessionApi.saveDailyRecord(reflectionPayload);
+              await new Promise(resolve => setTimeout(resolve, 500)); // Give DB time to write
+              const verifyRecord = await dailySessionApi.getDailyRecord(todayStr);
+              const savedReflection = (verifyRecord?.reflections || []).find((ref: any) => ref.goalId === targetGoalId || ref.reflectionText === reflectionPayload.reflections[0].reflectionText);
+              if (!savedReflection) throw new Error("Failed to verify save: Reflection not found in backend record");
+
               window.dispatchEvent(new Event('goalSaved'));
             } catch (err: any) {
               console.error(err);
               setSaveError(err.message || 'Failed to save reflection. Please try again.');
+              session.saveError = err.message || 'Failed to save reflection. Please try again.';
+              saveInterviewSessionBySessionId(session);
               setIsSaving(false);
-              return; // Abort — don't navigate until save succeeds
+              resultGenerationStatus.setComplete(session.sessionId);
+              return; // Abort and do NOT call onComplete, so the user stays on the page to see the error and retry
             }
           }
 
@@ -495,7 +519,7 @@ export function useSinglePromptInterview({
                 date: todayStr,
                 revisions: [{
                   topic: rev.topic || '',
-                  sourceGoalId: rev.sourceGoalId || sourceGoals[idx]?.goalId || crypto.randomUUID(),
+                  sourceGoalId: rev.sourceGoalId || sourceGoals[idx]?.goalId || (crypto.randomUUID ? crypto.randomUUID() : `goal_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`),
                   reason: rev.reason || ''
                 }]
               };
