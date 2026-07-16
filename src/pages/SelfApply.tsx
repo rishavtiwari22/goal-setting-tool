@@ -11,6 +11,8 @@ import { classifyTechnicalRole } from "../services/api/deepseekApi";
 import { getEmailFromJWT } from "../utils/jwt";
 import type { Job } from "../models/job";
 import type { InterviewMode, MentorProfile } from "../services/interview/interviewEngine";
+import { getDailyRecord } from "../services/api/dailySessionApi";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import {
   ChevronLeft,
   Plus,
@@ -95,31 +97,67 @@ export default function SelfApply() {
     setUserId(ENV.DUMMY_EMAIL());
   }, []);
 
+  const [showGoalModePopup, setShowGoalModePopup] = useState(false);
+  const [checkingRecord, setCheckingRecord] = useState(false);
+
   useEffect(() => {
     if (initialMode === 'goal-setting' || initialMode === 'reflection') {
       if (autoStart) {
-        const interviewConfig = {
-          jobId: null,
-          jobTitle: initialMode === 'goal-setting' ? "Daily Goal Setting" : "End of Day Reflection",
-          jobDescription: "",
-          technicalSkills: [],
-          softSkills: [],
-          mode: initialMode,
-          mentorProfile: null,
-          ocrEnabled: false,
-          turnLimit: undefined,
-          interviewTime: 15,
-          targetDate: targetDate,
-        };
-        sessionStorage.setItem("interviewConfig", JSON.stringify(interviewConfig));
-        const token = searchParams.get("token") || searchParams.get("jwt");
-        navigate(token ? `/interview?token=${token}` : "/interview", { replace: true });
+        if (initialMode === 'goal-setting') {
+          const checkGoals = async () => {
+            setCheckingRecord(true);
+            try {
+              const now = new Date();
+              const todayStr = targetDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+              const record = await getDailyRecord(todayStr);
+              if (record && record.goals && record.goals.length > 0) {
+                const hasUnlocked = record.goals.some((g: any) => 
+                  !record.reflections.some((r: any) => r.goalId === (g.goalId || g.id || g._id))
+                );
+                if (hasUnlocked) {
+                  setShowGoalModePopup(true);
+                  setCheckingRecord(false);
+                  return; // wait for user choice
+                }
+              }
+              proceedToInterview('append');
+            } catch (e) {
+              console.error(e);
+              proceedToInterview('append');
+            } finally {
+              setCheckingRecord(false);
+            }
+          };
+          checkGoals();
+        } else {
+          proceedToInterview('append');
+        }
       } else {
         setModalMode(initialMode);
         setIsCreateJobModalOpen(true);
       }
     }
-  }, [initialMode, autoStart, navigate, searchParams]);
+  }, [initialMode, autoStart, navigate, searchParams, targetDate]);
+
+  const proceedToInterview = (saveMode: 'append' | 'override') => {
+    const interviewConfig = {
+      jobId: null,
+      jobTitle: initialMode === 'goal-setting' ? "Daily Goal Setting" : "End of Day Reflection",
+      jobDescription: "",
+      technicalSkills: [],
+      softSkills: [],
+      mode: initialMode,
+      mentorProfile: null,
+      ocrEnabled: false,
+      turnLimit: undefined,
+      interviewTime: 15,
+      targetDate: targetDate,
+      goalSaveMode: saveMode,
+    };
+    sessionStorage.setItem("interviewConfig", JSON.stringify(interviewConfig));
+    const token = searchParams.get("token") || searchParams.get("jwt");
+    navigate(token ? `/interview?token=${token}` : "/interview", { replace: true });
+  };
 
   const fetchJobs = async () => {
     setLoadingJobs(true);
@@ -510,6 +548,39 @@ export default function SelfApply() {
           handleJobSelected(null, jobData);
         }}
       />
+
+      <Dialog open={showGoalModePopup} onOpenChange={setShowGoalModePopup}>
+        <DialogContent className="sm:max-w-md p-6 bg-white rounded-2xl border-0 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-slate-900">Existing Goals Found</DialogTitle>
+            <DialogDescription className="text-slate-500 mt-2">
+              You already have active goals for today. How would you like to proceed with your new goals?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 my-6">
+            <button
+              onClick={() => { setShowGoalModePopup(false); proceedToInterview('append'); }}
+              className="w-full group p-4 rounded-xl border-2 border-slate-200 hover:border-[#2B5E2B] bg-slate-50 hover:bg-[#F2FBF4] text-left transition-all duration-200"
+            >
+              <div className="font-bold text-slate-900 group-hover:text-[#2B5E2B] mb-1">Append New Goals</div>
+              <div className="text-sm text-slate-500">Keep your existing active goals and add these new ones alongside them.</div>
+            </button>
+            <button
+              onClick={() => { setShowGoalModePopup(false); proceedToInterview('override'); }}
+              className="w-full group p-4 rounded-xl border-2 border-slate-200 hover:border-rose-600 bg-slate-50 hover:bg-rose-50 text-left transition-all duration-200"
+            >
+              <div className="font-bold text-slate-900 group-hover:text-rose-700 mb-1">Override Existing Goals</div>
+              <div className="text-sm text-slate-500">Replace your currently active (unreflected) goals with the new ones. Goals you've already reflected on will be kept.</div>
+            </button>
+          </div>
+          <DialogFooter className="sm:justify-start">
+            <Button variant="ghost" onClick={() => { setShowGoalModePopup(false); navigate(-1); }} className="text-slate-500">
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

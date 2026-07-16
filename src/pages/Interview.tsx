@@ -15,6 +15,7 @@ import { useScreenWakeLock } from "../hooks/useScreenWakeLock";
 import { ReflectionResultPopup } from "@/components/ReflectionResultPopup";
 import AudioVisualizer from "@/components/AudioVisualizer";
 import type { InterviewSession } from "../models/interview";
+import { getDailyRecord } from "../services/api/dailySessionApi";
 import { loadInterviewSessionBySessionId, recoverOngoingSessionFromFirebase } from "../services/storage/interviewStorage";
 import { exportSessionToGoogleSheets } from "../services/export/googleSheetsExport";
 import { useOnboarding } from "../hooks/useOnboarding";
@@ -134,6 +135,37 @@ export default function Interview() {
       try {
         if (configStr) {
           const interviewConfig = JSON.parse(configStr) as InterviewConfig;
+          
+          if (interviewConfig.mode === 'reflection') {
+            try {
+              const now = new Date();
+              const todayStr = interviewConfig.targetDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+              const record = await getDailyRecord(todayStr);
+              
+              if (record && record.goals && record.goals.length > 0) {
+                const unreflectedGoals = record.goals.filter((g: any) => 
+                  !record.reflections.some((r: any) => r.goalId === (g.goalId || g.id || g._id))
+                );
+
+                if (unreflectedGoals.length === 0) {
+                  toast.success("You're all done for today! All goals have been reflected on.", { duration: 5000 });
+                  navigate("/");
+                  return;
+                }
+
+                // Inject unreflected goals into examinationPoints
+                interviewConfig.examinationPoints = unreflectedGoals.map((g: any) => g.description || g.title || '');
+                sessionStorage.setItem("interviewConfig", JSON.stringify(interviewConfig));
+              } else {
+                toast.error("No goals found for today to reflect on.");
+                navigate("/");
+                return;
+              }
+            } catch (err) {
+              console.error("Failed to fetch reflection context:", err);
+            }
+          }
+
           setConfig(interviewConfig);
           setIsInitializing(false);
           forceEndRef.current = false;

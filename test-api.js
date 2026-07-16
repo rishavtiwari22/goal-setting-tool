@@ -1,6 +1,6 @@
 const API_URL = 'http://localhost:3001/api/daily-records';
 const email = 'rishav@navgurukul.org';
-const date = '2026-07-16';
+const date = '2026-07-15';
 
 async function testApi() {
   console.log('--- Testing POST ---');
@@ -9,8 +9,8 @@ async function testApi() {
     date: date,
     goals: [
       {
-        goalId: "test_goal_123",
-        description: "Test saving to the backend via API script"
+        goalId: "test_update_15th",
+        description: "Testing the update logic: appending a new goal to July 15th!"
       }
     ]
   };

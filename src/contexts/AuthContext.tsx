@@ -1,7 +1,12 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { ENV } from "../utils/env";
-import { getRedirectResult, onAuthStateChanged, signInWithRedirect, signOut, User } from "firebase/auth";
-import { auth, provider } from "../services/firebase";
+
+export interface User {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+}
 
 const AuthContext = createContext<any>(null);
 

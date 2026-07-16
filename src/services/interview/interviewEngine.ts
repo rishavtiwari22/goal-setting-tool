@@ -15,4 +15,5 @@ export interface InterviewConfig {
   ocrEnabled?: boolean;
   turnLimit?: number;
   targetDate?: string;
+  goalSaveMode?: 'append' | 'override';
 }
