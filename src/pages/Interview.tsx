@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { FiSend, FiMic, FiMicOff, FiVolume2, FiVolumeX } from "react-icons/fi";
-import { Captions, CaptionsOff, MicOff, PhoneMissed, X } from "lucide-react";
+import { Captions, CaptionsOff, MicOff, PhoneMissed, X, Info } from "lucide-react";
 import { useSinglePromptInterview } from "../hooks/useSinglePromptInterview";
 import type { InterviewConfig } from "../services/interview/interviewEngine";
 import { useSpeechToText } from "../hooks/useSpeechToText";
@@ -287,6 +287,7 @@ export default function Interview() {
     submitAnswer,
     sessionId: currentSessionId,
     currentQuestion,
+    startError,
   } = useSinglePromptInterview({
     config,
     sessionId,
@@ -714,19 +715,26 @@ export default function Interview() {
           {/* Timer Display */}
           {remainingTime !== null && remainingTime !== undefined && (
             <div className="absolute top-4 left-4 md:top-6 md:left-6 z-20">
-              <div className="flex items-center gap-3 rounded-full border border-white/70 bg-white/80 px-4 py-2.5 shadow-[0_10px_30px_rgba(37,99,235,0.12)] backdrop-blur-md ring-1 ring-indigo-100/80 transition-transform duration-200 hover:scale-[1.02]">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50 text-indigo-700 shadow-sm">
-                  <svg className="h-4.5 w-4.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clipRule="evenodd" />
-                  </svg>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3 rounded-full border border-white/70 bg-white/80 px-4 py-2.5 shadow-[0_10px_30px_rgba(37,99,235,0.12)] backdrop-blur-md ring-1 ring-indigo-100/80 transition-transform duration-200 hover:scale-[1.02]">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50 text-indigo-700 shadow-sm">
+                    <svg className="h-4.5 w-4.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="leading-none">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">Time left</p>
+                    <span className={`font-mono text-[22px] md:text-[24px] font-bold tracking-tight ${remainingTime <= 30 ? 'text-rose-600' : 'text-slate-900'}`}>
+                      {String(Math.floor(remainingTime / 60)).padStart(2, '0')}:
+                      {String(remainingTime % 60).padStart(2, '0')}
+                    </span>
+                  </div>
                 </div>
-                <div className="leading-none">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">Time left</p>
-                  <span className={`font-mono text-[22px] md:text-[24px] font-bold tracking-tight ${remainingTime <= 30 ? 'text-rose-600' : 'text-slate-900'}`}>
-                    {String(Math.floor(remainingTime / 60)).padStart(2, '0')}:
-                    {String(remainingTime % 60).padStart(2, '0')}
-                  </span>
-                </div>
+                {config?.mode === 'reflection' && config?.targetDate && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-100/80 text-purple-800 text-xs font-bold border border-purple-200/50 shadow-sm backdrop-blur-md self-start">
+                    Reflecting on {new Date(config.targetDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', timeZone: 'UTC' })}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -832,6 +840,41 @@ export default function Interview() {
           </div>
         </div>
         
+        {/* Missing Goal Modal */}
+        {startError === 'NO_GOALS_FOR_TODAY' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-[2rem] p-8 md:p-10 max-w-lg w-full shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in duration-300 border border-slate-100 relative overflow-hidden">
+              <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full opacity-50 bg-green-50 pointer-events-none" />
+              <div className="z-10 relative">
+                <div className="flex items-center gap-4 text-[#2B5E2B] mb-2">
+                  <div className="p-3 bg-green-50 rounded-2xl">
+                    <Info size={28} />
+                  </div>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">Daily Goal Missing</h2>
+                </div>
+                <p className="text-slate-500 font-medium leading-relaxed mt-4">
+                  Please set a Daily Goal first before starting a reflection.
+                </p>
+              </div>
+              <div className="z-10 relative flex flex-col gap-3 mt-4">
+                <Button
+                  className="w-full bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-bold py-6 rounded-2xl transition-all shadow-md text-lg"
+                  onClick={() => navigate('/selfapply', { state: { mode: 'goal-setting', autoStart: true } })}
+                >
+                  Set Goal
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 font-bold py-6 rounded-2xl transition-all text-lg"
+                  onClick={() => navigate('/')}
+                >
+                  Go to Home
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Early Exit Modal for Mentor Modes */}
         {showEarlyExitModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">

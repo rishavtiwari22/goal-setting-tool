@@ -207,7 +207,7 @@ export const getMonthlyRecords = async (yearMonth: string, forceRefresh = false)
     }
 
     console.log(`[Calendar Debug] Fetching records for email: ${email}`);
-    const response = await fetch(`${ENV.DAILY_RECORDS_API_URL()}?email=${encodeURIComponent(email)}`, {
+    const response = await fetch(`${ENV.DAILY_RECORDS_API_URL()}?email=${encodeURIComponent(email)}&month=${yearMonth}`, {
       method: 'GET'
     });
     if (!response.ok) {

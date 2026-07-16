@@ -314,6 +314,7 @@ export function useSinglePromptInterview({
   const [sessionId, setSessionId] = useState(initialSessionId || '');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
   const [pendingGoalsPayload, setPendingGoalsPayload] = useState<any | null>(null);
 
   // Internal refs — not causing re-renders
@@ -425,7 +426,7 @@ export function useSinglePromptInterview({
 
         // --- BACKEND API INTEGRATION ---
         const now = new Date();
-        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const todayStr = configRef.current?.targetDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         if (configRef.current?.mode === 'goal-setting' && Array.isArray(parsed.goals)) {
           // The backend always appends new goals to existing ones (never replaces).
           // So we simply send the new goals from this session — the backend merges them in.
@@ -645,7 +646,8 @@ export function useSinglePromptInterview({
 
         if (cfg.mode === 'reflection') {
           try {
-            const todayStr = new Date().toISOString().split('T')[0];
+            const now = new Date();
+            const todayStr = cfg.targetDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             const todaySession = await dailySessionApi.getDailyRecord(todayStr);
             if (todaySession?.goals?.length > 0) {
               // Clean MongoDB fields, format for human-readable AI context
@@ -731,8 +733,11 @@ export function useSinglePromptInterview({
         saveInterviewSessionBySessionId(sessionRef.current, true);
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error starting interview:', error);
+      if (error.message === 'NO_GOALS_FOR_TODAY') {
+        setStartError('NO_GOALS_FOR_TODAY');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -1056,6 +1061,7 @@ export function useSinglePromptInterview({
     currentQuestion,
     sessionId,
     saveError,
+    startError,
     retrySave,
   };
 }

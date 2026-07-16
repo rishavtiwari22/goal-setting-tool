@@ -63,6 +63,7 @@ export default function SelfApply() {
 
   const initialMode: InterviewMode = (location.state as any)?.mode ?? 'practice';
   const autoStart: boolean = (location.state as any)?.autoStart ?? false;
+  const targetDate: string | undefined = (location.state as any)?.targetDate;
   const preselectedMentorProfile: MentorProfile | null = (location.state as any)?.mentorProfile ?? null;
   const [mode, setMode] = useState<InterviewMode>(initialMode);
   const [modalMode, setModalMode] = useState<'practice' | 'goal-setting' | 'reflection'>('practice');
@@ -114,6 +115,7 @@ export default function SelfApply() {
           ocrEnabled: false,
           turnLimit: undefined,
           interviewTime: 15,
+          targetDate: targetDate,
         };
         sessionStorage.setItem("interviewConfig", JSON.stringify(interviewConfig));
         const token = searchParams.get("token") || searchParams.get("jwt");

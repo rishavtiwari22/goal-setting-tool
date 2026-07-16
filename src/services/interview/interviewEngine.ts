@@ -14,4 +14,5 @@ export interface InterviewConfig {
   mentorProfile?: MentorProfile;
   ocrEnabled?: boolean;
   turnLimit?: number;
+  targetDate?: string;
 }

@@ -6,9 +6,10 @@ interface DailyRecordModalProps {
   onClose: () => void;
   dateStr: string;
   record: any | null;
+  onReflectNow?: (dateStr: string) => void;
 }
 
-export default function DailyRecordModal({ isOpen, onClose, dateStr, record }: DailyRecordModalProps) {
+export default function DailyRecordModal({ isOpen, onClose, dateStr, record, onReflectNow }: DailyRecordModalProps) {
   if (!isOpen) return null;
 
   const displayDate = new Date(dateStr).toLocaleDateString(undefined, {
@@ -21,6 +22,10 @@ export default function DailyRecordModal({ isOpen, onClose, dateStr, record }: D
   const goals = record?.goals || [];
   const reflections = record?.reflections || [];
   const revisions = record?.revisions || [];
+
+  const hasPendingReflection = goals.length > 0 && goals.some((goal: any) => 
+    !reflections.some((r: any) => r.goalId === goal.goalId || r.goalId === goal.id)
+  );
 
   return (
     <AnimatePresence>
@@ -45,12 +50,22 @@ export default function DailyRecordModal({ isOpen, onClose, dateStr, record }: D
               <h2 className="text-xl font-bold text-slate-900">Daily Review</h2>
               <p className="text-sm text-slate-500 font-medium">{displayDate}</p>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-3">
+              {hasPendingReflection && onReflectNow && (
+                <button
+                  onClick={() => onReflectNow(dateStr)}
+                  className="px-4 py-1.5 bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white text-sm font-bold rounded-lg shadow-sm transition-all hover:scale-105 active:scale-95"
+                >
+                  Reflect now
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Body */}

@@ -144,6 +144,10 @@ export default function CalendarPage() {
     return [...blanks, ...days];
   };
 
+  const handleReflectNow = (dateStr: string) => {
+    navigate('/selfapply', { state: { mode: 'reflection', autoStart: true, targetDate: dateStr } });
+  };
+
   const handleClose = () => {
     navigate(-1);
   };
@@ -214,6 +218,7 @@ export default function CalendarPage() {
         onClose={() => setIsModalOpen(false)}
         dateStr={selectedDate || ""}
         record={selectedDate ? records.find(r => r.date.split('T')[0] === selectedDate) : null}
+        onReflectNow={handleReflectNow}
       />
     </>
   );
