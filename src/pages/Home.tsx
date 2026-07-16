@@ -214,7 +214,7 @@ export default function Home() {
           <div className="px-5 py-3 bg-[rgb(204,253,209)] rounded-full shadow-none inline-flex items-center gap-2">
             <Info className="w-4 h-4 shrink-0 text-[rgb(204,253,209)] bg-[rgb(0,107,12)] rounded-full" />
             <span className="text-[10px] md:text-[12px] font-bold text-[rgb(0,107,12)]">
-              Please note that Apex works best on Google Chrome
+              Please note that Smart works best on Google Chrome
             </span>
           </div>
         </div>

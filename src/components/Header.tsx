@@ -25,7 +25,7 @@ export default function Header() {
             title="Go to Home"
           >
             <Target className="w-7 h-7 text-blue-600" />
-            <span className="font-bold text-lg text-slate-800 tracking-tight">Apex</span>
+            <span className="font-bold text-lg text-slate-800 tracking-tight">SMART</span>
           </div>
 
           {/* Right side icons */}
