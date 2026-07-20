@@ -417,15 +417,22 @@ export default function SelfApply() {
               ) : loadingJobs ? (
                 <Spinner className="text-[#2B5E2B]" />
               ) : (mode === 'goal-setting' || mode === 'reflection') ? (
-                <div className="w-full flex flex-col items-center justify-center py-12">
-                  <Button
-                    onClick={() => { setModalMode(mode); setIsCreateJobModalOpen(true); }}
-                    className="bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-black px-8 py-6 rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-3 text-lg"
-                  >
-                    <Plus size={20} />
-                    <span>Enter your {mode === 'goal-setting' ? 'Goal' : 'Reflection Details'}</span>
-                  </Button>
-                </div>
+                checkingRecord ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <Spinner className="text-[#2B5E2B]" />
+                    <p className="text-sm text-slate-500 font-medium">Setting up your session...</p>
+                  </div>
+                ) : (
+                  <div className="w-full flex flex-col items-center justify-center py-12">
+                    <Button
+                      onClick={() => { setModalMode(mode); setIsCreateJobModalOpen(true); }}
+                      className="bg-[#2B5E2B] hover:bg-[#1a3a1b] text-white font-black px-8 py-6 rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-3 text-lg"
+                    >
+                      <Plus size={20} />
+                      <span>Enter your {mode === 'goal-setting' ? 'Goal' : 'Reflection Details'}</span>
+                    </Button>
+                  </div>
+                )
               ) : (
                 <div className="w-full flex flex-col">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">

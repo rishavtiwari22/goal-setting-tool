@@ -411,12 +411,12 @@ export function useSinglePromptInterview({
       const { systemMessage, humanMessage } = buildSummarizePrompt({
         jobTitle: frameworkRef.current?.role || session.jobTitle,
         jobDescription: session.jobDescription,
-        knowledgePoints: session.examinationPoints,
+        knowledgePoints: session.examinationPoints || [],
         qaHistory: session.qaHistory.filter(qa => qa.answer),
         interviewTime: Math.floor(((session.interviewTime * 60) - timeRemainingRef.current) / 60),
         language: session.language || 'English',
         mode: configRef.current?.mode ?? 'practice',
-        parkedTopics: session.parkedTopics,
+        parkedTopics: session.parkedTopics || [],
       });
       const evalMsgs: ChatMessage[] = [
         { role: 'system', content: systemMessage },
@@ -443,7 +443,9 @@ export function useSinglePromptInterview({
           
           const newGoals = parsed.goals.map((g: any) => ({
             goalId: crypto.randomUUID ? crypto.randomUUID() : `goal_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-            description: g.conclusion || g.summary || ''
+            title: g.summary || '',
+            description: g.conclusion || g.summary || '',
+            keyActions: Array.isArray(g.keyActions) ? g.keyActions.filter(Boolean) : [],
           }));
 
           const goalSaveMode = configRef.current?.goalSaveMode || 'append';

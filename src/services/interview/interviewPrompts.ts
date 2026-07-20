@@ -383,7 +383,7 @@ ${qaHistoryStr}
 function buildMentorSummarizePrompt(
   params: BuildSummarizePromptParams,
 ): { systemMessage: string; humanMessage: string } {
-  const knowledgePointsStr = params.knowledgePoints.join(', ');
+  const knowledgePointsStr = (params.knowledgePoints || []).join(', ');
   const qaHistoryStr = formatQAHistory(params.qaHistory);
   const parked = (params.parkedTopics || []).filter(Boolean);
   const parkedSection = parked.length > 0
@@ -395,37 +395,41 @@ function buildMentorSummarizePrompt(
   let systemMessage: string;
 
   if (params.mode === 'goal-setting') {
-    systemMessage = `You are an expert mentor finalizing a student's daily goal-setting session.
-Your job is to read the conversation and output a finalized SMART Goal object. 
-IMPORTANT: The student may have set MULTIPLE goals during the session. You must combine all of them into this single output structure.
+    systemMessage = `You are a scribe finalizing a student's daily goal-setting session.
+Your ONLY job is to extract and record the goals the student EXPLICITLY stated they will do today.
 
-# Finalizing the Goal(s)
-Based on the conversation, construct a clear, specific, and measurable summary of ALL goals the student committed to achieve today.
-DO NOT output an interview review. Output ONLY the Goal data.
+# STRICT RULES — read carefully:
+- ONLY include goals the student clearly and explicitly committed to doing today.
+- DO NOT infer, suggest, expand, or add any goal that was not directly stated by the student.
+- DO NOT add coaching advice, sub-tasks, or improvements the mentor suggested unless the student explicitly agreed to them.
+- If the student stated 1 goal, output exactly 1 goal. If 2, output 2. Never add more.
+- keyActions must ONLY contain things the student said they would do — not suggestions.
+- If unsure whether something was committed to, leave it out.
 
 LANGUAGE: Write the full response in ${params.language}.
 
 OUTPUT FORMAT — respond with ONLY valid JSON matching this EXACT structure:
 
 {
-  "summary": "A high-level summary of the session.",
-  "conclusion": "A brief conclusion.",
+  "summary": "One sentence summary of what the student committed to today.",
+  "conclusion": "Brief closing note.",
   "goals": [
     {
-      "summary": "This should be the short, punchy Title of the goal.",
-      "conclusion": "A longer description of the goal, what they will do, and how they will do it.",
+      "summary": "Short, direct title of the goal — use the student's own words (max 10 words).",
+      "conclusion": "One sentence describing the goal in the student's own words.",
+      "keyActions": [
+        "Exact action the student said they will take.",
+        "Another exact action if they stated one."
+      ],
       "status": "active",
       "score": 100,
-      "topStrengths": [
-        { "name": "Specific", "description": "What exactly will be done?" }
-      ],
-      "improvementAreas": [
-        { "name": "Achievable", "description": "Is it realistic for one day?" }
-      ],
+      "topStrengths": [],
+      "improvementAreas": [],
       "topicsToStudy": []
     }
   ]
 }`;
+
   } else if (params.mode === 'reflection') {
     systemMessage = `You are an expert mentor finalizing a student's daily reflection session.
 Your job is to read the conversation and output a structured reflection assessment.

@@ -5,6 +5,8 @@ import SelfApply from "./pages/SelfApply";
 import Interview from "./pages/Interview";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 import { usePageTracking } from "./hooks/usePageTracking";
 import { AuthGuard } from "./components/AuthGuard";
@@ -31,6 +33,8 @@ function AppContent() {
       />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         path="/calendar/:date?"
         element={

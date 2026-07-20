@@ -102,11 +102,26 @@ export default function DailyRecordModal({ isOpen, onClose, dateStr, record, onR
                                 <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
                                   {index + 1}
                                 </div>
-                                <div>
+                                <div className="flex-1 min-w-0">
                                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Goal</span>
-                                  <p className="text-slate-800 font-medium mt-1 leading-relaxed">
-                                    {goal.description || goal.title}
+                                  {/* Title */}
+                                  <p className="text-slate-900 font-semibold mt-1 leading-snug">
+                                    {goal.title || goal.description}
                                   </p>
+                                  {/* Key Actions as bullet points */}
+                                  {Array.isArray(goal.keyActions) && goal.keyActions.length > 0 ? (
+                                    <ul className="mt-2 space-y-1">
+                                      {goal.keyActions.map((action: string, i: number) => (
+                                        <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                                          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                                          <span className="leading-relaxed">{action}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : goal.description && goal.description !== goal.title ? (
+                                    /* Fallback: show description for older records without keyActions */
+                                    <p className="mt-1.5 text-sm text-slate-600 leading-relaxed">{goal.description}</p>
+                                  ) : null}
                                 </div>
                               </div>
                             </div>

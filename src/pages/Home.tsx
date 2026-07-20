@@ -1,59 +1,46 @@
-import React, { useEffect, useState } from "react";
-import { ENV } from "../utils/env";
+import React from "react";
 import { getCurrentUserEmail } from "../config/auth";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { getEmailFromJWT, isValidJWTFormat } from "../utils/jwt";
 import { getResumeBuddyUrl } from "../utils/zuvySource";
 import { motion } from "framer-motion";
-import { Briefcase, BrainCircuit, GraduationCap, FileText, Info, Calendar as CalendarIcon } from "lucide-react";
+import { BrainCircuit, GraduationCap, Info } from "lucide-react";
 import Header from "@/components/Header";
 import HomeInterviewCard from "@/components/HomeInterviewcard";
 import type { InterviewMode } from "../services/interview/interviewEngine";
 
-// base64url-encode a UTF-8 string for JWT segments.
-function b64url(input: string) {
-  return btoa(unescape(encodeURIComponent(input)))
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-}
-
-// Mint a 3-part JWT-shaped token from email so downstream services can read
-// the email out of the payload using the same decoder the rest of the app uses.
-function mintStudentTokenFromEmail(email: string) {
-  const header = b64url(JSON.stringify({ alg: "none", typ: "JWT" }));
-  const payload = b64url(
-    JSON.stringify({ email, iat: Math.floor(Date.now() / 1000) }),
-  );
-  return `${header}.${payload}.`;
+function buildInterviewConfig(mode: InterviewMode, saveMode: 'append' | 'override') {
+  return {
+    jobId: null,
+    jobTitle: mode === 'goal-setting' ? "Daily Goal Setting" : "End of Day Reflection",
+    jobDescription: "",
+    technicalSkills: [],
+    softSkills: [],
+    mode,
+    mentorProfile: null,
+    ocrEnabled: false,
+    turnLimit: undefined,
+    interviewTime: 15,
+    targetDate: null,
+    goalSaveMode: saveMode,
+  };
 }
 
 export default function Home() {
-  // Dev Zuvy users (redirected from dev.app.zuvy.org) get the dev builder;
-  // everyone else gets the prod builder. Source is detected from the referrer
-  // at startup (see utils/zuvySource).
   const resumeBuddyUrl = getResumeBuddyUrl();
-  const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [email, setEmail] = useState(getCurrentUserEmail());
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [isNavigating, setIsNavigating] = useState(false);
-  const [activeTab, setActiveTab] = useState<"practice" | "goals">("goals");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  useEffect(() => {
-    // Force to authenticated user's email
-    setEmail(getCurrentUserEmail());
-  }, [searchParams, navigate]);
-
-  // URL params win, then a real token in storage, then a synthesized one
-  // from a stored email. Returns null only if we have nothing to identify
-  // the student with.
-  const resolveStudentToken = () => {
-    const fromUrl = searchParams.get("token") || searchParams.get("jwt");
-    if (fromUrl) return fromUrl;
-    return mintStudentTokenFromEmail(getCurrentUserEmail());
+  // Always launch directly into the interview with append mode — no popup, no intermediate page
+  const handleCardClick = (id: string, isComingSoon: boolean, mode?: InterviewMode) => {
+    if (isComingSoon) {
+      toast.info("This module is coming soon!");
+      return;
+    }
+    if (!mode) return;
+    const config = buildInterviewConfig(mode, 'append');
+    sessionStorage.setItem("interviewConfig", JSON.stringify(config));
+    navigate("/interview");
   };
 
   const interviewTypes: {
@@ -66,60 +53,30 @@ export default function Home() {
     mode?: InterviewMode;
     theme?: "green" | "purple";
   }[] = [
-      {
-        id: "goal-setting",
-        icon: <BrainCircuit className="w-8 h-8" />,
-        title: "Daily Goal Setting",
-        description: "Work with your AI Mentor to define a clear, specific, and measurable goal for today.",
-        estimatedTime: "10-15 mins",
-        comingSoon: false,
-        mode: "goal-setting",
-        theme: "green" as const,
-      },
-      {
-        id: "reflection",
-        icon: <GraduationCap className="w-8 h-8" />,
-        title: "End of Day Reflection",
-        description: "Review your progress, discuss blockers, and reflect on what you learned today.",
-        estimatedTime: "10-15 mins",
-        comingSoon: false,
-        mode: "reflection",
-        theme: "purple" as const,
-      },
-    ];
-
-  const handleCardClick = (id: string, isComingSoon: boolean, mode?: InterviewMode, autoStart: boolean = true) => {
-    if (id === "resume-buddy") {
-      const token = resolveStudentToken();
-      if (token) {
-        window.open(
-          `${resumeBuddyUrl}?token=${encodeURIComponent(token)}`,
-          "_blank",
-        );
-      }
-      return;
-    }
-
-    if (isComingSoon) {
-      toast.info("This module is coming soon!");
-      return;
-    }
-
-    const token = searchParams.get("token") || searchParams.get("jwt");
-
-    setSelectedType(id);
-    setTimeout(() => {
-      navigate(token ? `/selfapply?token=${token}` : "/selfapply", { state: { mode, autoStart } });
-    }, 300);
-  };
-
-  useEffect(() => {
-    // Authenticate from query removed, bypassing with dummy email.
-  }, [searchParams]);
+    {
+      id: "goal-setting",
+      icon: <BrainCircuit className="w-8 h-8" />,
+      title: "Daily Goal Setting",
+      description: "Work with your AI Mentor to define a clear, specific, and measurable goal for today.",
+      estimatedTime: "10-15 mins",
+      comingSoon: false,
+      mode: "goal-setting",
+      theme: "green" as const,
+    },
+    {
+      id: "reflection",
+      icon: <GraduationCap className="w-8 h-8" />,
+      title: "End of Day Reflection",
+      description: "Review your progress, discuss blockers, and reflect on what you learned today.",
+      estimatedTime: "10-15 mins",
+      comingSoon: false,
+      mode: "reflection",
+      theme: "purple" as const,
+    },
+  ];
 
   return (
     <div className="min-h-screen w-full bg-[#FBFAF8] flex flex-col font-sans overflow-y-auto">
-
       <Header />
 
       <main className="flex-1 flex flex-col items-center justify-center w-full max-w-full mx-auto px-6 py-10 text-center">
@@ -158,10 +115,12 @@ export default function Home() {
                 description={type.description}
                 estimatedTime={type.estimatedTime}
                 theme={type.theme}
-                onClick={() => handleCardClick(type.id, type.comingSoon, type.mode, true)}
+                onClick={() => {
+                  handleCardClick(type.id, type.comingSoon, type.mode);
+                }}
                 onSecondaryClick={(e) => {
                   e.stopPropagation();
-                  handleCardClick(type.id, type.comingSoon, type.mode, false);
+                  handleCardClick(type.id, type.comingSoon, type.mode);
                 }}
                 className="w-full"
               />
@@ -179,6 +138,8 @@ export default function Home() {
         </div>
 
       </main>
+
+
 
       <style>{`
         @keyframes bounce-slow {
