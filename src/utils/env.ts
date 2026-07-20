@@ -98,6 +98,11 @@ export const ENV = {
     const url = import.meta.env['VITE_DAILY_RECORDS_API_URL'];
     return url && url.trim() !== '' ? url : 'https://smart-track-4b7p.onrender.com/api/daily-records';
   },
+  AUTH_API_URL: () => {
+    const url = import.meta.env['VITE_AUTH_API_URL'];
+    if (url && url.trim() !== '') return url;
+    return ENV.DAILY_RECORDS_API_URL().replace('/daily-records', '/auth');
+  },
   DUMMY_EMAIL: () => {
     const email = import.meta.env['VITE_DUMMY_EMAIL'];
     return email && email.trim() !== '' ? email : 'rishav@navgurukul.org';

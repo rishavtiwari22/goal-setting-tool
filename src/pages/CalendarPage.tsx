@@ -3,7 +3,9 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import DailyRecordModal from "@/components/DailyRecordModal";
-import { getMonthlyRecords } from "@/services/api/dailySessionApi";
+import { toast } from "sonner";
+import { getCurrentUserEmail } from "../config/auth";
+import { getMonthlyRecords, DailyRecord } from "../services/api/dailySessionApi";
 import { ENV } from "@/utils/env";
 
 export default function CalendarPage() {
@@ -18,7 +20,7 @@ export default function CalendarPage() {
   const [userId, setUserId] = useState<string>("");
 
   useEffect(() => {
-    setUserId(ENV.DUMMY_EMAIL());
+    setUserId(getCurrentUserEmail());
   }, []);
 
   useEffect(() => {

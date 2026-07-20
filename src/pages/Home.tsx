@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ENV } from "../utils/env";
+import { getCurrentUserEmail } from "../config/auth";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { getEmailFromJWT, isValidJWTFormat } from "../utils/jwt";
@@ -34,7 +35,7 @@ export default function Home() {
   // at startup (see utils/zuvySource).
   const resumeBuddyUrl = getResumeBuddyUrl();
   const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [email, setEmail] = useState(ENV.DUMMY_EMAIL());
+  const [email, setEmail] = useState(getCurrentUserEmail());
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [activeTab, setActiveTab] = useState<"practice" | "goals">("goals");
@@ -42,8 +43,8 @@ export default function Home() {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    // If we're not logged in, force it to our dummy email
-    setEmail(ENV.DUMMY_EMAIL());
+    // Force to authenticated user's email
+    setEmail(getCurrentUserEmail());
   }, [searchParams, navigate]);
 
   // URL params win, then a real token in storage, then a synthesized one
@@ -52,7 +53,7 @@ export default function Home() {
   const resolveStudentToken = () => {
     const fromUrl = searchParams.get("token") || searchParams.get("jwt");
     if (fromUrl) return fromUrl;
-    return mintStudentTokenFromEmail(ENV.DUMMY_EMAIL());
+    return mintStudentTokenFromEmail(getCurrentUserEmail());
   };
 
   const interviewTypes: {

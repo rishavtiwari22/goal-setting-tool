@@ -1,10 +1,11 @@
-import { ENV } from '../utils/env';
+import { getEmailFromJWT } from "../utils/jwt";
+import { ENV } from "../utils/env";
 
-/**
- * Returns the currently authenticated user's email.
- * Currently uses a hardcoded dummy email until real authentication is implemented.
- */
 export const getCurrentUserEmail = (): string => {
-  // TODO: Swap this out for the real logged-in user's email when auth is ready.
-  return ENV.DUMMY_EMAIL();
+  const token = localStorage.getItem("auth_token");
+  if (token) {
+    const email = getEmailFromJWT(token);
+    if (email) return email;
+  }
+  return ENV.DUMMY_EMAIL(); // fallback if not logged in
 };

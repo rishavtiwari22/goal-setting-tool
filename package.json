@@ -13,11 +13,13 @@
   "dependencies": {
     "@ricky0123/vad-web": "^0.0.30",
     "@vitejs/plugin-react": "^4.7.0",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "firebase": "^11.1.0",
     "framer-motion": "^12.23.26",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.7.4",
     "onnxruntime-web": "^1.23.2",
     "react": "^19.2.3",

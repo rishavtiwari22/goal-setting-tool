@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { FiSend, FiMic, FiMicOff, FiVolume2, FiVolumeX } from "react-icons/fi";
 import { Captions, CaptionsOff, MicOff, PhoneMissed, X, Info } from "lucide-react";
 import { useSinglePromptInterview } from "../hooks/useSinglePromptInterview";
+import { getCurrentUserEmail } from "../config/auth";
 import type { InterviewConfig } from "../services/interview/interviewEngine";
 import { useSpeechToText } from "../hooks/useSpeechToText";
 import { usePiper } from "../hooks/usePiper";
@@ -100,7 +101,7 @@ export default function Interview() {
       const isInvited = sessionStorage.getItem("isInvited") === "true";
 
       if (!configStr && !sessionId) {
-        const storedEmail = ENV.DUMMY_EMAIL();
+        const storedEmail = getCurrentUserEmail();
         if (storedEmail) {
           const recoveredSession = await recoverOngoingSessionFromFirebase(storedEmail);
           if (recoveredSession) {
@@ -184,7 +185,7 @@ export default function Interview() {
         } else if (sessionId) {
           let session = loadInterviewSessionBySessionId(sessionId);
           if (!session) {
-            const storedEmail = ENV.DUMMY_EMAIL();
+            const storedEmail = getCurrentUserEmail();
             if (storedEmail) {
               const { recoverSessionFromFirebase } = await import("../services/storage/interviewStorage");
               session = await recoverSessionFromFirebase(storedEmail, sessionId);

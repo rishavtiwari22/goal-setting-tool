@@ -60,7 +60,11 @@ export const getDailyRecord = async (dateStr: string): Promise<DailyRecord | nul
     const email = getCurrentUserEmail();
     const date = normalizeDateStr(dateStr);
     const url = `${ENV.DAILY_RECORDS_API_URL()}?date=${date}&email=${encodeURIComponent(email)}&_t=${Date.now()}`;
-    const response = await fetch(url, { cache: 'no-store' });
+    const token = localStorage.getItem("auth_token") || "";
+    const response = await fetch(url, { 
+      cache: 'no-store',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     if (!response.ok) {
       if (response.status === 404) return null;
       throw new Error(`Failed to fetch daily record: ${response.status}`);
@@ -86,9 +90,13 @@ export const createDailyRecord = async (payload: {
   const email = getCurrentUserEmail();
   const date = normalizeDateStr(payload.date);
   
+  const token = localStorage.getItem("auth_token") || "";
   const response = await fetch(ENV.DAILY_RECORDS_API_URL(), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
     body: JSON.stringify({ email, ...payload, date })
   });
   
@@ -115,9 +123,13 @@ export const patchGoals = async (id: string, dateStr: string, mode: 'append' | '
   const date = normalizeDateStr(dateStr);
 
   const url = `${ENV.DAILY_RECORDS_API_URL()}/${id}/goals`;
+  const token = localStorage.getItem("auth_token") || "";
   const response = await fetch(url, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
     body: JSON.stringify({ mode, goals })
   });
 
@@ -159,9 +171,13 @@ export const patchReflections = async (id: string, dateStr: string, reflection: 
   const date = normalizeDateStr(dateStr);
 
   const url = `${ENV.DAILY_RECORDS_API_URL()}/${id}/reflections`;
+  const token = localStorage.getItem("auth_token") || "";
   const response = await fetch(url, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
     body: JSON.stringify(reflection)
   });
 
@@ -196,8 +212,13 @@ export const getMonthlyRecords = async (yearMonth: string, forceRefresh = false)
       return recordsCache[email].data;
     }
 
+    const token = localStorage.getItem("auth_token") || "";
     const url = `${ENV.DAILY_RECORDS_API_URL()}?email=${encodeURIComponent(email)}&_t=${Date.now()}`;
-    const response = await fetch(url, { method: 'GET', cache: 'no-store' });
+    const response = await fetch(url, { 
+      method: 'GET', 
+      cache: 'no-store',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     if (!response.ok) {
       if (response.status === 404) return [];
       throw new Error(`Failed to fetch monthly records: ${response.status}`);

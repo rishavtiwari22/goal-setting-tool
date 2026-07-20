@@ -6,6 +6,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import DeviceTester from "@/components/DeviceTester";
 import CreateJobModal from "@/components/CreateJobModal";
+import { getCurrentUserEmail } from "../config/auth";
 import InterviewCard from "@/components/InterviewCard";
 import { classifyTechnicalRole } from "../services/api/deepseekApi";
 import { getEmailFromJWT } from "../utils/jwt";
@@ -94,7 +95,7 @@ export default function SelfApply() {
       fetchJobs();
     }
     // Bypass auth token reading:
-    setUserId(ENV.DUMMY_EMAIL());
+    setUserId(getCurrentUserEmail());
   }, []);
 
   const [showGoalModePopup, setShowGoalModePopup] = useState(false);

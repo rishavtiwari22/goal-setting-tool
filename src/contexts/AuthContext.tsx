@@ -10,31 +10,92 @@ export interface User {
 
 const AuthContext = createContext<any>(null);
 
+function buildUser(data: { id: string; email: string; name?: string }): User {
+  return {
+    uid: data.id,
+    email: data.email,
+    displayName: data.name || null,
+    photoURL: null, // null → Header falls back to initials from email
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchUser = async (token: string) => {
+    try {
+      const response = await fetch(`${ENV.AUTH_API_URL()}/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUser(buildUser(data.user));
+      } else {
+        // Invalid token
+        localStorage.removeItem("auth_token");
+        setUser(null);
+      }
+    } catch (err) {
+      console.error("Failed to fetch user", err);
+      setUser(null);
+    }
+  };
+
   useEffect(() => {
-    // Force dummy user
-    setUser({
-      uid: "dummy-user-123",
-      email: ENV.DUMMY_EMAIL(),
-      displayName: "Dummy User",
-      photoURL: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23646cff'/><text x='50%' y='50%' font-family='Arial' font-size='40' font-weight='bold' fill='white' text-anchor='middle' dy='.3em'>DU</text></svg>"
-    } as User);
-    setLoading(false);
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      fetchUser(token).finally(() => setLoading(false));
+    } else {
+      setUser(null);
+      setLoading(false);
+    }
   }, []);
 
-  function signIn() {
-    // No-op
+  async function signIn(email: string, password: string) {
+    const response = await fetch(`${ENV.AUTH_API_URL()}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Login failed");
+    }
+
+    const data = await response.json();
+    localStorage.setItem("auth_token", data.token);
+    setUser(buildUser(data.user));
   }
 
-  function logOut() {
+  async function signUp(email: string, password: string, name?: string) {
+    const response = await fetch(`${ENV.AUTH_API_URL()}/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, name })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Signup failed");
+    }
+
+    const data = await response.json();
+    localStorage.setItem("auth_token", data.token);
+    setUser(buildUser(data.user));
+  }
+
+  function signOut() {
+    localStorage.removeItem("auth_token");
+    setUser(null);
     return Promise.resolve();
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, logOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
