@@ -10,10 +10,7 @@ function getEnvVar(name: string): string {
 }
 
 export function validateEnvironment(): void {
-  const requiredVars = [
-    'VITE_API_BASE_URL',
-    'VITE_API_TOKEN',
-  ];
+  const requiredVars: string[] = [];
 
   const missing: string[] = [];
   for (const varName of requiredVars) {
@@ -38,8 +35,14 @@ export function validateEnvironment(): void {
 }
 
 export const ENV = {
-  API_BASE_URL: () => getEnvVar('VITE_API_BASE_URL'),
-  API_TOKEN: () => getEnvVar('VITE_API_TOKEN'),
+  API_BASE_URL: () => {
+    const url = import.meta.env['VITE_API_BASE_URL'];
+    return url && url.trim() !== '' ? url : '';
+  },
+  API_TOKEN: () => {
+    const token = import.meta.env['VITE_API_TOKEN'];
+    return token && token.trim() !== '' ? token : '';
+  },
   CHAT_API_URL: () => {
     const url = import.meta.env['VITE_DEEPSEEK_API_URL'];
     if (url && url.trim() !== '') return url.trim();
